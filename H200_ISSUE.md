@@ -66,12 +66,16 @@ directly after the updated commit is visible on GitHub.
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
 
-## 5. Chaoyang 32x32 teacher timing run (`kau-aimslab`)
+## 5. Chaoyang 32x32 teacher timing run (account selectable)
+
+For Chaoyang requests, enter exactly one of the following IDs in the form:
+`bapedragon` (personal account) or `kau-aimslab` (lab account). The command is
+the same for both accounts because the dataset and output paths are shared.
 
 | Field | Value |
 |---|---|
 | Title | `[Request]: 박철현 Chaoyang ResNet56 32x32 teacher timing run` |
-| 사용자 ID | `kau-aimslab` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
 | 코드 실행 명령어 | `python train_teacher_chaoyang.py --timing-run --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
@@ -81,7 +85,7 @@ directly after the updated commit is visible on GitHub.
 The timing run reads `/app/data/chaoyang` and does not write to the collected
 `/app/output` path.
 
-## 6. Chaoyang full 300-epoch run (`kau-aimslab`)
+## 6. Chaoyang full 300-epoch run (account selectable)
 
 Submit after the timing log contains `[PROTOCOL_CHECK] status=PASS`, the exact
 4,021/2,139 split counts, and `[DONE]`.
@@ -89,7 +93,7 @@ Submit after the timing log contains `[PROTOCOL_CHECK] status=PASS`, the exact
 | Field | Value |
 |---|---|
 | Title | `[Request]: 박철현 Chaoyang ResNet56 32x32 teacher training` |
-| 사용자 ID | `kau-aimslab` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
 | 코드 실행 명령어 | `python train_teacher_chaoyang.py --output-dir /app/output --run-name teacher_resnet56_chaoyang_32_moderateaug_300ep_seed1 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |

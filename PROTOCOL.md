@@ -154,6 +154,7 @@ official Flowers reproduction.
 |---|---:|---|---:|---:|---:|---|
 | CIFAR-100 | 437 | `bapedragon` | 2 | 9.3 s | 46m 17s | PASS |
 | Flowers-102 | 439 | `kau-aimslab` | 2 | 5.3 s | 26m 25s | PASS |
+| Chaoyang | 442 | `bapedragon` | 2 | 5.2 s | 26m 11s | PASS |
 
 The timing runs used the original 300-epoch attempt-1 schedule. Their 2-epoch
 accuracies are startup diagnostics and are not research results. Build 439
