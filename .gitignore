@@ -1,0 +1,13 @@
+data/
+outputs/
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+*.zip
+*.tar
+*.tar.gz
+*.pt
+*.pth
+*.pyth
+
