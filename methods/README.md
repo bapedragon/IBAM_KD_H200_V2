@@ -59,3 +59,18 @@ Every subprocess has an independent run name and directory. A failure stops
 the sequence and records `three_method_status.json`; outputs from already
 completed methods remain intact. After all three finish,
 `three_method_summary.json` lists their individual result directories.
+
+The ordered subset can be selected when the combined estimate is too close to
+the Pod runtime limit:
+
+```bash
+python methods/run_cifar100_three_methods.py --full-run --methods KD CRD \
+  --output-dir /app/output/cifar100_kd_crd_full_v2 --num-workers 4
+
+python methods/run_cifar100_three_methods.py --full-run --methods ReviewKD \
+  --output-dir /app/output/cifar100_reviewkd_full_v2 --num-workers 4
+```
+
+The legacy aggregate filenames remain `three_method_status.json` and
+`three_method_summary.json` for compatibility even when a subset is selected;
+the JSON payload records the actual `selected_methods`.

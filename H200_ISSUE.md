@@ -126,20 +126,39 @@ final sequence marker:
 [DONE] All three methods completed successfully; resources may be released.
 ```
 
-## 8. CIFAR-100 KD + CRD + ReviewKD sequential full run
+## 8. CIFAR-100 full runs split safely across the 600-minute limit
 
-Submit only after the timing summary confirms the combined estimate fits the
-Pod runtime limit.
+The measured combined estimate was `9h 41m 37s`, leaving only about 18 minutes
+before the 600-minute Pod limit. Run `KD + CRD` and `ReviewKD` as two separate
+issues so normal runtime variance cannot discard all three results.
+
+### 8.1 KD + CRD full run
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti KD CRD ReviewKD full training` |
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti KD CRD full training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/run_cifar100_three_methods.py --full-run --output-dir /app/output/cifar100_three_methods_full_v2 --num-workers 4` |
+| 코드 실행 명령어 | `python methods/run_cifar100_three_methods.py --full-run --methods KD CRD --output-dir /app/output/cifar100_kd_crd_full_v2 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
+
+Expected duration from timing: approximately `6h 23m 10s`.
+
+### 8.2 ReviewKD full run
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti ReviewKD full training` |
+| 사용자 ID | `kau-aimslab` (연구실 계정) **or** `bapedragon` (개인 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/run_cifar100_three_methods.py --full-run --methods ReviewKD --output-dir /app/output/cifar100_reviewkd_full_v2 --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+Expected duration from timing: approximately `3h 18m 27s`.
 
 If a later method fails, the runner stops, writes the failing method and error
 to `three_method_status.json`, and leaves every already completed method

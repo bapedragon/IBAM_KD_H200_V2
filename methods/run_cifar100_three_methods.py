@@ -53,7 +53,7 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument(
         "--full-run",
         action="store_true",
-        help="Run all three methods for the full 300 epochs.",
+        help="Run the selected methods for the full 300 epochs.",
     )
     parser.add_argument("--data-dir", type=Path, default=Path("./data"))
     parser.add_argument(
@@ -65,6 +65,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--methods",
+        nargs="+",
+        choices=[method for method, _, _ in METHODS],
+        default=[method for method, _, _ in METHODS],
+        help=(
+            "Subset to execute in canonical KD -> CRD -> ReviewKD order. "
+            "Defaults to all three. "
+            "Use this to split a full run across the H200 runtime limit."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -80,6 +91,12 @@ def main() -> None:
     if args.num_workers < 0:
         raise ValueError("--num-workers must be non-negative")
 
+    requested = set(args.methods)
+    selected_methods = tuple(item for item in METHODS if item[0] in requested)
+    selected_names = [item[0] for item in selected_methods]
+    if len(selected_names) != len(args.methods):
+        raise ValueError("--methods must not contain duplicate method names")
+
     output_root = args.output_dir.resolve()
     output_root.mkdir(parents=True, exist_ok=True)
     status_path = output_root / "three_method_status.json"
@@ -87,9 +104,13 @@ def main() -> None:
     records: list[dict[str, Any]] = []
 
     log("=" * 80)
-    log("CIFAR-100 DEIT-TI SEQUENTIAL DISTILLATION: KD -> CRD -> REVIEWKD")
+    log(
+        "CIFAR-100 DEIT-TI SEQUENTIAL DISTILLATION: "
+        + " -> ".join(selected_names)
+    )
     log("=" * 80)
     log(f"[MODE] timing_run={args.timing_run} full_run={args.full_run}")
+    log(f"[METHODS] selected={','.join(selected_names)}")
     log(f"[PATH] repository={REPOSITORY_ROOT}")
     log(f"[PATH] data_dir={args.data_dir.resolve()}")
     log(f"[PATH] teacher_root={args.teacher_root.resolve()}")
@@ -116,7 +137,10 @@ def main() -> None:
     subprocess.run(verify_command, cwd=REPOSITORY_ROOT, check=True)
 
     try:
-        for index, (method, relative_script, prefix) in enumerate(METHODS, start=1):
+        total_methods = len(selected_methods)
+        for index, (method, relative_script, prefix) in enumerate(
+            selected_methods, start=1
+        ):
             name = run_name(prefix, args.timing_run, args.seed)
             method_dir = output_root / name
             command = [
@@ -159,12 +183,13 @@ def main() -> None:
                 {
                     "status": "running",
                     "mode": "timing" if args.timing_run else "full",
+                    "selected_methods": selected_names,
                     "records": records,
                 },
             )
             log("=" * 80)
-            log(f"[SEQUENCE][{index}/3] START method={method}")
-            log(f"[SEQUENCE][{index}/3] command={' '.join(command)}")
+            log(f"[SEQUENCE][{index}/{total_methods}] START method={method}")
+            log(f"[SEQUENCE][{index}/{total_methods}] command={' '.join(command)}")
             method_start = time.time()
             subprocess.run(command, cwd=REPOSITORY_ROOT, check=True)
             record["status"] = "complete"
@@ -186,13 +211,14 @@ def main() -> None:
             atomic_json(
                 status_path,
                 {
-                    "status": "running" if index < len(METHODS) else "complete",
+                    "status": "running" if index < total_methods else "complete",
                     "mode": "timing" if args.timing_run else "full",
+                    "selected_methods": selected_names,
                     "records": records,
                 },
             )
             log(
-                f"[SEQUENCE][{index}/3] DONE method={method} "
+                f"[SEQUENCE][{index}/{total_methods}] DONE method={method} "
                 f"best_top1={record['best_top1']} run_dir={method_dir}"
             )
     except Exception as error:
@@ -204,6 +230,7 @@ def main() -> None:
             {
                 "status": "failed",
                 "mode": "timing" if args.timing_run else "full",
+                "selected_methods": selected_names,
                 "records": records,
             },
         )
@@ -221,18 +248,26 @@ def main() -> None:
         "student": "deit_ti",
         "teacher_input": 32,
         "student_input": 224,
+        "selected_methods": selected_names,
         "elapsed_seconds": elapsed,
         "elapsed_human": format_duration(elapsed),
-        "estimated_three_method_full_seconds": estimated_full_seconds,
-        "estimated_three_method_full_human": format_duration(
+        "estimated_selected_methods_full_seconds": estimated_full_seconds,
+        "estimated_selected_methods_full_human": format_duration(
             estimated_full_seconds
         ),
         "records": records,
     }
+    if len(selected_names) == len(METHODS):
+        final_summary["estimated_three_method_full_seconds"] = (
+            estimated_full_seconds
+        )
+        final_summary["estimated_three_method_full_human"] = format_duration(
+            estimated_full_seconds
+        )
     final_path = output_root / "three_method_summary.json"
     atomic_json(final_path, final_summary)
     log("=" * 80)
-    log("[FINAL_RESULT] completed_methods=KD,CRD,ReviewKD")
+    log(f"[FINAL_RESULT] completed_methods={','.join(selected_names)}")
     for record in records:
         log(
             f"[FINAL_RESULT] method={record['method']} "
@@ -240,11 +275,17 @@ def main() -> None:
         )
     log(f"[FINAL_RESULT] aggregate_summary={final_path}")
     log(
-        f"[TIMING] estimated_three_method_full="
+        f"[TIMING] estimated_selected_methods_full="
         f"{format_duration(estimated_full_seconds)} "
         f"({estimated_full_seconds:.1f}s)"
     )
-    log("[DONE] All three methods completed successfully; resources may be released.")
+    if len(selected_names) == len(METHODS):
+        log("[DONE] All three methods completed successfully; resources may be released.")
+    else:
+        log(
+            "[DONE] Selected methods completed successfully: "
+            f"{','.join(selected_names)}; resources may be released."
+        )
 
 
 def cli_main() -> None:
@@ -254,7 +295,7 @@ def cli_main() -> None:
         log("=" * 80)
         log(f"[FATAL] {type(error).__name__}: {error}")
         traceback.print_exc()
-        log("[FATAL] Three-method sequence did not complete.")
+        log("[FATAL] Method sequence did not complete.")
         raise
 
 
