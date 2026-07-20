@@ -136,3 +136,16 @@ public YAML is not present at the audited LG commit; consequently, the shared
 LG code behavior and ALG's explicit implementation details are the documented
 reproduction boundary. All listed statistical values are constants rather
 than command-line overrides.
+
+## H200 timing verification
+
+| Dataset | H200 build | Account | Full-data epochs | Average epoch | Estimated full run | Result |
+|---|---:|---|---:|---:|---:|---|
+| CIFAR-100 | 437 | `bapedragon` | 2 | 9.3 s | 46m 17s | PASS |
+| Flowers-102 | 439 | `kau-aimslab` | 2 | 5.3 s | 26m 25s | PASS |
+
+Both timing runs retained their locked 300-epoch cosine schedule. Their
+2-epoch accuracies are startup diagnostics and are not reported as research
+results. Build 439 additionally verified the official Flowers downloads and
+MD5 values, the 2,040/6,149 split, 861,750 parameters, 32/16/8 feature grids,
+and atomic creation of all checkpoint variants and summary files.

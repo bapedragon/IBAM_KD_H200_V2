@@ -135,6 +135,11 @@ The full Flowers directory contains `best`, `latest`, and
 `summary.json`. Core statistical settings are locked in code exactly as for
 the CIFAR-100 teacher.
 
+H200 build 439 completed the Flowers full-data two-epoch timing run with all
+protocol checks passing. It measured 5.3 seconds per epoch and estimated about
+26 minutes for the locked 300-epoch run. Timing-run accuracy is not a research
+result.
+
 ## Failure behavior
 
 All important messages are printed with `flush=True`. Python exceptions print
