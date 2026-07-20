@@ -100,7 +100,7 @@ confirmed:
 - local smoke run completed forward, backward, evaluation, atomic checkpoint,
   metrics, summary, and SHA-256 generation.
 
-## Flowers-102 reproduction boundary and final recipe v4
+## Flowers-102 reproduction boundary and final recipe v5
 
 ALG's implementation details state that its ResNet56 guidance CNN is trained
 on 32 x 32 images and uses SGD with learning rate 0.1, momentum 0.9, weight
@@ -120,10 +120,11 @@ then reached only 51.63% despite 100% training accuracy, demonstrating severe
 overfitting. It is rejected.
 
 The 600-epoch strong run subsequently reached a best Top-1 of 69.87% and a
-closest-to-draft checkpoint of 66.35% at epoch 457. Recipe v4 now keeps every
-statistical choice unchanged except that it uses an independent 400-epoch
-cosine schedule. It is an explicit implementation comparison between the
-completed 300- and 600-epoch schedules, not an official LG Flowers setting.
+closest-to-draft checkpoint of 66.35% at epoch 457. An independent 400-epoch
+strong run reached 63.33% at epoch 346. Recipe v5 keeps every statistical
+choice unchanged except that it uses an independent 450-epoch cosine schedule.
+It is the final explicit implementation comparison among the completed 300-,
+400-, and 600-epoch schedules, not an official LG Flowers setting.
 The primary target from the current draft is 66.33%. For provenance, the
 original LG paper's Table 1 reports 59.83% for its 32-resolution Flowers
 ResNet56 teacher. These reference values are logged separately.
@@ -136,7 +137,7 @@ ResNet56 teacher. These reference values are logged separately.
 | Teacher | CIFAR-style ResNet56 (`6n+2`, `n=9`) |
 | Input resolution | **32 x 32** |
 | Number of classes | 102 |
-| Epochs | **400** |
+| Epochs | **450** |
 | Train / test batch size | 128 / 200 |
 | Optimizer | SGD |
 | Initial learning rate | 0.1 |
@@ -153,7 +154,7 @@ ResNet56 teacher. These reference values are logged separately.
 
 Evaluation remains direct resize to 32 x 32 plus ImageNet normalization. All
 listed statistical values are constants rather than command-line overrides.
-The 400-epoch schedule must be described as an implementation choice rather
+The 450-epoch schedule must be described as an implementation choice rather
 than an exact official Flowers reproduction.
 
 ## H200 timing verification
@@ -180,8 +181,9 @@ verified the official Flowers downloads and MD5 values, the 2,040/6,149 split,
 | Flowers attempt 2, weak augmentation | 441 | 300 | 51.63% | draft 66.33% | -14.70 pp | rejected: overfit |
 | Flowers attempt 3, strong augmentation | 444 | 600 | 69.87% | draft 66.33% | +3.54 pp | completed |
 | Flowers attempt 3, closest diagnostic | 444 | epoch 457 | 66.35% | draft 66.33% | +0.02 pp | saved |
+| Flowers attempt 4, strong augmentation | - | 400 | 63.33% | draft 66.33% | -3.00 pp | completed |
 
-The Flowers recipe-v4 400-epoch result will be added after its final H200 run.
+The Flowers recipe-v5 450-epoch result will be added after its final H200 run.
 
 ## Chaoyang locked protocol
 

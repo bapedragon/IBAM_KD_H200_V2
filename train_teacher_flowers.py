@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Train the 400-epoch Flowers-102 ResNet56 guidance teacher at 32 x 32.
+"""Train the 450-epoch Flowers-102 ResNet56 guidance teacher at 32 x 32.
 
-Recipe v4 keeps the official LG strong-augmentation path and uses an
-independent 400-epoch cosine schedule between the completed 300- and
-600-epoch runs. On the KAU H200 runner, pass ``--output-dir /app/output`` for
+Recipe v5 keeps the official LG strong-augmentation path and uses an
+independent 450-epoch cosine schedule after the completed 300-, 400-, and
+600-epoch comparisons. On the KAU H200 runner, pass ``--output-dir /app/output`` for
 artifacts that must survive Pod release.
 """
 
@@ -37,7 +37,7 @@ NUM_CLASSES = 102
 IMAGE_SIZE = 32
 TRAIN_BATCH_SIZE = 128
 TEST_BATCH_SIZE = 200
-PLANNED_EPOCHS = 400
+PLANNED_EPOCHS = 450
 BASE_LR = 0.1
 MOMENTUM = 0.9
 WEIGHT_DECAY = 5e-4
@@ -45,7 +45,7 @@ SEED = 1
 REFERENCE_TEACHER_TOP1 = 66.33
 PUBLISHED_LG_TEACHER_TOP1 = 59.83
 SCIPY_VERSION = "1.15.3"
-RECIPE_NAME = "flowers102_32_official_strongaug_400ep_v4"
+RECIPE_NAME = "flowers102_32_official_strongaug_450ep_v5"
 
 FLOWERS_BASE_URL = "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/"
 FLOWERS_FILES = {
@@ -88,8 +88,8 @@ LOCKED_PROTOCOL: Dict[str, Any] = {
     "published_lg_teacher_top1": PUBLISHED_LG_TEACHER_TOP1,
     "protocol_basis": (
         "ALG explicit teacher constraints + official LG strong augmentation + "
-        "independent 400-epoch cosine schedule selected after the documented "
-        "300- and 600-epoch comparisons"
+        "independent 450-epoch cosine schedule selected after the documented "
+        "300-, 400-, and 600-epoch comparisons"
     ),
     "official_lg_commit": common.OFFICIAL_LG_COMMIT,
 }
@@ -136,7 +136,7 @@ def flowers_train_transform() -> transforms.Compose:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Train the 400-epoch Flowers-102 ResNet56 teacher at 32x32"
+        description="Train the 450-epoch Flowers-102 ResNet56 teacher at 32x32"
     )
     parser.add_argument("--data-dir", type=Path, default=Path("./data"))
     parser.add_argument("--output-dir", type=Path, default=Path("./outputs"))
@@ -145,7 +145,7 @@ def parse_args() -> argparse.Namespace:
     modes.add_argument(
         "--timing-run",
         action="store_true",
-        help="Run two full-dataset epochs while retaining the 400-epoch LR schedule.",
+        help="Run two full-dataset epochs while retaining the 450-epoch LR schedule.",
     )
     modes.add_argument(
         "--smoke",
@@ -175,10 +175,10 @@ def actual_epochs(args: argparse.Namespace) -> int:
 
 def default_run_name(args: argparse.Namespace) -> str:
     if args.smoke:
-        return "teacher_resnet56_flowers102_32_strongaug_400ep_seed1_smoke"
+        return "teacher_resnet56_flowers102_32_strongaug_450ep_seed1_smoke"
     elif args.timing_run:
-        return "teacher_resnet56_flowers102_32_strongaug_400ep_seed1_timing_2ep"
-    return "teacher_resnet56_flowers102_32_strongaug_400ep_seed1"
+        return "teacher_resnet56_flowers102_32_strongaug_450ep_seed1_timing_2ep"
+    return "teacher_resnet56_flowers102_32_strongaug_450ep_seed1"
 
 
 def deterministic_subset(dataset: Dataset[Any], size: int, seed: int) -> Dataset[Any]:
@@ -507,18 +507,18 @@ def train(args: argparse.Namespace) -> None:
     run_dir = args.output_dir / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    best_path = run_dir / "teacher_resnet56_flowers102_32_strongaug_400ep_best.pt"
-    latest_path = run_dir / "teacher_resnet56_flowers102_32_strongaug_400ep_latest.pt"
+    best_path = run_dir / "teacher_resnet56_flowers102_32_strongaug_450ep_best.pt"
+    latest_path = run_dir / "teacher_resnet56_flowers102_32_strongaug_450ep_latest.pt"
     closest_path = (
         run_dir
-        / "teacher_resnet56_flowers102_32_strongaug_400ep_closest_to_reference.pt"
+        / "teacher_resnet56_flowers102_32_strongaug_450ep_closest_to_reference.pt"
     )
     config_path = run_dir / "config.json"
     metrics_path = run_dir / "metrics.csv"
     summary_path = run_dir / "summary.json"
 
     log("=" * 80)
-    log("TRAIN FLOWERS-102 RESNET56 TEACHER RECIPE V4 (32 x 32, 400 EPOCHS)")
+    log("TRAIN FLOWERS-102 RESNET56 TEACHER RECIPE V5 (32 x 32, 450 EPOCHS)")
     log("=" * 80)
     log(f"[ENV] python={sys.version.split()[0]} torch={torch.__version__}")
     log(
@@ -548,8 +548,8 @@ def train(args: argparse.Namespace) -> None:
     )
     log(f"[RECIPE] name={RECIPE_NAME}")
     log(
-        "[NOTE] The public LG repository has no Flowers teacher YAML. Recipe v4 "
-        "keeps official strong augmentation and uses a 400-epoch cosine schedule."
+        "[NOTE] The public LG repository has no Flowers teacher YAML. Recipe v5 "
+        "keeps official strong augmentation and uses a 450-epoch cosine schedule."
     )
 
     model = ResNet56Flowers()

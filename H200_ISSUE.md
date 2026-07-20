@@ -2,7 +2,7 @@
 
 Use the timing request first when a pipeline is new. CIFAR-100 estimates its
 300-epoch duration. The Flowers pipeline has already completed multiple full
-runs, so its final 400-epoch request may be submitted directly.
+runs, so its final 450-epoch request may be submitted directly.
 
 ## 1. Timing run
 
@@ -49,7 +49,7 @@ different GitHub user allocation and writes only temporary timing artifacts.
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
 
-## 4. Flowers-102 final full 400-epoch run (account selectable)
+## 4. Flowers-102 final full 450-epoch run (account selectable)
 
 The previous Flowers run already verified the H200 data/model pipeline. The
 new timing request is therefore optional; the full request may be submitted
@@ -57,10 +57,10 @@ directly after the updated commit is visible on GitHub.
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 Flowers-102 ResNet56 32x32 400-epoch teacher training` |
+| Title | `[Request]: 박철현 Flowers-102 ResNet56 32x32 450-epoch teacher training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_strongaug_400ep_seed1 --num-workers 4` |
+| 코드 실행 명령어 | `python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_strongaug_450ep_seed1 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
