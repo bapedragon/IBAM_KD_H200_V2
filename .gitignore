@@ -12,4 +12,4 @@ __pycache__/
 *.pyth
 
 # The three explicitly selected, hash-verified teacher checkpoints are tracked.
-!checkpoints/teachers/**/*.pt
+!teachers/checkpoints/**/*.pt

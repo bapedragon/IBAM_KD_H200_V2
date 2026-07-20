@@ -23,7 +23,7 @@ output still retains `best`, `latest`, and `closest_to_reference` files.
 Verify hashes, metadata, strict state-dict loading, and a 32 x 32 forward pass:
 
 ```bash
-python teacher_checkpoints.py --dataset all
+python teachers/verify_checkpoints.py --dataset all
 ```
 
 The datasets are not included. Chaoyang remains mounted separately at

@@ -26,7 +26,10 @@ from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
-import train_teacher_cifar100 as common
+try:
+    from . import train_teacher_cifar100 as common
+except ImportError:  # Direct execution: python teachers/train_teacher_chaoyang.py
+    import train_teacher_cifar100 as common
 
 
 NUM_CLASSES = 4

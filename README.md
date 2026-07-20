@@ -26,20 +26,22 @@ independent from the earlier 224 x 224 teacher experiments.
 
 ```text
 IBAM_KD_H200_V2/
-├── checkpoints/teachers/
-│   ├── cifar100/
-│   ├── flowers102/
-│   ├── chaoyang/
-│   ├── README.md
-│   └── manifest.json
 ├── H200_ISSUE.md
 ├── README.md
 ├── PROTOCOL.md
 ├── requirements.txt
-├── teacher_checkpoints.py
-├── train_teacher_chaoyang.py
-├── train_teacher_cifar100.py
-└── train_teacher_flowers.py
+└── teachers/
+    ├── checkpoints/
+    │   ├── cifar100/
+    │   ├── flowers102/
+    │   ├── chaoyang/
+    │   ├── README.md
+    │   └── manifest.json
+    ├── README.md
+    ├── train_teacher_chaoyang.py
+    ├── train_teacher_cifar100.py
+    ├── train_teacher_flowers.py
+    └── verify_checkpoints.py
 ```
 
 The complete locked protocol and source audit are recorded in
@@ -50,10 +52,10 @@ Ready-to-copy H200 request values are recorded in
 ## Fixed teachers for downstream KD
 
 The selected weights and their full provenance are under
-[`checkpoints/teachers`](checkpoints/teachers). Before launching a KD job, run:
+[`teachers/checkpoints`](teachers/checkpoints). Before launching a KD job, run:
 
 ```bash
-python teacher_checkpoints.py --dataset all
+python teachers/verify_checkpoints.py --dataset all
 ```
 
 This verifies each committed SHA-256, checkpoint metadata, strict model load,
@@ -80,7 +82,7 @@ The timing run uses the full CIFAR-100 dataset for two epochs while keeping the
 repository and therefore do not need to be collected.
 
 ```bash
-python train_teacher_cifar100.py --timing-run --num-workers 4
+python teachers/train_teacher_cifar100.py --timing-run --num-workers 4
 ```
 
 Expected log markers:
@@ -96,7 +98,7 @@ Expected log markers:
 After the timing run succeeds, use:
 
 ```bash
-python train_teacher_cifar100.py --output-dir /app/output --run-name teacher_resnet56_cifar100_32_lg_official_seed1 --num-workers 4
+python teachers/train_teacher_cifar100.py --output-dir /app/output --run-name teacher_resnet56_cifar100_32_lg_official_seed1 --num-workers 4
 ```
 
 The core full-run values are already fixed to the official settings, so the
@@ -133,7 +135,7 @@ This checks imports, model forward/backward, data preparation, and checkpoint
 creation on deterministic subsets:
 
 ```bash
-python train_teacher_cifar100.py --smoke --num-workers 0
+python teachers/train_teacher_cifar100.py --smoke --num-workers 0
 ```
 
 Smoke/timing accuracy is not a research result.
@@ -162,13 +164,13 @@ because the public LG repository has no Flowers teacher YAML.
 Optional two-epoch timing check retaining the 450-epoch cosine schedule:
 
 ```bash
-python train_teacher_flowers.py --timing-run --num-workers 4
+python teachers/train_teacher_flowers.py --timing-run --num-workers 4
 ```
 
 For the collected full run, write to `/app/output`:
 
 ```bash
-python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_strongaug_450ep_seed1 --num-workers 4
+python teachers/train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_strongaug_450ep_seed1 --num-workers 4
 ```
 
 The full Flowers directory contains `best`, `latest`, and
@@ -192,13 +194,13 @@ image format before training.
 Run the full-data two-epoch timing check first:
 
 ```bash
-python train_teacher_chaoyang.py --timing-run --num-workers 4
+python teachers/train_teacher_chaoyang.py --timing-run --num-workers 4
 ```
 
 After it prints `[PROTOCOL_CHECK] status=PASS` and `[DONE]`, run:
 
 ```bash
-python train_teacher_chaoyang.py --output-dir /app/output --run-name teacher_resnet56_chaoyang_32_moderateaug_300ep_seed1 --num-workers 4
+python teachers/train_teacher_chaoyang.py --output-dir /app/output --run-name teacher_resnet56_chaoyang_32_moderateaug_300ep_seed1 --num-workers 4
 ```
 
 The statistical recipe is fixed at ResNet56, 32 x 32, 300 epochs, SGD 0.1,

@@ -12,13 +12,18 @@ from typing import Any, Callable
 import torch
 import torch.nn as nn
 
-from train_teacher_chaoyang import ResNet56Chaoyang
-from train_teacher_cifar100 import ResNet56
-from train_teacher_flowers import ResNet56Flowers
+try:
+    from .train_teacher_chaoyang import ResNet56Chaoyang
+    from .train_teacher_cifar100 import ResNet56
+    from .train_teacher_flowers import ResNet56Flowers
+except ImportError:  # Direct execution: python teachers/verify_checkpoints.py
+    from train_teacher_chaoyang import ResNet56Chaoyang
+    from train_teacher_cifar100 import ResNet56
+    from train_teacher_flowers import ResNet56Flowers
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent
-DEFAULT_CHECKPOINT_ROOT = REPOSITORY_ROOT / "checkpoints" / "teachers"
+DEFAULT_CHECKPOINT_ROOT = REPOSITORY_ROOT / "checkpoints"
 DATASET_ALIASES = {
     "cifar-100": "cifar100",
     "cifar100": "cifar100",

@@ -30,7 +30,10 @@ from torchvision import transforms
 from torchvision.datasets import Flowers102
 from torchvision.datasets.utils import check_integrity, extract_archive
 
-import train_teacher_cifar100 as common
+try:
+    from . import train_teacher_cifar100 as common
+except ImportError:  # Direct execution: python teachers/train_teacher_flowers.py
+    import train_teacher_cifar100 as common
 
 
 NUM_CLASSES = 102

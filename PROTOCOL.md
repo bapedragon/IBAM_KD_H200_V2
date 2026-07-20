@@ -1,7 +1,7 @@
 # ResNet56 32 x 32 teacher protocols
 
 This document records the exact protocol used by
-`train_teacher_cifar100.py`. The goal is to reproduce the **32 x 32 guidance
+`teachers/train_teacher_cifar100.py`. The goal is to reproduce the **32 x 32 guidance
 teacher** used by LG and ALG, not the previously trained 224 x 224 teacher.
 
 ## Paper and official-code evidence
@@ -185,7 +185,7 @@ verified the official Flowers downloads and MD5 values, the 2,040/6,149 split,
 | Flowers final, strong augmentation | 447 | 450 | 66.03% | draft 66.33% | -0.30 pp | **selected best** |
 | Chaoyang moderate augmentation | 443 | 300 | 76.72% | 77.20% | -0.48 pp | **selected best** |
 
-The selected checkpoints are recorded in `checkpoints/teachers/manifest.json`.
+The selected checkpoints are recorded in `teachers/checkpoints/manifest.json`.
 All downstream KD methods must reuse these exact hashes rather than selecting
 a different teacher per method.
 

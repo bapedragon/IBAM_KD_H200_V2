@@ -11,7 +11,7 @@ runs, so its final 450-epoch request may be submitted directly.
 | Title | `[Request]: 박철현 CIFAR-100 ResNet56 32x32 teacher timing run` |
 | 사용자 ID | `bapedragon` |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python train_teacher_cifar100.py --timing-run --num-workers 4` |
+| 코드 실행 명령어 | `python teachers/train_teacher_cifar100.py --timing-run --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
@@ -29,7 +29,7 @@ Submit this only after the timing log contains
 | Title | `[Request]: 박철현 CIFAR-100 ResNet56 32x32 teacher training` |
 | 사용자 ID | `bapedragon` |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python train_teacher_cifar100.py --output-dir /app/output --run-name teacher_resnet56_cifar100_32_lg_official_seed1 --num-workers 4` |
+| 코드 실행 명령어 | `python teachers/train_teacher_cifar100.py --output-dir /app/output --run-name teacher_resnet56_cifar100_32_lg_official_seed1 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
@@ -44,7 +44,7 @@ different GitHub user allocation and writes only temporary timing artifacts.
 | Title | `[Request]: 박철현 Flowers-102 ResNet56 32x32 final teacher timing run` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python train_teacher_flowers.py --timing-run --num-workers 4` |
+| 코드 실행 명령어 | `python teachers/train_teacher_flowers.py --timing-run --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
@@ -60,7 +60,7 @@ directly after the updated commit is visible on GitHub.
 | Title | `[Request]: 박철현 Flowers-102 ResNet56 32x32 450-epoch teacher training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_strongaug_450ep_seed1 --num-workers 4` |
+| 코드 실행 명령어 | `python teachers/train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_strongaug_450ep_seed1 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
@@ -76,7 +76,7 @@ the same for both accounts because the dataset and output paths are shared.
 | Title | `[Request]: 박철현 Chaoyang ResNet56 32x32 teacher timing run` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python train_teacher_chaoyang.py --timing-run --num-workers 4` |
+| 코드 실행 명령어 | `python teachers/train_teacher_chaoyang.py --timing-run --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
@@ -94,7 +94,7 @@ Submit after the timing log contains `[PROTOCOL_CHECK] status=PASS`, the exact
 | Title | `[Request]: 박철현 Chaoyang ResNet56 32x32 teacher training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python train_teacher_chaoyang.py --output-dir /app/output --run-name teacher_resnet56_chaoyang_32_moderateaug_300ep_seed1 --num-workers 4` |
+| 코드 실행 명령어 | `python teachers/train_teacher_chaoyang.py --output-dir /app/output --run-name teacher_resnet56_chaoyang_32_moderateaug_300ep_seed1 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
