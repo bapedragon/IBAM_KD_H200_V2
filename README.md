@@ -123,8 +123,9 @@ and heterogeneous adapters.
 
 H200 build 451 measured the CIFAR-100 `Ours -> CRD -> MGD` 300-epoch
 estimates as `4h 08m 37s`, `3h 15m 04s`, and `3h 03m 26s`. The combined
-`10h 27m 07s` exceeds the Pod limit, so full training is split into Ours alone
-and CRD+MGD; see [`H200_ISSUE.md`](H200_ISSUE.md).
+`10h 27m 07s` exceeds the Pod limit. The current two-account schedule runs
+Ours+CRD first (`7h 23m 41s`) and MGD separately; see
+[`H200_ISSUE.md`](H200_ISSUE.md).
 
 ## Fixed teachers for downstream KD
 

@@ -37,35 +37,38 @@ Measured 300-epoch estimates were Ours `4h 08m 37s`, CRD `3h 15m 04s`, and
 MGD `3h 03m 26s`. Their `10h 27m 07s` total exceeds the 600-minute Pod limit,
 so do not submit all three in one full request.
 
-### CIFAR-100 Ours full training
+### CIFAR-100 Ours + CRD full training
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti Ours full training` |
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti Ours CRD full training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/run_cifar100_ours_crd_mgd.py --full-run --methods Ours --output-dir /app/output/cifar100_ours_full_v2 --num-workers 4` |
+| 코드 실행 명령어 | `python methods/run_cifar100_ours_crd_mgd.py --full-run --methods Ours CRD --output-dir /app/output/cifar100_ours_crd_full_v2 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
 
-Expected training time is approximately `4h 08m 37s`.
+Expected combined training time is approximately `7h 23m 41s`, leaving about
+`2h 36m 19s` under the 600-minute Pod limit. Ours runs first, followed by CRD,
+and both methods write independent result directories under `/app/output`.
 
-### CIFAR-100 CRD + MGD full training
+### CIFAR-100 MGD full training
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti CRD MGD full training` |
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti MGD full training` |
 | 사용자 ID | `kau-aimslab` (연구실 계정) **or** `bapedragon` (개인 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/run_cifar100_ours_crd_mgd.py --full-run --methods CRD MGD --output-dir /app/output/cifar100_crd_mgd_full_v2 --num-workers 4` |
+| 코드 실행 명령어 | `python methods/run_cifar100_ours_crd_mgd.py --full-run --methods MGD --output-dir /app/output/cifar100_mgd_full_v2 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
 
-Expected combined training time is approximately `6h 18m 30s`. Run these two
-requests in parallel on the personal and lab accounts when both allocations
-are available.
+Expected training time is approximately `3h 03m 26s`. Submit this after an
+account becomes available. The current packing prioritizes Ours and CRD on the
+idle account while the other account runs the previously submitted combined
+job.
 
 ## 2. Full 300-epoch run
 

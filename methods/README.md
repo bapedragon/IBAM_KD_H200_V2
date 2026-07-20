@@ -59,16 +59,18 @@ python methods/run_cifar100_ours_crd_mgd.py --timing-run \
 | MGD | `3h 03m 26s` |
 | Total | `10h 27m 07s` |
 
-The total exceeds the 600-minute limit. Run `Ours` alone and `CRD MGD`
-together in two parallel Issues. The runner blocks an unsafe all-three full
-request. Every method still writes an independent directory.
+The total exceeds the 600-minute limit. For the current two-account schedule,
+run `Ours CRD` together first and submit `MGD` separately after an account is
+available. `Ours CRD` is estimated at `7h 23m 41s`, leaving `2h 36m 19s`
+under the limit. The runner blocks an unsafe all-three full request. Every
+method still writes an independent directory.
 
 ```bash
-python methods/run_cifar100_ours_crd_mgd.py --full-run --methods Ours \
-  --output-dir /app/output/cifar100_ours_full_v2 --num-workers 4
+python methods/run_cifar100_ours_crd_mgd.py --full-run --methods Ours CRD \
+  --output-dir /app/output/cifar100_ours_crd_full_v2 --num-workers 4
 
-python methods/run_cifar100_ours_crd_mgd.py --full-run --methods CRD MGD \
-  --output-dir /app/output/cifar100_crd_mgd_full_v2 --num-workers 4
+python methods/run_cifar100_ours_crd_mgd.py --full-run --methods MGD \
+  --output-dir /app/output/cifar100_mgd_full_v2 --num-workers 4
 ```
 
 Method settings and official-code provenance are recorded under each method
