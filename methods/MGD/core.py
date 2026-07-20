@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train ViT students with standard logit knowledge distillation."""
+"""Train DeiT-Ti with official-code-based Masked Generative Distillation."""
 
 from __future__ import annotations
 
@@ -22,21 +22,26 @@ from typing import Any
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import ConcatDataset, DataLoader, Dataset, Subset
-from torchvision import transforms
-from torchvision.datasets import CIFAR100, Flowers102
-from torchvision.transforms import InterpolationMode
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from teachers.train_teacher_cifar100 import ensure_cifar100
+from methods.KD.core import (
+    atomic_torch_save,
+    build_loaders as build_base_loaders,
+    student_view_to_teacher_view,
+)
+from methods.MGD.official_mgd import MGDLoss
 from teachers.verify_checkpoints import DEFAULT_CHECKPOINT_ROOT, load_teacher
 
 
 TIMM_VERSION = "1.0.27"
+OFFICIAL_REPOSITORY = "https://github.com/yzd-v/MGD"
+OFFICIAL_COMMIT = "2c9da0b28625eb948db57afc02c824452c3910fe"
+TEACHER_CHANNELS = 64
+STUDENT_CHANNELS = 192
 STUDENT_MODELS = {
     "deit_ti": "deit_tiny_patch16_224",
     "convit": "convit_tiny",
@@ -44,17 +49,6 @@ STUDENT_MODELS = {
     "pvtv2": "pvt_v2_b0",
 }
 PENDING_OFFICIAL_INTEGRATION = ("cvt", "t2t_7", "t2t_14")
-TEACHER_IMAGE_SIZE = 32
-STUDENT_IMAGE_SIZE = 224
-CIFAR100_MEAN = (0.5071, 0.4867, 0.4408)
-CIFAR100_STD = (0.2675, 0.2565, 0.2761)
-IMAGENET_MEAN = (0.485, 0.456, 0.406)
-IMAGENET_STD = (0.229, 0.224, 0.225)
-STUDENT_NORMALIZATION = {
-    "cifar100": (CIFAR100_MEAN, CIFAR100_STD),
-    "flowers102": (IMAGENET_MEAN, IMAGENET_STD),
-    "chaoyang": (IMAGENET_MEAN, IMAGENET_STD),
-}
 NUM_CLASSES = {"cifar100": 100, "flowers102": 102, "chaoyang": 4}
 VANILLA_TOP1 = {
     "cifar100": {
@@ -116,7 +110,7 @@ def install_signal_handlers() -> None:
         log(f"[FATAL][SIGNAL] Received {signal_name}; external termination requested.")
         if frame is not None:
             traceback.print_stack(frame)
-        log("[FATAL] KD training was interrupted before normal completion.")
+        log("[FATAL] MGD training was interrupted before normal completion.")
         raise SystemExit(128 + signum)
 
     for signum in (signal.SIGINT, signal.SIGTERM):
@@ -134,7 +128,7 @@ def seed_everything(seed: int) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", choices=tuple(NUM_CLASSES), default="cifar100")
-    parser.add_argument("--student", choices=tuple(STUDENT_MODELS), default="deit_ti")
+    parser.add_argument("--student", choices=("deit_ti",), default="deit_ti")
     parser.add_argument(
         "--protocol-name",
         type=str,
@@ -161,13 +155,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight-decay", type=float, default=0.05)
     parser.add_argument("--warmup-epochs", type=int, default=20)
-    parser.add_argument("--temperature", type=float, default=4.0)
-    parser.add_argument(
-        "--kd-weight",
-        type=float,
-        default=0.9,
-        help="Weight alpha in (1-alpha)*CE + alpha*T^2*KL.",
-    )
+    parser.add_argument("--mgd-alpha", type=float, default=0.00007)
+    parser.add_argument("--mgd-lambda", type=float, default=0.15)
+    parser.add_argument("--student-block", type=int, default=11)
+    parser.add_argument("--feature-grid", type=int, default=14)
     parser.add_argument("--label-smoothing", type=float, default=0.1)
     parser.add_argument(
         "--amp",
@@ -192,7 +183,7 @@ def finalize_args(args: argparse.Namespace) -> None:
             if args.timing_run
             else ("smoke" if args.smoke else f"{args.student_epochs}ep")
         )
-        args.run_name = f"kd_{args.dataset}_{args.student}_{suffix}"
+        args.run_name = f"mgd_{args.dataset}_{args.student}_{suffix}"
 
     positive_fields = (
         "student_epochs",
@@ -201,7 +192,7 @@ def finalize_args(args: argparse.Namespace) -> None:
         "smoke_train_samples",
         "smoke_test_samples",
         "lr",
-        "temperature",
+        "feature_grid",
     )
     for field in positive_fields:
         if getattr(args, field) <= 0:
@@ -210,158 +201,22 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError("--num-workers must be non-negative")
     if args.warmup_epochs < 0:
         raise ValueError("--warmup-epochs must be non-negative")
-    if not 0.0 <= args.kd_weight <= 1.0:
-        raise ValueError("--kd-weight must be in [0, 1]")
+    if args.mgd_alpha < 0:
+        raise ValueError("--mgd-alpha must be non-negative")
+    if not 0.0 <= args.mgd_lambda <= 1.0:
+        raise ValueError("--mgd-lambda must be in [0, 1]")
+    if not 0 <= args.student_block < 12:
+        raise ValueError("--student-block must be in [0, 11]")
     if not 0.0 <= args.label_smoothing < 1.0:
         raise ValueError("--label-smoothing must be in [0, 1)")
     if args.image_size != 224:
-        raise ValueError("The shared paper protocol requires --image-size 224")
+        raise ValueError("The fixed dataset protocols require --image-size 224")
+    if args.feature_grid != 14:
+        raise ValueError("DeiT-Ti patch features require --feature-grid 14")
 
 
 def build_loaders(args: argparse.Namespace, device: torch.device) -> tuple[Any, Any]:
-    student_mean, student_std = STUDENT_NORMALIZATION[args.dataset]
-    train_transform = transforms.Compose(
-        [
-            transforms.RandomResizedCrop(
-                STUDENT_IMAGE_SIZE,
-                scale=(0.8, 1.0),
-                interpolation=InterpolationMode.BICUBIC,
-            ),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(student_mean, student_std),
-        ]
-    )
-    resize_size = int(round(STUDENT_IMAGE_SIZE / 0.875))
-    test_transform = transforms.Compose(
-        [
-            transforms.Resize(resize_size, interpolation=InterpolationMode.BICUBIC),
-            transforms.CenterCrop(STUDENT_IMAGE_SIZE),
-            transforms.ToTensor(),
-            transforms.Normalize(student_mean, student_std),
-        ]
-    )
-
-    if args.dataset == "cifar100":
-        log(f"[DATA] CIFAR-100 root={args.data_dir.resolve()}")
-        log("[DATA] Preparing CIFAR-100 with verified mirror fallback")
-        ensure_cifar100(args.data_dir)
-        train_dataset: Dataset[Any] = CIFAR100(
-            root=args.data_dir,
-            train=True,
-            transform=train_transform,
-            download=False,
-        )
-        test_dataset: Dataset[Any] = CIFAR100(
-            root=args.data_dir,
-            train=False,
-            transform=test_transform,
-            download=False,
-        )
-        split_description = "train=official_train eval=official_test"
-    elif args.dataset == "flowers102":
-        from teachers.train_teacher_flowers import ensure_flowers, ensure_scipy
-
-        log(f"[DATA] Oxford Flowers root={args.data_dir.resolve()}")
-        log("[DATA] Preparing Oxford Flowers from official files with MD5 checks")
-        ensure_scipy()
-        ensure_flowers(args.data_dir)
-        train_parts = [
-            Flowers102(
-                root=args.data_dir,
-                split=split,
-                transform=train_transform,
-                download=False,
-            )
-            for split in ("train", "val")
-        ]
-        train_dataset = ConcatDataset(train_parts)
-        test_dataset = Flowers102(
-            root=args.data_dir,
-            split="test",
-            transform=test_transform,
-            download=False,
-        )
-        split_description = "train=official_train+val eval=official_test"
-    else:
-        from teachers.train_teacher_chaoyang import (
-            ChaoyangDataset,
-            resolve_dataset_root,
-        )
-
-        dataset_root = resolve_dataset_root(args.data_dir)
-        log(f"[DATA] requested_root={args.data_dir.expanduser().resolve()}")
-        log(f"[DATA] resolved_root={dataset_root}")
-        log("[DATA] Validating official Chaoyang train/test splits and labels")
-        train_dataset = ChaoyangDataset(dataset_root, "train", train_transform)
-        test_dataset = ChaoyangDataset(dataset_root, "test", test_transform)
-        split_description = "train=official_train eval=official_test"
-    if args.smoke:
-        generator = torch.Generator().manual_seed(args.seed)
-        train_indexes = torch.randperm(len(train_dataset), generator=generator)[
-            : min(args.smoke_train_samples, len(train_dataset))
-        ]
-        test_generator = torch.Generator().manual_seed(args.seed + 1)
-        test_indexes = torch.randperm(len(test_dataset), generator=test_generator)[
-            : min(args.smoke_test_samples, len(test_dataset))
-        ]
-        train_dataset = Subset(train_dataset, train_indexes.tolist())
-        test_dataset = Subset(test_dataset, test_indexes.tolist())
-
-    def seed_worker(worker_id: int) -> None:
-        del worker_id
-        worker_seed = torch.initial_seed() % (2**32)
-        random.seed(worker_seed)
-
-    loader_generator = torch.Generator().manual_seed(args.seed)
-    common = {
-        "batch_size": args.batch_size,
-        "num_workers": args.num_workers,
-        "pin_memory": device.type == "cuda",
-        "worker_init_fn": seed_worker,
-        "persistent_workers": args.num_workers > 0,
-    }
-    train_loader = DataLoader(
-        train_dataset,
-        shuffle=True,
-        drop_last=False,
-        generator=loader_generator,
-        **common,
-    )
-    test_loader = DataLoader(
-        test_dataset,
-        shuffle=False,
-        drop_last=False,
-        **common,
-    )
-    log(f"[DATA] train_samples={len(train_dataset)} test_samples={len(test_dataset)}")
-    log(
-        f"[DATA] student_image={STUDENT_IMAGE_SIZE} teacher_image={TEACHER_IMAGE_SIZE} "
-        f"batch_size={args.batch_size} num_workers={args.num_workers} smoke={args.smoke} "
-        f"{split_description}"
-    )
-    return train_loader, test_loader
-
-
-def student_view_to_teacher_view(
-    images: torch.Tensor,
-    dataset: str = "cifar100",
-) -> torch.Tensor:
-    """Preserve crop/flip geometry while adapting size and normalization."""
-
-    normalization_mean, normalization_std = STUDENT_NORMALIZATION[dataset]
-    student_mean = images.new_tensor(normalization_mean).view(1, 3, 1, 1)
-    student_std = images.new_tensor(normalization_std).view(1, 3, 1, 1)
-    teacher_mean = images.new_tensor(IMAGENET_MEAN).view(1, 3, 1, 1)
-    teacher_std = images.new_tensor(IMAGENET_STD).view(1, 3, 1, 1)
-    pixels = images * student_std + student_mean
-    pixels = F.interpolate(
-        pixels,
-        size=(TEACHER_IMAGE_SIZE, TEACHER_IMAGE_SIZE),
-        mode="bilinear",
-        align_corners=False,
-    )
-    return (pixels - teacher_mean) / teacher_std
+    return build_base_loaders(args, device)
 
 
 def create_student(timm: Any, student_key: str, num_classes: int) -> nn.Module:
@@ -400,21 +255,39 @@ def top1_correct(logits: torch.Tensor, targets: torch.Tensor) -> int:
     return int((logits.argmax(dim=1) == targets).sum().item())
 
 
-def kd_loss(
-    student_logits: torch.Tensor,
-    teacher_logits: torch.Tensor,
-    temperature: float,
+def forward_teacher_feature(
+    teacher: nn.Module,
+    images: torch.Tensor,
+    feature_grid: int,
 ) -> torch.Tensor:
-    return F.kl_div(
-        F.log_softmax(student_logits / temperature, dim=1),
-        F.softmax(teacher_logits / temperature, dim=1),
-        reduction="batchmean",
-    ) * (temperature**2)
+    feature = teacher.forward_features(images)[-1]
+    return F.interpolate(
+        feature,
+        size=(feature_grid, feature_grid),
+        mode="bilinear",
+        align_corners=False,
+    )
+
+
+def forward_student_feature(
+    student: nn.Module,
+    images: torch.Tensor,
+    student_block: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    final_tokens, intermediate_features = student.forward_intermediates(
+        images,
+        indices=[student_block],
+        norm=False,
+        output_fmt="NCHW",
+    )
+    logits = student.forward_head(final_tokens)
+    return intermediate_features[0], logits
 
 
 def train_one_epoch(
     student: nn.Module,
     teacher: nn.Module,
+    mgd: MGDLoss,
     loader: Any,
     optimizer: torch.optim.Optimizer,
     scaler: Any,
@@ -424,9 +297,10 @@ def train_one_epoch(
 ) -> tuple[float, float, float, float]:
     student.train()
     teacher.eval()
+    mgd.train()
     total_loss = 0.0
     total_ce = 0.0
-    total_kd = 0.0
+    total_mgd = 0.0
     correct = 0
     total = 0
 
@@ -436,20 +310,27 @@ def train_one_epoch(
         optimizer.zero_grad(set_to_none=True)
 
         with torch.no_grad(), autocast_context(amp_enabled):
-            teacher_logits = teacher(
-                student_view_to_teacher_view(images, args.dataset)
+            teacher_feature = forward_teacher_feature(
+                teacher,
+                student_view_to_teacher_view(images, args.dataset),
+                args.feature_grid,
             )
         with autocast_context(amp_enabled):
-            student_logits = student(images)
+            student_feature, student_logits = forward_student_feature(
+                student,
+                images,
+                args.student_block,
+            )
             ce = F.cross_entropy(
                 student_logits,
                 targets,
                 label_smoothing=args.label_smoothing,
             )
-            distillation = kd_loss(
-                student_logits.float(), teacher_logits.float(), args.temperature
-            )
-            loss = (1.0 - args.kd_weight) * ce + args.kd_weight * distillation
+        distillation = mgd(
+            student_feature.float(),
+            teacher_feature.float(),
+        )
+        loss = ce.float() + distillation
 
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -459,14 +340,14 @@ def train_one_epoch(
         total += batch_size
         total_loss += float(loss.detach()) * batch_size
         total_ce += float(ce.detach()) * batch_size
-        total_kd += float(distillation.detach()) * batch_size
+        total_mgd += float(distillation.detach()) * batch_size
         correct += top1_correct(student_logits.detach(), targets)
 
     denominator = max(1, total)
     return (
         total_loss / denominator,
         total_ce / denominator,
-        total_kd / denominator,
+        total_mgd / denominator,
         100.0 * correct / denominator,
     )
 
@@ -527,14 +408,9 @@ def public_args(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def atomic_torch_save(payload: dict[str, Any], path: Path) -> None:
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    torch.save(payload, temporary)
-    temporary.replace(path)
-
-
 def checkpoint_payload(
     student: nn.Module,
+    mgd: MGDLoss,
     epoch: int,
     accuracy: float,
     best_accuracy: float,
@@ -543,15 +419,18 @@ def checkpoint_payload(
 ) -> dict[str, Any]:
     return {
         "model": student.state_dict(),
+        "mgd_adapter": mgd.state_dict(),
         "epoch": epoch,
         "accuracy": accuracy,
         "best_accuracy": best_accuracy,
-        "method": "KD",
+        "method": "MGD",
         "student": args.student,
         "timm_model": STUDENT_MODELS[args.student],
         "dataset": args.dataset,
         "num_classes": NUM_CLASSES[args.dataset],
         "teacher": teacher_spec,
+        "official_repository": OFFICIAL_REPOSITORY,
+        "official_commit": OFFICIAL_COMMIT,
         "args": public_args(args),
     }
 
@@ -572,11 +451,13 @@ def write_summary(
     estimated_planned = average_epoch * args.planned_epochs
     summary = {
         "status": "complete" if latest_epoch == args.student_epochs else "running",
-        "method": "KD",
+        "method": "MGD",
         "dataset": args.dataset,
         "student": args.student,
         "timm_model": STUDENT_MODELS[args.student],
         "teacher": teacher_spec,
+        "official_repository": OFFICIAL_REPOSITORY,
+        "official_commit": OFFICIAL_COMMIT,
         "student_epochs": args.student_epochs,
         "latest_epoch": latest_epoch,
         "best_top1": best_accuracy,
@@ -615,7 +496,7 @@ def main() -> None:
     summary_path = run_dir / "summary.json"
 
     log("=" * 72)
-    log("STANDARD LOGIT KD / RESNET56 -> VIT STUDENT")
+    log("OFFICIAL-CODE-BASED MGD / RESNET56 -> DEIT-TI")
     log("=" * 72)
     log(
         f"[ENV] python={platform.python_version()} torch={torch.__version__} "
@@ -648,13 +529,18 @@ def main() -> None:
         "teacher=bilinear_downsample_to_32x32(ImageNet norm)"
     )
     log(
-        f"[KD] loss=(1-{args.kd_weight})*CE+{args.kd_weight}*T^2*KL "
-        f"temperature={args.temperature} label_smoothing={args.label_smoothing}"
+        f"[MGD] loss=CE+alpha*sum_MSE/N alpha={args.mgd_alpha} "
+        f"mask_probability={args.mgd_lambda} mask_axis=channel no_logit_KL"
     )
-    log("[NOTE] KD temperature and loss weight are implementation choices, not specified in V2.")
     log(
-        "[NOTE] CvT, T2T-7, and T2T-14 require their official model implementations; "
-        "they are not exposed by timm==1.0.27."
+        f"[OFFICIAL] repository={OFFICIAL_REPOSITORY} "
+        f"commit={OFFICIAL_COMMIT}"
+    )
+    log(
+        "[ADAPTER] teacher=post-activation stage3 bilinear_to_14x14 "
+        f"student_block={args.student_block} token_grid=14x14 "
+        f"align={STUDENT_CHANNELS}->{TEACHER_CHANNELS} "
+        "generator=Conv3x3-ReLU-Conv3x3"
     )
 
     train_loader, test_loader = build_loaders(args, device)
@@ -664,17 +550,53 @@ def main() -> None:
         checkpoint_root=args.teacher_root,
     )
     student = create_student(timm, args.student, NUM_CLASSES[args.dataset]).to(device)
+    mgd = MGDLoss(
+        STUDENT_CHANNELS,
+        TEACHER_CHANNELS,
+        alpha_mgd=args.mgd_alpha,
+        lambda_mgd=args.mgd_lambda,
+    ).to(device)
+
+    with torch.no_grad():
+        probe = torch.zeros(2, 3, args.image_size, args.image_size, device=device)
+        teacher_probe = forward_teacher_feature(
+            teacher,
+            student_view_to_teacher_view(probe, args.dataset),
+            args.feature_grid,
+        )
+        student_probe, logits_probe = forward_student_feature(
+            student,
+            probe,
+            args.student_block,
+        )
+        aligned_probe = mgd.align_feature(student_probe)
+    expected_teacher_shape = (2, TEACHER_CHANNELS, 14, 14)
+    expected_student_shape = (2, STUDENT_CHANNELS, 14, 14)
+    if tuple(teacher_probe.shape) != expected_teacher_shape:
+        raise RuntimeError(f"Unexpected teacher feature: {tuple(teacher_probe.shape)}")
+    if tuple(student_probe.shape) != expected_student_shape:
+        raise RuntimeError(f"Unexpected student feature: {tuple(student_probe.shape)}")
+    if tuple(aligned_probe.shape) != expected_teacher_shape:
+        raise RuntimeError(f"Unexpected aligned feature: {tuple(aligned_probe.shape)}")
+    if tuple(logits_probe.shape) != (2, NUM_CLASSES[args.dataset]):
+        raise RuntimeError(f"Unexpected student logits: {tuple(logits_probe.shape)}")
     log(
         f"[TEACHER] selected={teacher_spec['selected_kind']} epoch={teacher_payload['epoch']} "
         f"top1={float(teacher_payload['accuracy']):.2f}% sha256={teacher_spec['sha256']}"
     )
     log(
         f"[MODEL] teacher_params={count_parameters(teacher):,} "
-        f"student={STUDENT_MODELS[args.student]} student_params={count_parameters(student):,}"
+        f"student={STUDENT_MODELS[args.student]} "
+        f"student_params={count_parameters(student):,} "
+        f"mgd_trainable_params={count_parameters(mgd):,}"
+    )
+    log(
+        f"[FEATURE_CHECK] teacher={expected_teacher_shape} "
+        f"student={expected_student_shape} aligned={expected_teacher_shape}"
     )
 
     optimizer = torch.optim.AdamW(
-        student.parameters(),
+        list(student.parameters()) + list(mgd.parameters()),
         lr=args.lr,
         weight_decay=args.weight_decay,
     )
@@ -702,6 +624,7 @@ def main() -> None:
         loss, ce, distillation, train_accuracy = train_one_epoch(
             student,
             teacher,
+            mgd,
             train_loader,
             optimizer,
             scaler,
@@ -717,6 +640,7 @@ def main() -> None:
 
         payload = checkpoint_payload(
             student,
+            mgd,
             epoch,
             latest_accuracy,
             best_accuracy,
@@ -742,8 +666,8 @@ def main() -> None:
         average_epoch = sum(epoch_times) / len(epoch_times)
         suffix = " saved_best" if saved_best else ""
         log(
-            f"[KD][{epoch:03d}/{args.student_epochs:03d}] loss={loss:.4f} "
-            f"ce={ce:.4f} kd={distillation:.4f} train_acc={train_accuracy:.2f}% "
+            f"[MGD][{epoch:03d}/{args.student_epochs:03d}] loss={loss:.4f} "
+            f"ce={ce:.4f} mgd={distillation:.4f} train_acc={train_accuracy:.2f}% "
             f"val_acc={latest_accuracy:.2f}% best={best_accuracy:.2f}% "
             f"lr={epoch_lr:.6g} time={epoch_seconds:.1f}s "
             f"avg_epoch={average_epoch:.1f}s "
@@ -757,7 +681,7 @@ def main() -> None:
     vanilla = VANILLA_TOP1[args.dataset][args.student]
     log("=" * 72)
     log(
-        f"[FINAL_RESULT] kd_best_top1={best_accuracy:.2f}% "
+        f"[FINAL_RESULT] mgd_best_top1={best_accuracy:.2f}% "
         f"vanilla_top1={vanilla:.2f}% gain_over_vanilla={best_accuracy - vanilla:+.2f}pp"
     )
     log(
@@ -769,7 +693,7 @@ def main() -> None:
     log(f"[FINAL_RESULT] best_checkpoint={best_checkpoint.resolve()}")
     log(f"[FINAL_RESULT] latest_checkpoint={latest_checkpoint.resolve()}")
     log(f"[FINAL_RESULT] summary={summary_path.resolve()}")
-    log("[DONE] KD training completed successfully; resources may be released.")
+    log("[DONE] MGD training completed successfully; resources may be released.")
 
 
 def cli_main() -> None:
@@ -779,7 +703,7 @@ def cli_main() -> None:
         log("=" * 72)
         log(f"[FATAL] {type(error).__name__}: {error}")
         traceback.print_exc()
-        log("[FATAL] KD training did not complete.")
+        log("[FATAL] MGD training did not complete.")
         raise
 
 

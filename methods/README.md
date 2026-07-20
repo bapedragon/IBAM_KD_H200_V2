@@ -1,76 +1,92 @@
 # Distillation methods
 
-This directory starts the V2 student stage. Every method must use the same
-fixed CIFAR-100 teacher checkpoint and the same base DeiT-Ti protocol. A method
-may change only its explicitly documented distillation operator and associated
-coefficient.
+This directory contains the V2 ResNet56-to-DeiT-Ti student pipelines for the
+five generic KD baselines in the draft table: KD, CRD, ReviewKD, MGD, and OFA.
+Every method uses the same fixed teacher checkpoint and the same base student
+protocol for a given dataset. Only the documented transfer operator and its
+method-specific coefficients may differ.
 
-## Fixed CIFAR-100 student protocol
+## Locked common student protocols
 
-| Item | Value |
-|---|---:|
-| Student | DeiT-Ti (`deit_tiny_patch16_224`) |
-| Initialization | scratch; no external pretrained weights |
-| Student input | **224 x 224** |
-| Teacher | fixed ResNet56 checkpoint from `teachers/checkpoints/manifest.json` |
-| Teacher input | **32 x 32** |
-| Epochs | 300 |
-| Batch size | 128 |
-| Optimizer | AdamW |
-| Initial LR | `5e-4` |
-| Weight decay | `0.05` |
-| LR schedule | 20-epoch warm-up, then cosine decay |
-| Label smoothing | `0.1` |
-| AMP | enabled on CUDA |
-| Seed | 42 |
-| Evaluation | CIFAR-100 test Top-1 |
+| Dataset | Epochs | Batch | Warm-up | Student input | Teacher input |
+|---|---:|---:|---:|---:|---:|
+| CIFAR-100 | 300 | 128 | 20 | 224 x 224 | 32 x 32 |
+| Flowers-102 | 200 | 64 | 5 | 224 x 224 | 32 x 32 |
+| Chaoyang | 100 | 64 | 5 | 224 x 224 | 32 x 32 |
 
-The student transform is random resized crop to 224 (`scale=0.8-1.0`, bicubic),
-random horizontal flip, tensor conversion, and CIFAR-100 normalization. Test
-images use resize to 256, center crop to 224, and the same normalization.
+All datasets use scratch DeiT-Ti (`deit_tiny_patch16_224`), AdamW with initial
+learning rate `5e-4` and weight decay `0.05`, cosine decay after warm-up, label
+smoothing `0.1`, CUDA AMP, seed `42`, and test Top-1 evaluation. No external
+student pretrained weights are used.
+
+Training uses random resized crop to 224 (`scale=0.8-1.0`, bicubic) and random
+horizontal flip. Evaluation uses resize to 256 and center crop to 224.
+CIFAR-100 uses CIFAR normalization for the student; Flowers and Chaoyang use
+ImageNet normalization.
 
 The teacher does **not** receive an independently augmented image. The exact
-student tensor is converted back to image space, bilinearly resized from 224
-to 32, and normalized with the ImageNet statistics used to train the fixed
+student view is converted back to image space, bilinearly resized from 224 to
+32, and normalized with the ImageNet statistics used to train the fixed
 teacher. Crop and flip geometry therefore remains shared across both branches.
 
 ## Method-specific operators
 
-| Method | Transfer | V2 adaptation |
+| Method | Transfer | V2 CNN-to-ViT connection |
 |---|---|---|
-| KD | class logits | No spatial adapter required |
+| KD | class logits | no spatial adapter |
 | CRD | pooled representation | ResNet stage-3 GAP `64d`; DeiT CLS pre-logits `192d` |
 | ReviewKD | multi-level features | ResNet 32/16/8 grids bilinearly resized to DeiT 14x14 grid |
+| MGD | masked reconstruction | ResNet stage-3 8x8 bilinearly resized to 14x14; DeiT block-11 tokens; `192 -> 64` alignment |
+| OFA | projected class logits | DeiT blocks 1/3/9/11 and official-behavior transformer projectors |
 
-Method-specific settings and official-code provenance are recorded under each
-method directory. The generic CNN-to-ViT adapters are explicit V2
-implementation choices; they are not claimed to be the original CNN-to-CNN
-configurations from the corresponding papers.
+Method settings and official-code provenance are recorded under each method
+directory. The CNN-to-ViT adapters are explicit V2 implementation choices;
+they are not presented as the original CNN-to-CNN configurations.
 
-## Sequential execution
+## Five-method timing and full execution
 
-The runner executes `KD -> CRD -> ReviewKD` as separate Python subprocesses:
-
-```bash
-python methods/run_cifar100_three_methods.py --timing-run --num-workers 4
-```
-
-Every subprocess has an independent run name and directory. A failure stops
-the sequence and records `three_method_status.json`; outputs from already
-completed methods remain intact. After all three finish,
-`three_method_summary.json` lists their individual result directories.
-
-The ordered subset can be selected when the combined estimate is too close to
-the Pod runtime limit:
+The generic runner executes each selected method as a separate Python
+subprocess in canonical order:
 
 ```bash
-python methods/run_cifar100_three_methods.py --full-run --methods KD CRD \
-  --output-dir /app/output/cifar100_kd_crd_full_v2 --num-workers 4
+python methods/run_five_methods.py --dataset flowers102 --timing-run \
+  --output-dir /app/output/flowers102_five_methods_timing_v2 --num-workers 4
 
-python methods/run_cifar100_three_methods.py --full-run --methods ReviewKD \
-  --output-dir /app/output/cifar100_reviewkd_full_v2 --num-workers 4
+python methods/run_five_methods.py --dataset chaoyang --timing-run \
+  --output-dir /app/output/chaoyang_five_methods_timing_v2 --num-workers 4
 ```
 
-The legacy aggregate filenames remain `three_method_status.json` and
-`three_method_summary.json` for compatibility even when a subset is selected;
-the JSON payload records the actual `selected_methods`.
+To collect all ten timings in one Issue and one combined summary:
+
+```bash
+python methods/run_flowers_chaoyang_timing.py \
+  --num-workers 4
+```
+
+This upper-level runner writes `two_dataset_timing_status.json` and
+`two_dataset_timing_summary.json`, while preserving both per-dataset summaries
+for the lifetime of the timing Pod. Every required estimate is also printed.
+
+Every method has its own run directory and writes `student_best.pt`,
+`student_latest.pt`, and `summary.json`. The runner writes
+`five_method_status.json` while running and `five_method_summary.json` after
+success. A later failure stops the sequence but does not delete artifacts from
+already completed methods.
+
+The final timing log reports each method's average epoch time and full-run
+estimate plus the combined estimate. Use an ordered subset when the measured
+total would leave insufficient margin under the 600-minute Pod limit:
+
+```bash
+python methods/run_five_methods.py --dataset flowers102 --full-run \
+  --methods KD CRD ReviewKD --output-dir /app/output/flowers102_group1_v2 \
+  --num-workers 4
+
+python methods/run_five_methods.py --dataset flowers102 --full-run \
+  --methods MGD OFA --output-dir /app/output/flowers102_group2_v2 \
+  --num-workers 4
+```
+
+The exact grouping must be chosen from the returned H200 timing log. A safe
+target is at most about 540 minutes per Issue, leaving roughly one hour for
+downloads, setup, evaluation, checkpoint writes, and runtime variance.

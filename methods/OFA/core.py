@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train ViT students with standard logit knowledge distillation."""
+"""Train DeiT-Ti with official-behavior-based One-for-All KD."""
 
 from __future__ import annotations
 
@@ -22,21 +22,26 @@ from typing import Any
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import ConcatDataset, DataLoader, Dataset, Subset
-from torchvision import transforms
-from torchvision.datasets import CIFAR100, Flowers102
-from torchvision.transforms import InterpolationMode
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from teachers.train_teacher_cifar100 import ensure_cifar100
+from methods.KD.core import (
+    atomic_torch_save,
+    build_loaders as build_base_loaders,
+    student_view_to_teacher_view,
+)
+from methods.OFA.official_ofa import OFAProjector, ofa_loss
 from teachers.verify_checkpoints import DEFAULT_CHECKPOINT_ROOT, load_teacher
 
 
 TIMM_VERSION = "1.0.27"
+OFFICIAL_REPOSITORY = "https://github.com/Hao840/OFAKD"
+OFFICIAL_COMMIT = "f7bb896cac9879040800bde08a8cc2057a904c52"
+STUDENT_EMBED_DIM = 192
+STAGE_TO_BLOCK = {1: 1, 2: 3, 3: 9, 4: 11}
 STUDENT_MODELS = {
     "deit_ti": "deit_tiny_patch16_224",
     "convit": "convit_tiny",
@@ -44,17 +49,6 @@ STUDENT_MODELS = {
     "pvtv2": "pvt_v2_b0",
 }
 PENDING_OFFICIAL_INTEGRATION = ("cvt", "t2t_7", "t2t_14")
-TEACHER_IMAGE_SIZE = 32
-STUDENT_IMAGE_SIZE = 224
-CIFAR100_MEAN = (0.5071, 0.4867, 0.4408)
-CIFAR100_STD = (0.2675, 0.2565, 0.2761)
-IMAGENET_MEAN = (0.485, 0.456, 0.406)
-IMAGENET_STD = (0.229, 0.224, 0.225)
-STUDENT_NORMALIZATION = {
-    "cifar100": (CIFAR100_MEAN, CIFAR100_STD),
-    "flowers102": (IMAGENET_MEAN, IMAGENET_STD),
-    "chaoyang": (IMAGENET_MEAN, IMAGENET_STD),
-}
 NUM_CLASSES = {"cifar100": 100, "flowers102": 102, "chaoyang": 4}
 VANILLA_TOP1 = {
     "cifar100": {
@@ -116,7 +110,7 @@ def install_signal_handlers() -> None:
         log(f"[FATAL][SIGNAL] Received {signal_name}; external termination requested.")
         if frame is not None:
             traceback.print_stack(frame)
-        log("[FATAL] KD training was interrupted before normal completion.")
+        log("[FATAL] OFA training was interrupted before normal completion.")
         raise SystemExit(128 + signum)
 
     for signum in (signal.SIGINT, signal.SIGTERM):
@@ -134,7 +128,7 @@ def seed_everything(seed: int) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", choices=tuple(NUM_CLASSES), default="cifar100")
-    parser.add_argument("--student", choices=tuple(STUDENT_MODELS), default="deit_ti")
+    parser.add_argument("--student", choices=("deit_ti",), default="deit_ti")
     parser.add_argument(
         "--protocol-name",
         type=str,
@@ -161,13 +155,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight-decay", type=float, default=0.05)
     parser.add_argument("--warmup-epochs", type=int, default=20)
-    parser.add_argument("--temperature", type=float, default=4.0)
-    parser.add_argument(
-        "--kd-weight",
-        type=float,
-        default=0.9,
-        help="Weight alpha in (1-alpha)*CE + alpha*T^2*KL.",
-    )
+    parser.add_argument("--ofa-eps", type=float, default=1.0)
+    parser.add_argument("--ofa-stages", type=int, nargs="+", default=[1, 2, 3, 4])
+    parser.add_argument("--ofa-loss-weight", type=float, default=1.0)
+    parser.add_argument("--kd-loss-weight", type=float, default=1.0)
+    parser.add_argument("--gt-loss-weight", type=float, default=1.0)
+    parser.add_argument("--ofa-temperature", type=float, default=1.0)
+    parser.add_argument("--feature-grid", type=int, default=14)
     parser.add_argument("--label-smoothing", type=float, default=0.1)
     parser.add_argument(
         "--amp",
@@ -192,7 +186,7 @@ def finalize_args(args: argparse.Namespace) -> None:
             if args.timing_run
             else ("smoke" if args.smoke else f"{args.student_epochs}ep")
         )
-        args.run_name = f"kd_{args.dataset}_{args.student}_{suffix}"
+        args.run_name = f"ofa_{args.dataset}_{args.student}_{suffix}"
 
     positive_fields = (
         "student_epochs",
@@ -201,7 +195,7 @@ def finalize_args(args: argparse.Namespace) -> None:
         "smoke_train_samples",
         "smoke_test_samples",
         "lr",
-        "temperature",
+        "feature_grid",
     )
     for field in positive_fields:
         if getattr(args, field) <= 0:
@@ -210,158 +204,30 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError("--num-workers must be non-negative")
     if args.warmup_epochs < 0:
         raise ValueError("--warmup-epochs must be non-negative")
-    if not 0.0 <= args.kd_weight <= 1.0:
-        raise ValueError("--kd-weight must be in [0, 1]")
+    if args.ofa_eps <= 0:
+        raise ValueError("--ofa-eps must be positive")
+    if args.ofa_temperature <= 0:
+        raise ValueError("--ofa-temperature must be positive")
+    if min(args.gt_loss_weight, args.kd_loss_weight, args.ofa_loss_weight) < 0:
+        raise ValueError("OFA loss weights must be non-negative")
+    args.ofa_stages = tuple(args.ofa_stages)
+    if (
+        not args.ofa_stages
+        or tuple(sorted(args.ofa_stages)) != args.ofa_stages
+        or len(set(args.ofa_stages)) != len(args.ofa_stages)
+        or any(stage not in STAGE_TO_BLOCK for stage in args.ofa_stages)
+    ):
+        raise ValueError("--ofa-stages must be a sorted unique subset of 1 2 3 4")
     if not 0.0 <= args.label_smoothing < 1.0:
         raise ValueError("--label-smoothing must be in [0, 1)")
     if args.image_size != 224:
-        raise ValueError("The shared paper protocol requires --image-size 224")
+        raise ValueError("The fixed dataset protocols require --image-size 224")
+    if args.feature_grid != 14:
+        raise ValueError("DeiT-Ti patch features require --feature-grid 14")
 
 
 def build_loaders(args: argparse.Namespace, device: torch.device) -> tuple[Any, Any]:
-    student_mean, student_std = STUDENT_NORMALIZATION[args.dataset]
-    train_transform = transforms.Compose(
-        [
-            transforms.RandomResizedCrop(
-                STUDENT_IMAGE_SIZE,
-                scale=(0.8, 1.0),
-                interpolation=InterpolationMode.BICUBIC,
-            ),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(student_mean, student_std),
-        ]
-    )
-    resize_size = int(round(STUDENT_IMAGE_SIZE / 0.875))
-    test_transform = transforms.Compose(
-        [
-            transforms.Resize(resize_size, interpolation=InterpolationMode.BICUBIC),
-            transforms.CenterCrop(STUDENT_IMAGE_SIZE),
-            transforms.ToTensor(),
-            transforms.Normalize(student_mean, student_std),
-        ]
-    )
-
-    if args.dataset == "cifar100":
-        log(f"[DATA] CIFAR-100 root={args.data_dir.resolve()}")
-        log("[DATA] Preparing CIFAR-100 with verified mirror fallback")
-        ensure_cifar100(args.data_dir)
-        train_dataset: Dataset[Any] = CIFAR100(
-            root=args.data_dir,
-            train=True,
-            transform=train_transform,
-            download=False,
-        )
-        test_dataset: Dataset[Any] = CIFAR100(
-            root=args.data_dir,
-            train=False,
-            transform=test_transform,
-            download=False,
-        )
-        split_description = "train=official_train eval=official_test"
-    elif args.dataset == "flowers102":
-        from teachers.train_teacher_flowers import ensure_flowers, ensure_scipy
-
-        log(f"[DATA] Oxford Flowers root={args.data_dir.resolve()}")
-        log("[DATA] Preparing Oxford Flowers from official files with MD5 checks")
-        ensure_scipy()
-        ensure_flowers(args.data_dir)
-        train_parts = [
-            Flowers102(
-                root=args.data_dir,
-                split=split,
-                transform=train_transform,
-                download=False,
-            )
-            for split in ("train", "val")
-        ]
-        train_dataset = ConcatDataset(train_parts)
-        test_dataset = Flowers102(
-            root=args.data_dir,
-            split="test",
-            transform=test_transform,
-            download=False,
-        )
-        split_description = "train=official_train+val eval=official_test"
-    else:
-        from teachers.train_teacher_chaoyang import (
-            ChaoyangDataset,
-            resolve_dataset_root,
-        )
-
-        dataset_root = resolve_dataset_root(args.data_dir)
-        log(f"[DATA] requested_root={args.data_dir.expanduser().resolve()}")
-        log(f"[DATA] resolved_root={dataset_root}")
-        log("[DATA] Validating official Chaoyang train/test splits and labels")
-        train_dataset = ChaoyangDataset(dataset_root, "train", train_transform)
-        test_dataset = ChaoyangDataset(dataset_root, "test", test_transform)
-        split_description = "train=official_train eval=official_test"
-    if args.smoke:
-        generator = torch.Generator().manual_seed(args.seed)
-        train_indexes = torch.randperm(len(train_dataset), generator=generator)[
-            : min(args.smoke_train_samples, len(train_dataset))
-        ]
-        test_generator = torch.Generator().manual_seed(args.seed + 1)
-        test_indexes = torch.randperm(len(test_dataset), generator=test_generator)[
-            : min(args.smoke_test_samples, len(test_dataset))
-        ]
-        train_dataset = Subset(train_dataset, train_indexes.tolist())
-        test_dataset = Subset(test_dataset, test_indexes.tolist())
-
-    def seed_worker(worker_id: int) -> None:
-        del worker_id
-        worker_seed = torch.initial_seed() % (2**32)
-        random.seed(worker_seed)
-
-    loader_generator = torch.Generator().manual_seed(args.seed)
-    common = {
-        "batch_size": args.batch_size,
-        "num_workers": args.num_workers,
-        "pin_memory": device.type == "cuda",
-        "worker_init_fn": seed_worker,
-        "persistent_workers": args.num_workers > 0,
-    }
-    train_loader = DataLoader(
-        train_dataset,
-        shuffle=True,
-        drop_last=False,
-        generator=loader_generator,
-        **common,
-    )
-    test_loader = DataLoader(
-        test_dataset,
-        shuffle=False,
-        drop_last=False,
-        **common,
-    )
-    log(f"[DATA] train_samples={len(train_dataset)} test_samples={len(test_dataset)}")
-    log(
-        f"[DATA] student_image={STUDENT_IMAGE_SIZE} teacher_image={TEACHER_IMAGE_SIZE} "
-        f"batch_size={args.batch_size} num_workers={args.num_workers} smoke={args.smoke} "
-        f"{split_description}"
-    )
-    return train_loader, test_loader
-
-
-def student_view_to_teacher_view(
-    images: torch.Tensor,
-    dataset: str = "cifar100",
-) -> torch.Tensor:
-    """Preserve crop/flip geometry while adapting size and normalization."""
-
-    normalization_mean, normalization_std = STUDENT_NORMALIZATION[dataset]
-    student_mean = images.new_tensor(normalization_mean).view(1, 3, 1, 1)
-    student_std = images.new_tensor(normalization_std).view(1, 3, 1, 1)
-    teacher_mean = images.new_tensor(IMAGENET_MEAN).view(1, 3, 1, 1)
-    teacher_std = images.new_tensor(IMAGENET_STD).view(1, 3, 1, 1)
-    pixels = images * student_std + student_mean
-    pixels = F.interpolate(
-        pixels,
-        size=(TEACHER_IMAGE_SIZE, TEACHER_IMAGE_SIZE),
-        mode="bilinear",
-        align_corners=False,
-    )
-    return (pixels - teacher_mean) / teacher_std
+    return build_base_loaders(args, device)
 
 
 def create_student(timm: Any, student_key: str, num_classes: int) -> nn.Module:
@@ -400,33 +266,45 @@ def top1_correct(logits: torch.Tensor, targets: torch.Tensor) -> int:
     return int((logits.argmax(dim=1) == targets).sum().item())
 
 
-def kd_loss(
-    student_logits: torch.Tensor,
-    teacher_logits: torch.Tensor,
-    temperature: float,
-) -> torch.Tensor:
-    return F.kl_div(
-        F.log_softmax(student_logits / temperature, dim=1),
-        F.softmax(teacher_logits / temperature, dim=1),
-        reduction="batchmean",
-    ) * (temperature**2)
+def forward_student_features(
+    student: nn.Module,
+    images: torch.Tensor,
+    stages: tuple[int, ...],
+) -> tuple[list[torch.Tensor], torch.Tensor]:
+    """Mirror timm's DeiT forward while retaining official OFA stage tokens."""
+    selected_blocks = {STAGE_TO_BLOCK[stage]: stage for stage in stages}
+    tokens = student.patch_embed(images)
+    tokens = student._pos_embed(tokens)
+    tokens = student.patch_drop(tokens)
+    tokens = student.norm_pre(tokens)
+    captured: dict[int, torch.Tensor] = {}
+    for block_index, block in enumerate(student.blocks):
+        tokens = block(tokens)
+        if block_index in selected_blocks:
+            captured[selected_blocks[block_index]] = tokens
+    tokens = student.norm(tokens)
+    logits = student.forward_head(tokens)
+    return [captured[stage] for stage in stages], logits
 
 
 def train_one_epoch(
     student: nn.Module,
     teacher: nn.Module,
+    projector: OFAProjector,
     loader: Any,
     optimizer: torch.optim.Optimizer,
     scaler: Any,
     device: torch.device,
     args: argparse.Namespace,
     amp_enabled: bool,
-) -> tuple[float, float, float, float]:
+) -> tuple[float, float, float, float, float]:
     student.train()
     teacher.eval()
+    projector.train()
     total_loss = 0.0
     total_ce = 0.0
     total_kd = 0.0
+    total_ofa = 0.0
     correct = 0
     total = 0
 
@@ -440,16 +318,43 @@ def train_one_epoch(
                 student_view_to_teacher_view(images, args.dataset)
             )
         with autocast_context(amp_enabled):
-            student_logits = student(images)
+            student_features, student_logits = forward_student_features(
+                student,
+                images,
+                args.ofa_stages,
+            )
+            projected_logits = projector(student_features)
             ce = F.cross_entropy(
                 student_logits,
                 targets,
                 label_smoothing=args.label_smoothing,
             )
-            distillation = kd_loss(
-                student_logits.float(), teacher_logits.float(), args.temperature
+        target_mask = F.one_hot(
+            targets,
+            num_classes=student_logits.shape[-1],
+        ).to(dtype=torch.float32)
+        final_distillation = ofa_loss(
+            student_logits.float(),
+            teacher_logits.float(),
+            target_mask,
+            args.ofa_eps,
+            args.ofa_temperature,
+        )
+        intermediate_distillation = sum(
+            ofa_loss(
+                head_logits.float(),
+                teacher_logits.float(),
+                target_mask,
+                args.ofa_eps,
+                args.ofa_temperature,
             )
-            loss = (1.0 - args.kd_weight) * ce + args.kd_weight * distillation
+            for head_logits in projected_logits
+        )
+        loss = (
+            args.gt_loss_weight * ce.float()
+            + args.kd_loss_weight * final_distillation
+            + args.ofa_loss_weight * intermediate_distillation
+        )
 
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -459,7 +364,8 @@ def train_one_epoch(
         total += batch_size
         total_loss += float(loss.detach()) * batch_size
         total_ce += float(ce.detach()) * batch_size
-        total_kd += float(distillation.detach()) * batch_size
+        total_kd += float(final_distillation.detach()) * batch_size
+        total_ofa += float(intermediate_distillation.detach()) * batch_size
         correct += top1_correct(student_logits.detach(), targets)
 
     denominator = max(1, total)
@@ -467,6 +373,7 @@ def train_one_epoch(
         total_loss / denominator,
         total_ce / denominator,
         total_kd / denominator,
+        total_ofa / denominator,
         100.0 * correct / denominator,
     )
 
@@ -527,14 +434,9 @@ def public_args(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def atomic_torch_save(payload: dict[str, Any], path: Path) -> None:
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    torch.save(payload, temporary)
-    temporary.replace(path)
-
-
 def checkpoint_payload(
     student: nn.Module,
+    projector: OFAProjector,
     epoch: int,
     accuracy: float,
     best_accuracy: float,
@@ -543,15 +445,18 @@ def checkpoint_payload(
 ) -> dict[str, Any]:
     return {
         "model": student.state_dict(),
+        "ofa_projector": projector.state_dict(),
         "epoch": epoch,
         "accuracy": accuracy,
         "best_accuracy": best_accuracy,
-        "method": "KD",
+        "method": "OFA",
         "student": args.student,
         "timm_model": STUDENT_MODELS[args.student],
         "dataset": args.dataset,
         "num_classes": NUM_CLASSES[args.dataset],
         "teacher": teacher_spec,
+        "official_repository": OFFICIAL_REPOSITORY,
+        "official_commit": OFFICIAL_COMMIT,
         "args": public_args(args),
     }
 
@@ -572,11 +477,13 @@ def write_summary(
     estimated_planned = average_epoch * args.planned_epochs
     summary = {
         "status": "complete" if latest_epoch == args.student_epochs else "running",
-        "method": "KD",
+        "method": "OFA",
         "dataset": args.dataset,
         "student": args.student,
         "timm_model": STUDENT_MODELS[args.student],
         "teacher": teacher_spec,
+        "official_repository": OFFICIAL_REPOSITORY,
+        "official_commit": OFFICIAL_COMMIT,
         "student_epochs": args.student_epochs,
         "latest_epoch": latest_epoch,
         "best_top1": best_accuracy,
@@ -615,7 +522,7 @@ def main() -> None:
     summary_path = run_dir / "summary.json"
 
     log("=" * 72)
-    log("STANDARD LOGIT KD / RESNET56 -> VIT STUDENT")
+    log("OFFICIAL-BEHAVIOR-BASED OFA / RESNET56 -> DEIT-TI")
     log("=" * 72)
     log(
         f"[ENV] python={platform.python_version()} torch={torch.__version__} "
@@ -648,13 +555,19 @@ def main() -> None:
         "teacher=bilinear_downsample_to_32x32(ImageNet norm)"
     )
     log(
-        f"[KD] loss=(1-{args.kd_weight})*CE+{args.kd_weight}*T^2*KL "
-        f"temperature={args.temperature} label_smoothing={args.label_smoothing}"
+        f"[OFA] loss={args.gt_loss_weight}*CE+{args.kd_loss_weight}*final_OFA+"
+        f"{args.ofa_loss_weight}*sum(stage_OFA) eps={args.ofa_eps} "
+        f"temperature={args.ofa_temperature} stages={args.ofa_stages}"
     )
-    log("[NOTE] KD temperature and loss weight are implementation choices, not specified in V2.")
     log(
-        "[NOTE] CvT, T2T-7, and T2T-14 require their official model implementations; "
-        "they are not exposed by timm==1.0.27."
+        f"[OFFICIAL] repository={OFFICIAL_REPOSITORY} "
+        f"commit={OFFICIAL_COMMIT}"
+    )
+    log(
+        "[ADAPTER] teacher=final class logits student_blocks="
+        f"{tuple(STAGE_TO_BLOCK[stage] for stage in args.ofa_stages)} "
+        "token_grid=14x14 patch_merge=14x14->7x7 "
+        "stage_heads=official_transformer_projectors"
     )
 
     train_loader, test_loader = build_loaders(args, device)
@@ -664,17 +577,60 @@ def main() -> None:
         checkpoint_root=args.teacher_root,
     )
     student = create_student(timm, args.student, NUM_CLASSES[args.dataset]).to(device)
+    projector = OFAProjector(
+        stages=args.ofa_stages,
+        embed_dim=STUDENT_EMBED_DIM,
+        patch_grid=args.feature_grid,
+        num_classes=NUM_CLASSES[args.dataset],
+    ).to(device)
+
+    with torch.no_grad():
+        probe = torch.zeros(2, 3, args.image_size, args.image_size, device=device)
+        teacher_logits_probe = teacher(
+            student_view_to_teacher_view(probe, args.dataset)
+        )
+        student_probe, logits_probe = forward_student_features(
+            student,
+            probe,
+            args.ofa_stages,
+        )
+        projected_probe = projector(student_probe)
+    expected_logits_shape = (2, NUM_CLASSES[args.dataset])
+    expected_token_shape = (2, 197, STUDENT_EMBED_DIM)
+    if tuple(teacher_logits_probe.shape) != expected_logits_shape:
+        raise RuntimeError(f"Unexpected teacher logits: {tuple(teacher_logits_probe.shape)}")
+    if [tuple(feature.shape) for feature in student_probe] != [
+        expected_token_shape for _ in args.ofa_stages
+    ]:
+        raise RuntimeError(
+            f"Unexpected student tokens: {[tuple(feature.shape) for feature in student_probe]}"
+        )
+    if tuple(logits_probe.shape) != expected_logits_shape:
+        raise RuntimeError(f"Unexpected student logits: {tuple(logits_probe.shape)}")
+    if [tuple(logits.shape) for logits in projected_probe] != [
+        expected_logits_shape for _ in args.ofa_stages
+    ]:
+        raise RuntimeError(
+            f"Unexpected projected logits: {[tuple(logits.shape) for logits in projected_probe]}"
+        )
     log(
         f"[TEACHER] selected={teacher_spec['selected_kind']} epoch={teacher_payload['epoch']} "
         f"top1={float(teacher_payload['accuracy']):.2f}% sha256={teacher_spec['sha256']}"
     )
     log(
         f"[MODEL] teacher_params={count_parameters(teacher):,} "
-        f"student={STUDENT_MODELS[args.student]} student_params={count_parameters(student):,}"
+        f"student={STUDENT_MODELS[args.student]} "
+        f"student_params={count_parameters(student):,} "
+        f"ofa_trainable_params={count_parameters(projector):,}"
+    )
+    log(
+        f"[FEATURE_CHECK] teacher_logits={expected_logits_shape} "
+        f"student_tokens={[expected_token_shape for _ in args.ofa_stages]} "
+        f"projected_logits={[expected_logits_shape for _ in args.ofa_stages]}"
     )
 
     optimizer = torch.optim.AdamW(
-        student.parameters(),
+        list(student.parameters()) + list(projector.parameters()),
         lr=args.lr,
         weight_decay=args.weight_decay,
     )
@@ -699,9 +655,10 @@ def main() -> None:
         epoch = epoch_index + 1
         epoch_start = time.time()
         epoch_lr = optimizer.param_groups[0]["lr"]
-        loss, ce, distillation, train_accuracy = train_one_epoch(
+        loss, ce, final_distillation, intermediate_distillation, train_accuracy = train_one_epoch(
             student,
             teacher,
+            projector,
             train_loader,
             optimizer,
             scaler,
@@ -717,6 +674,7 @@ def main() -> None:
 
         payload = checkpoint_payload(
             student,
+            projector,
             epoch,
             latest_accuracy,
             best_accuracy,
@@ -742,8 +700,10 @@ def main() -> None:
         average_epoch = sum(epoch_times) / len(epoch_times)
         suffix = " saved_best" if saved_best else ""
         log(
-            f"[KD][{epoch:03d}/{args.student_epochs:03d}] loss={loss:.4f} "
-            f"ce={ce:.4f} kd={distillation:.4f} train_acc={train_accuracy:.2f}% "
+            f"[OFA][{epoch:03d}/{args.student_epochs:03d}] loss={loss:.4f} "
+            f"ce={ce:.4f} final={final_distillation:.4f} "
+            f"intermediate={intermediate_distillation:.4f} "
+            f"train_acc={train_accuracy:.2f}% "
             f"val_acc={latest_accuracy:.2f}% best={best_accuracy:.2f}% "
             f"lr={epoch_lr:.6g} time={epoch_seconds:.1f}s "
             f"avg_epoch={average_epoch:.1f}s "
@@ -757,7 +717,7 @@ def main() -> None:
     vanilla = VANILLA_TOP1[args.dataset][args.student]
     log("=" * 72)
     log(
-        f"[FINAL_RESULT] kd_best_top1={best_accuracy:.2f}% "
+        f"[FINAL_RESULT] ofa_best_top1={best_accuracy:.2f}% "
         f"vanilla_top1={vanilla:.2f}% gain_over_vanilla={best_accuracy - vanilla:+.2f}pp"
     )
     log(
@@ -769,7 +729,7 @@ def main() -> None:
     log(f"[FINAL_RESULT] best_checkpoint={best_checkpoint.resolve()}")
     log(f"[FINAL_RESULT] latest_checkpoint={latest_checkpoint.resolve()}")
     log(f"[FINAL_RESULT] summary={summary_path.resolve()}")
-    log("[DONE] KD training completed successfully; resources may be released.")
+    log("[DONE] OFA training completed successfully; resources may be released.")
 
 
 def cli_main() -> None:
@@ -779,7 +739,7 @@ def cli_main() -> None:
         log("=" * 72)
         log(f"[FATAL] {type(error).__name__}: {error}")
         traceback.print_exc()
-        log("[FATAL] KD training did not complete.")
+        log("[FATAL] OFA training did not complete.")
         raise
 
 

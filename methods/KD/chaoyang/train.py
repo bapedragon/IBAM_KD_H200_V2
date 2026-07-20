@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Run standard logit KD on Chaoyang."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
+from methods.KD.core import cli_main
+
+
+CHAOYANG_PROTOCOL_DEFAULTS = (
+    ("--protocol-name", "chaoyang_deit_ti_common_kd_v2"),
+    ("--student-epochs", "100"),
+    ("--batch-size", "64"),
+    ("--lr", "0.0005"),
+    ("--weight-decay", "0.05"),
+    ("--warmup-epochs", "5"),
+    ("--temperature", "4.0"),
+    ("--kd-weight", "0.9"),
+    ("--label-smoothing", "0.1"),
+)
+
+
+def has_option(option: str) -> bool:
+    return any(
+        argument == option or argument.startswith(f"{option}=")
+        for argument in sys.argv[1:]
+    )
+
+
+if __name__ == "__main__":
+    if any(arg == "--dataset" or arg.startswith("--dataset=") for arg in sys.argv[1:]):
+        raise SystemExit("This wrapper fixes --dataset chaoyang; remove --dataset from the command.")
+    sys.argv[1:1] = ["--dataset", "chaoyang"]
+    for option, value in reversed(CHAOYANG_PROTOCOL_DEFAULTS):
+        if not has_option(option):
+            sys.argv[1:1] = [option, value]
+    cli_main()

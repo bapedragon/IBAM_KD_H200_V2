@@ -33,9 +33,13 @@ IBAM_KD_H200_V2/
 ├── methods/
 │   ├── README.md
 │   ├── run_cifar100_three_methods.py
+│   ├── run_five_methods.py
+│   ├── run_flowers_chaoyang_timing.py
 │   ├── KD/
 │   ├── CRD/
-│   └── ReviewKD/
+│   ├── ReviewKD/
+│   ├── MGD/
+│   └── OFA/
 └── teachers/
     ├── checkpoints/
     │   ├── cifar100/
@@ -55,30 +59,48 @@ The complete locked protocol and source audit are recorded in
 Ready-to-copy H200 request values are recorded in
 [`H200_ISSUE.md`](H200_ISSUE.md).
 
-## CIFAR-100 student stage
+## DeiT-Ti student stage
 
-The V2 student pipeline now supports the first three generic methods in one
-sequential job: `KD -> CRD -> ReviewKD`. All three reuse the exact fixed
-CIFAR-100 teacher hash while training a scratch DeiT-Ti at 224 x 224.
+The V2 student pipeline supports all five generic methods in the draft table:
+`KD -> CRD -> ReviewKD -> MGD -> OFA`. Every method reuses the selected fixed
+teacher hash for its dataset while training a scratch DeiT-Ti at 224 x 224.
 
 The teacher input is derived from the same augmented student tensor using
 bilinear resize to 32 x 32, so crop and flip geometry cannot drift between the
 two branches. The teacher and student normalizations are applied separately.
-ReviewKD teacher features at 32/16/8 are bilinearly matched to the DeiT 14x14
-patch grid.
+Spatial feature methods bilinearly match the CNN feature grid to the DeiT
+14x14 patch grid where required.
 
-Run the full-data two-epoch timing sequence first:
+Run the full-data two-epoch timing sequence first. Flowers and Chaoyang can be
+submitted as separate Issues in parallel using the personal and lab accounts:
 
 ```bash
-python methods/run_cifar100_three_methods.py --timing-run --num-workers 4
+python methods/run_five_methods.py --dataset flowers102 --timing-run \
+  --output-dir /app/output/flowers102_five_methods_timing_v2 --num-workers 4
+
+python methods/run_five_methods.py --dataset chaoyang --timing-run \
+  --output-dir /app/output/chaoyang_five_methods_timing_v2 --num-workers 4
 ```
+
+Alternatively, one Issue can measure all ten dataset-method combinations:
+
+```bash
+python methods/run_flowers_chaoyang_timing.py \
+  --num-workers 4
+```
+
+The timing artifacts stay in the temporary clone by default; all duration
+estimates needed for job packing are printed in the Issue log. Full training
+must instead use an explicit singular `/app/output/...` collection path.
 
 Each method writes its own `student_best.pt`, `student_latest.pt`, and
 `summary.json` under a distinct run directory. The runner additionally writes
-`three_method_status.json` and `three_method_summary.json`; therefore no method
-can overwrite another method's files. See [`methods/README.md`](methods/README.md)
-for the locked base protocol and the method subdirectories for their exact
-losses, official-code provenance, and heterogeneous adapters.
+`five_method_status.json` and `five_method_summary.json`; therefore no method
+can overwrite another method's files. Its timing summary provides individual
+and combined full-run estimates for packing jobs safely below the 600-minute
+Pod limit. See [`methods/README.md`](methods/README.md) for the locked base
+protocols and each method directory for exact losses, official-code provenance,
+and heterogeneous adapters.
 
 ## Fixed teachers for downstream KD
 

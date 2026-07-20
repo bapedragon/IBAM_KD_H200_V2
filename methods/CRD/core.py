@@ -412,7 +412,7 @@ def main() -> None:
         f"image={args.image_size}"
     )
     log(
-        "[INPUT] shared_geometry=True student=224x224(CIFAR-100 norm) "
+        f"[INPUT] shared_geometry=True student=224x224({args.dataset} norm) "
         "teacher=bilinear_downsample_to_32x32(ImageNet norm)"
     )
     log(
@@ -452,7 +452,7 @@ def main() -> None:
         student_probe = torch.zeros(
             2, 3, args.image_size, args.image_size, device=device
         )
-        teacher_probe = student_view_to_teacher_view(student_probe)
+        teacher_probe = student_view_to_teacher_view(student_probe, args.dataset)
         teacher_rep, _ = forward_teacher_with_rep(teacher, teacher_probe)
         student_rep, _ = forward_student_with_rep(student, student_probe)
     if teacher_rep.shape[1] != TEACHER_DIM:
@@ -522,7 +522,7 @@ def main() -> None:
 
             with torch.no_grad(), autocast_context(amp_enabled):
                 teacher_representation, _ = forward_teacher_with_rep(
-                    teacher, student_view_to_teacher_view(images)
+                    teacher, student_view_to_teacher_view(images, args.dataset)
                 )
             with autocast_context(amp_enabled):
                 student_representation, student_logits = (
