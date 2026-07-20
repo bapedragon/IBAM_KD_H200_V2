@@ -182,8 +182,12 @@ verified the official Flowers downloads and MD5 values, the 2,040/6,149 split,
 | Flowers attempt 3, strong augmentation | 444 | 600 | 69.87% | draft 66.33% | +3.54 pp | completed |
 | Flowers attempt 3, closest diagnostic | 444 | epoch 457 | 66.35% | draft 66.33% | +0.02 pp | saved |
 | Flowers attempt 4, strong augmentation | - | 400 | 63.33% | draft 66.33% | -3.00 pp | completed |
+| Flowers final, strong augmentation | 447 | 450 | 66.03% | draft 66.33% | -0.30 pp | **selected best** |
+| Chaoyang moderate augmentation | 443 | 300 | 76.72% | 77.20% | -0.48 pp | **selected best** |
 
-The Flowers recipe-v5 450-epoch result will be added after its final H200 run.
+The selected checkpoints are recorded in `checkpoints/teachers/manifest.json`.
+All downstream KD methods must reuse these exact hashes rather than selecting
+a different teacher per method.
 
 ## Chaoyang locked protocol
 

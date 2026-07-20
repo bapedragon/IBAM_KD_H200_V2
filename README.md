@@ -8,27 +8,35 @@ LG, ALG, and Ours use the same low-resolution CNN guidance teacher.
 
 The low-resolution teacher stage currently covers:
 
-| Dataset | Teacher | Teacher input | Reference Top-1 |
-|---|---|---:|---:|
-| CIFAR-100 | CIFAR-style ResNet56 | **32 x 32** | 70.43% |
-| Flowers-102 | CIFAR-style ResNet56 | **32 x 32** | 66.33% |
-| Chaoyang | CIFAR-style ResNet56 | **32 x 32** | 77.20% |
+| Dataset | Teacher input | Selected Top-1 | Reference | Gap |
+|---|---:|---:|---:|---:|
+| CIFAR-100 | **32 x 32** | **71.91%** | 70.43% | +1.48 pp |
+| Flowers-102 | **32 x 32** | **66.03%** | 66.33% | -0.30 pp |
+| Chaoyang | **32 x 32** | **76.72%** | 77.20% | -0.48 pp |
 
 The Flowers implementation uses the official `train+val` split (2,040 images)
 for training and the official test split (6,149 images) for evaluation.
 
-Student and KD method folders will be added only after the teacher checkpoint
-has been validated. This keeps the new repository independent from the earlier
-224 x 224 teacher experiments.
+All three primary `best` checkpoints have passed SHA-256, strict state-dict,
+metadata, and 32 x 32 forward checks. They are fixed before downstream KD and
+must be reused across every compared method. This repository remains
+independent from the earlier 224 x 224 teacher experiments.
 
 ## Files
 
 ```text
 IBAM_KD_H200_V2/
+├── checkpoints/teachers/
+│   ├── cifar100/
+│   ├── flowers102/
+│   ├── chaoyang/
+│   ├── README.md
+│   └── manifest.json
 ├── H200_ISSUE.md
 ├── README.md
 ├── PROTOCOL.md
 ├── requirements.txt
+├── teacher_checkpoints.py
 ├── train_teacher_chaoyang.py
 ├── train_teacher_cifar100.py
 └── train_teacher_flowers.py
@@ -38,6 +46,19 @@ The complete locked protocol and source audit are recorded in
 [`PROTOCOL.md`](PROTOCOL.md).
 Ready-to-copy H200 request values are recorded in
 [`H200_ISSUE.md`](H200_ISSUE.md).
+
+## Fixed teachers for downstream KD
+
+The selected weights and their full provenance are under
+[`checkpoints/teachers`](checkpoints/teachers). Before launching a KD job, run:
+
+```bash
+python teacher_checkpoints.py --dataset all
+```
+
+This verifies each committed SHA-256, checkpoint metadata, strict model load,
+output dimensions, and finite 32 x 32 inference. The loader also freezes the
+returned teacher parameters for downstream use.
 
 ## Why 32 x 32?
 

@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "model": "CIFAR-style ResNet56",
+  "input_resolution": 32,
+  "selection_policy": "The primary best checkpoint from each completed H200 run is fixed before downstream KD and reused for every compared method.",
+  "teachers": {
+    "cifar100": {
+      "dataset": "CIFAR-100",
+      "checkpoint": "cifar100/teacher_resnet56_cifar100_32_best.pt",
+      "training_config": "cifar100/training_config.json",
+      "training_metrics": "cifar100/metrics.csv",
+      "training_summary": "cifar100/training_summary.json",
+      "training_log": "cifar100/training_log.txt",
+      "selected_kind": "best",
+      "h200_build": 438,
+      "account": "bapedragon",
+      "epoch": 300,
+      "top1": 71.91,
+      "reference_top1": 70.43,
+      "gap_to_reference_pp": 1.48,
+      "num_classes": 100,
+      "sha256": "e4ec5192d1e3fd06bbf8eb4e6b53790a73917bcdfb4e4e31083bc388f6488052"
+    },
+    "flowers102": {
+      "dataset": "Oxford Flowers-102",
+      "checkpoint": "flowers102/teacher_resnet56_flowers102_32_best.pt",
+      "training_config": "flowers102/training_config.json",
+      "training_metrics": "flowers102/metrics.csv",
+      "training_summary": "flowers102/training_summary.json",
+      "training_log": "flowers102/training_log.txt",
+      "selected_kind": "best",
+      "h200_build": 447,
+      "account": "kau-aimslab",
+      "epoch": 389,
+      "top1": 66.0269962595544,
+      "reference_top1": 66.33,
+      "gap_to_reference_pp": -0.30300374044560385,
+      "num_classes": 102,
+      "sha256": "2b082bc98176f19ebdd62eccc1384aacfdd26d84f97e58d0ec2ddaed68c7c5a4"
+    },
+    "chaoyang": {
+      "dataset": "Chaoyang",
+      "checkpoint": "chaoyang/teacher_resnet56_chaoyang_32_best.pt",
+      "training_config": "chaoyang/training_config.json",
+      "training_metrics": "chaoyang/metrics.csv",
+      "training_summary": "chaoyang/training_summary.json",
+      "training_log": "chaoyang/training_log.txt",
+      "selected_kind": "best",
+      "h200_build": 443,
+      "account": "bapedragon",
+      "epoch": 94,
+      "top1": 76.71809256661992,
+      "reference_top1": 77.2,
+      "gap_to_reference_pp": -0.481907433380087,
+      "num_classes": 4,
+      "sha256": "8cadc2d471311cfb055ed4d860a9acc858fb73f7e73a2b9678c69993c3590f04"
+    }
+  }
+}
