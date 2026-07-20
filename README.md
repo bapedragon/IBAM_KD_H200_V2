@@ -6,13 +6,15 @@ LG, ALG, and Ours use the same low-resolution CNN guidance teacher.
 
 ## Current scope
 
-The first completed component is:
+The low-resolution teacher stage currently covers:
 
-- Dataset: CIFAR-100
-- Teacher: CIFAR-style ResNet56
-- Teacher input: **32 x 32**
-- Reference protocol: LG official paper and code
-- Reference teacher Top-1: **70.43%**
+| Dataset | Teacher | Teacher input | Reference Top-1 |
+|---|---|---:|---:|
+| CIFAR-100 | CIFAR-style ResNet56 | **32 x 32** | 70.43% |
+| Flowers-102 | CIFAR-style ResNet56 | **32 x 32** | 66.33% |
+
+The Flowers implementation uses the official `train+val` split (2,040 images)
+for training and the official test split (6,149 images) for evaluation.
 
 Student and KD method folders will be added only after the teacher checkpoint
 has been validated. This keeps the new repository independent from the earlier
@@ -26,7 +28,8 @@ IBAM_KD_H200_V2/
 ├── README.md
 ├── PROTOCOL.md
 ├── requirements.txt
-└── train_teacher_cifar100.py
+├── train_teacher_cifar100.py
+└── train_teacher_flowers.py
 ```
 
 The complete locked protocol and source audit are recorded in
@@ -111,6 +114,26 @@ python train_teacher_cifar100.py --smoke --num-workers 0
 ```
 
 Smoke/timing accuracy is not a research result.
+
+## Flowers-102 timing and full runs
+
+Run two full-dataset timing epochs while retaining the locked 300-epoch cosine
+schedule:
+
+```bash
+python train_teacher_flowers.py --timing-run --num-workers 4
+```
+
+After the timing log passes, collect a full run under `/app/output`:
+
+```bash
+python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_lg_official_seed1 --num-workers 4
+```
+
+The full Flowers directory contains `best`, `latest`, and
+`closest_to_reference` checkpoints plus `config.json`, `metrics.csv`, and
+`summary.json`. Core statistical settings are locked in code exactly as for
+the CIFAR-100 teacher.
 
 ## Failure behavior
 

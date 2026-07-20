@@ -1,4 +1,4 @@
-# CIFAR-100 ResNet56 teacher protocol
+# ResNet56 32 x 32 teacher protocols
 
 This document records the exact protocol used by
 `train_teacher_cifar100.py`. The goal is to reproduce the **32 x 32 guidance
@@ -99,3 +99,40 @@ confirmed:
   at checked epochs, including epochs 1, 2, 20, 100, 299, and 300;
 - local smoke run completed forward, backward, evaluation, atomic checkpoint,
   metrics, summary, and SHA-256 generation.
+
+## Flowers-102 locked protocol
+
+`train_teacher_flowers.py` applies the same low-resolution guidance-teacher
+recipe to Oxford Flowers-102. ALG's implementation details state that its
+ResNet56 guidance CNN is trained on 32 x 32 images and uses SGD with learning
+rate 0.1, momentum 0.9, weight decay 5e-4, and batch size 128. The LG dataset
+code defines Flowers training as official `train+val` and evaluation as the
+official test split.
+
+| Item | Value |
+|---|---:|
+| Dataset | Oxford Flowers-102 |
+| Train split | official train+val: 1,020+1,020=2,040 |
+| Evaluation split | official test: 6,149 |
+| Teacher | CIFAR-style ResNet56 (`6n+2`, `n=9`) |
+| Input resolution | **32 x 32** |
+| Number of classes | 102 |
+| Epochs | 300 |
+| Train / test batch size | 128 / 200 |
+| Optimizer | SGD |
+| Initial learning rate | 0.1 |
+| Momentum / Nesterov | 0.9 / enabled |
+| Weight decay | 5e-4, excluding bias and normalization parameters |
+| LR schedule | cosine decay to 0; no warm-up |
+| Label smoothing / Mixup / CutMix | 0 / disabled / disabled |
+| Mixed precision | disabled |
+| Seed / cuDNN benchmark | 1 / disabled |
+| Primary metric | official test Top-1 accuracy |
+| Reference teacher Top-1 | 66.33% |
+
+Training and evaluation transforms are the same official LG transforms
+recorded above, with the spatial size set to 32 x 32. The Flowers-specific
+public YAML is not present at the audited LG commit; consequently, the shared
+LG code behavior and ALG's explicit implementation details are the documented
+reproduction boundary. All listed statistical values are constants rather
+than command-line overrides.
