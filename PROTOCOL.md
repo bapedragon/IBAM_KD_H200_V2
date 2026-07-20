@@ -100,14 +100,24 @@ confirmed:
 - local smoke run completed forward, backward, evaluation, atomic checkpoint,
   metrics, summary, and SHA-256 generation.
 
-## Flowers-102 locked protocol
+## Flowers-102 reproduction boundary and recipe v2
 
-`train_teacher_flowers.py` applies the same low-resolution guidance-teacher
-recipe to Oxford Flowers-102. ALG's implementation details state that its
-ResNet56 guidance CNN is trained on 32 x 32 images and uses SGD with learning
-rate 0.1, momentum 0.9, weight decay 5e-4, and batch size 128. The LG dataset
-code defines Flowers training as official `train+val` and evaluation as the
-official test split.
+ALG's implementation details state that its ResNet56 guidance CNN is trained
+on 32 x 32 images and uses SGD with learning rate 0.1, momentum 0.9, weight
+decay 5e-4, and batch size 128. The LG dataset code defines Flowers training
+as official `train+val` and evaluation as the official test split.
+
+The audited public LG commit contains no Flowers YAML. In particular, the
+paper's 300-epoch statement describes the 224 x 224 ViT students, not the
+Flowers ResNet56 teacher. Therefore the exact Flowers teacher epoch count and
+strong-augmentation switch cannot be claimed as published settings.
+
+The first H200 attempt inherited CIFAR's 300-epoch strong-augmentation recipe
+and reached 59.33% Top-1, 7.00 points below the 66.33% reference. Recipe v2 is
+a controlled, explicitly documented adjustment. It adopts two settings that
+already exist in the public LG framework: its default `MAX_EPOCH=200` and its
+`STRONG_AUGMENTATION=False` transform branch. All paper-confirmed constraints
+remain fixed.
 
 | Item | Value |
 |---|---:|
@@ -117,7 +127,7 @@ official test split.
 | Teacher | CIFAR-style ResNet56 (`6n+2`, `n=9`) |
 | Input resolution | **32 x 32** |
 | Number of classes | 102 |
-| Epochs | 300 |
+| Epochs | **200** (public LG framework default; Flowers YAML unavailable) |
 | Train / test batch size | 128 / 200 |
 | Optimizer | SGD |
 | Initial learning rate | 0.1 |
@@ -127,15 +137,15 @@ official test split.
 | Label smoothing / Mixup / CutMix | 0 / disabled / disabled |
 | Mixed precision | disabled |
 | Seed / cuDNN benchmark | 1 / disabled |
+| Train augmentation | resize 32, random crop padding 4, horizontal flip |
+| Removed from attempt 1 | random resized crop, RandAugment, random erasing |
 | Primary metric | official test Top-1 accuracy |
 | Reference teacher Top-1 | 66.33% |
 
-Training and evaluation transforms are the same official LG transforms
-recorded above, with the spatial size set to 32 x 32. The Flowers-specific
-public YAML is not present at the audited LG commit; consequently, the shared
-LG code behavior and ALG's explicit implementation details are the documented
-reproduction boundary. All listed statistical values are constants rather
-than command-line overrides.
+Evaluation remains direct resize to 32 x 32 plus ImageNet normalization. All
+listed statistical values are constants rather than command-line overrides.
+Recipe v2 must be described as an implementation choice rather than an exact
+official Flowers reproduction.
 
 ## H200 timing verification
 
@@ -144,8 +154,17 @@ than command-line overrides.
 | CIFAR-100 | 437 | `bapedragon` | 2 | 9.3 s | 46m 17s | PASS |
 | Flowers-102 | 439 | `kau-aimslab` | 2 | 5.3 s | 26m 25s | PASS |
 
-Both timing runs retained their locked 300-epoch cosine schedule. Their
-2-epoch accuracies are startup diagnostics and are not reported as research
-results. Build 439 additionally verified the official Flowers downloads and
-MD5 values, the 2,040/6,149 split, 861,750 parameters, 32/16/8 feature grids,
-and atomic creation of all checkpoint variants and summary files.
+The timing runs used the original 300-epoch attempt-1 schedule. Their 2-epoch
+accuracies are startup diagnostics and are not research results. Build 439
+verified the official Flowers downloads and MD5 values, the 2,040/6,149 split,
+861,750 parameters, 32/16/8 feature grids, and atomic checkpoint creation.
+
+## Completed full-run results
+
+| Dataset / recipe | H200 build | Epochs | Best Top-1 | Reference | Gap | Status |
+|---|---:|---:|---:|---:|---:|---|
+| CIFAR-100 official recipe | 438 | 300 | 71.91% | 70.43% | +1.48 pp | accepted |
+| CIFAR-100 closest diagnostic | 438 | - | 70.53% | 70.43% | +0.10 pp | saved |
+| Flowers attempt 1, strong augmentation | 440 | 300 | 59.33% | 66.33% | -7.00 pp | not accepted |
+
+The Flowers recipe-v2 result will be added only after its full H200 run.

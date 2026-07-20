@@ -115,29 +115,40 @@ python train_teacher_cifar100.py --smoke --num-workers 0
 
 Smoke/timing accuracy is not a research result.
 
-## Flowers-102 timing and full runs
+## Flowers-102 adjusted recipe v2
 
-Run two full-dataset timing epochs while retaining the locked 300-epoch cosine
-schedule:
+The first Flowers attempt inherited CIFAR's 300-epoch strong-augmentation
+recipe and reached 59.33%, 7.00 points below the 66.33% reference. Because the
+public LG commit does not contain its Flowers YAML, recipe v2 changes only the
+two unavailable Flowers choices:
+
+- 200 epochs, matching the public LG framework's default `MAX_EPOCH`;
+- the public LG weak-augmentation branch: resize to 32, random crop with
+  padding 4, horizontal flip, and ImageNet normalization.
+
+ResNet56, 32 x 32 input, scratch training, SGD 0.1, momentum 0.9, Nesterov,
+weight decay 5e-4, batch size 128, cosine decay, and seed 1 remain unchanged.
+
+Optional two-epoch timing check retaining the 200-epoch cosine schedule:
 
 ```bash
 python train_teacher_flowers.py --timing-run --num-workers 4
 ```
 
-After the timing log passes, collect a full run under `/app/output`:
+For the collected full run, write to `/app/output`:
 
 ```bash
-python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_lg_official_seed1 --num-workers 4
+python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_weakaug_200ep_seed1 --num-workers 4
 ```
 
 The full Flowers directory contains `best`, `latest`, and
 `closest_to_reference` checkpoints plus `config.json`, `metrics.csv`, and
-`summary.json`. Core statistical settings are locked in code exactly as for
-the CIFAR-100 teacher.
+`summary.json`. The new run name prevents the 59.33% attempt from being
+overwritten.
 
-H200 build 439 completed the Flowers full-data two-epoch timing run with all
-protocol checks passing. It measured 5.3 seconds per epoch and estimated about
-26 minutes for the locked 300-epoch run. Timing-run accuracy is not a research
+H200 build 439 verified the original Flowers data/model pipeline. Build 440
+completed the first 300-epoch recipe at 59.33%; that checkpoint is retained as
+an unsuccessful reproduction attempt. Timing-run accuracy is not a research
 result.
 
 ## Failure behavior

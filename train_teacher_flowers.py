@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Train an LG/ALG-compatible Flowers-102 ResNet56 teacher at 32 x 32.
+"""Train the adjusted Flowers-102 ResNet56 guidance teacher at 32 x 32.
 
-The statistical protocol is intentionally locked. On the KAU H200 runner,
-pass ``--output-dir /app/output`` for a full run whose artifacts must survive
+Recipe v2 keeps the paper-confirmed teacher constraints while using the public
+LG code's weak-augmentation path and default 200-epoch schedule. On the KAU
+H200 runner, pass ``--output-dir /app/output`` for artifacts that must survive
 Pod release. Timing-run artifacts remain in the temporary cloned repository.
 """
 
@@ -25,6 +26,7 @@ from typing import Any, Dict, Sequence, Tuple
 import torch
 import torch.nn as nn
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, Subset
+from torchvision import transforms
 from torchvision.datasets import Flowers102
 from torchvision.datasets.utils import check_integrity, extract_archive
 
@@ -35,13 +37,14 @@ NUM_CLASSES = 102
 IMAGE_SIZE = 32
 TRAIN_BATCH_SIZE = 128
 TEST_BATCH_SIZE = 200
-PLANNED_EPOCHS = 300
+PLANNED_EPOCHS = 200
 BASE_LR = 0.1
 MOMENTUM = 0.9
 WEIGHT_DECAY = 5e-4
 SEED = 1
 REFERENCE_TEACHER_TOP1 = 66.33
 SCIPY_VERSION = "1.15.3"
+RECIPE_NAME = "flowers102_32_weakaug_200ep_v2"
 
 FLOWERS_BASE_URL = "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/"
 FLOWERS_FILES = {
@@ -75,8 +78,13 @@ LOCKED_PROTOCOL: Dict[str, Any] = {
     "seed": SEED,
     "cudnn_benchmark": False,
     "train_drop_last": True,
+    "strong_augmentation": False,
+    "train_transform": "resize32+random_crop_padding4+hflip+normalize",
     "reference_top1": REFERENCE_TEACHER_TOP1,
-    "protocol_basis": "LG code behavior + ALG implementation details",
+    "protocol_basis": (
+        "ALG explicit teacher constraints + public LG weak-augmentation "
+        "branch and default MAX_EPOCH=200"
+    ),
     "official_lg_commit": common.OFFICIAL_LG_COMMIT,
 }
 
@@ -115,9 +123,22 @@ class ResNet56Flowers(common.ResNet56):
         self._init_weights(self.head.fc)
 
 
+def flowers_train_transform() -> transforms.Compose:
+    """Public-LG weak augmentation branch for the small Flowers split."""
+    return transforms.Compose(
+        [
+            transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
+            transforms.RandomCrop((IMAGE_SIZE, IMAGE_SIZE), padding=IMAGE_SIZE // 8),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ToTensor(),
+            transforms.Normalize(common.IMAGENET_MEAN, common.IMAGENET_STD),
+        ]
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Train the LG/ALG-compatible Flowers-102 ResNet56 teacher at 32x32"
+        description="Train the adjusted Flowers-102 ResNet56 teacher at 32x32"
     )
     parser.add_argument("--data-dir", type=Path, default=Path("./data"))
     parser.add_argument("--output-dir", type=Path, default=Path("./outputs"))
@@ -126,7 +147,7 @@ def parse_args() -> argparse.Namespace:
     modes.add_argument(
         "--timing-run",
         action="store_true",
-        help="Run two full-dataset epochs while retaining the 300-epoch LR schedule.",
+        help="Run two full-dataset epochs while retaining the 200-epoch LR schedule.",
     )
     modes.add_argument(
         "--smoke",
@@ -160,8 +181,8 @@ def default_run_name(args: argparse.Namespace) -> str:
     elif args.timing_run:
         suffix = "timing_2ep"
     else:
-        suffix = "full_300ep"
-    return f"teacher_resnet56_flowers102_32_lg_official_seed1_{suffix}"
+        suffix = "full_200ep"
+    return f"teacher_resnet56_flowers102_32_weakaug_seed1_{suffix}"
 
 
 def deterministic_subset(dataset: Dataset[Any], size: int, seed: int) -> Dataset[Any]:
@@ -322,13 +343,13 @@ def build_datasets(args: argparse.Namespace) -> Tuple[Dataset[Any], Dataset[Any]
         Flowers102(
             root=args.data_dir,
             split="train",
-            transform=common.OfficialLGTrainTransform(),
+            transform=flowers_train_transform(),
             download=False,
         ),
         Flowers102(
             root=args.data_dir,
             split="val",
-            transform=common.OfficialLGTrainTransform(),
+            transform=flowers_train_transform(),
             download=False,
         ),
     ]
@@ -438,12 +459,14 @@ def checkpoint_payload(
         "num_classes": NUM_CLASSES,
         "input_resolution": IMAGE_SIZE,
         "reference_teacher_top1": REFERENCE_TEACHER_TOP1,
+        "recipe_name": RECIPE_NAME,
         "official_lg_commit": common.OFFICIAL_LG_COMMIT,
         "protocol": LOCKED_PROTOCOL,
         "preprocessing": {
             "normalization_mean": common.IMAGENET_MEAN,
             "normalization_std": common.IMAGENET_STD,
-            "strong_augmentation": True,
+            "strong_augmentation": False,
+            "train_transform": LOCKED_PROTOCOL["train_transform"],
             "timm_version": common.timm.__version__,
         },
         "epoch_times": list(epoch_times),
@@ -486,15 +509,17 @@ def train(args: argparse.Namespace) -> None:
     run_dir = args.output_dir / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    best_path = run_dir / "teacher_resnet56_flowers102_32_best.pt"
-    latest_path = run_dir / "teacher_resnet56_flowers102_32_latest.pt"
-    closest_path = run_dir / "teacher_resnet56_flowers102_32_closest_to_reference.pt"
+    best_path = run_dir / "teacher_resnet56_flowers102_32_weakaug_best.pt"
+    latest_path = run_dir / "teacher_resnet56_flowers102_32_weakaug_latest.pt"
+    closest_path = (
+        run_dir / "teacher_resnet56_flowers102_32_weakaug_closest_to_reference.pt"
+    )
     config_path = run_dir / "config.json"
     metrics_path = run_dir / "metrics.csv"
     summary_path = run_dir / "summary.json"
 
     log("=" * 80)
-    log("TRAIN LG/ALG-COMPATIBLE FLOWERS-102 RESNET56 TEACHER (32 x 32)")
+    log("TRAIN FLOWERS-102 RESNET56 TEACHER RECIPE V2 (32 x 32)")
     log("=" * 80)
     log(f"[ENV] python={sys.version.split()[0]} torch={torch.__version__}")
     log(
@@ -520,6 +545,11 @@ def train(args: argparse.Namespace) -> None:
     log(
         f"[REFERENCE] flowers_teacher_top1={REFERENCE_TEACHER_TOP1:.2f}% "
         f"lg_commit={common.OFFICIAL_LG_COMMIT}"
+    )
+    log(f"[RECIPE] name={RECIPE_NAME}")
+    log(
+        "[NOTE] Flowers teacher epochs and augmentation are not published in "
+        "the available Flowers YAML; this is a documented controlled adjustment."
     )
 
     model = ResNet56Flowers()
@@ -563,13 +593,11 @@ def train(args: argparse.Namespace) -> None:
         "nesterov=True weight_decay=0.0005 warmup=0 cosine_to=0"
     )
     log(
-        "[AUG] official_strong=True color_jitter_arg=0.4 "
-        "randaugment=rand-m9-mstd0.5-inc1 random_erasing=0.25 "
-        "normalization=ImageNet"
+        "[AUG] official_weak_branch=True resize=32 random_crop_padding=4 "
+        "horizontal_flip=0.5 normalization=ImageNet"
     )
     log(
-        "[AUG] realized=timm1.0.27_random_resized_crop+bicubic+flip+"
-        "randaugment+normalize+random_erasing (no separate ColorJitter op)"
+        "[AUG] removed_from_v1=random_resized_crop+randaugment+random_erasing"
     )
     log(
         f"[MODEL] teacher_params={common.count_parameters(model):,} "
@@ -662,8 +690,8 @@ def train(args: argparse.Namespace) -> None:
             "closest_to_reference_top1": closest_top1,
             "reference_top1": REFERENCE_TEACHER_TOP1,
             "avg_epoch_seconds": average_epoch,
-            "estimated_300_seconds": estimated_full,
-            "estimated_300_human": common.format_duration(estimated_full),
+            "estimated_planned_seconds": estimated_full,
+            "estimated_planned_human": common.format_duration(estimated_full),
             "elapsed_seconds": elapsed_seconds,
             "paths": {
                 "best": str(best_path.resolve()),
@@ -680,7 +708,7 @@ def train(args: argparse.Namespace) -> None:
             f"test_acc={latest_top1:.2f}% best={best_top1:.2f}% "
             f"closest_ref={closest_top1:.2f}% lr={current_lr:.8f} "
             f"time={epoch_seconds:.1f}s avg_epoch={average_epoch:.1f}s "
-            f"est_300={common.format_duration(estimated_full)} "
+            f"est_{PLANNED_EPOCHS}={common.format_duration(estimated_full)} "
             f"elapsed={common.format_duration(elapsed_seconds)}"
             + (" saved_best" if is_best else "")
             + (" saved_closest" if is_closest else "")
@@ -706,8 +734,8 @@ def train(args: argparse.Namespace) -> None:
         "best_gap_to_reference_pp": best_top1 - REFERENCE_TEACHER_TOP1,
         "closest_gap_to_reference_pp": closest_top1 - REFERENCE_TEACHER_TOP1,
         "avg_epoch_seconds": average_epoch,
-        "estimated_300_seconds": estimated_full,
-        "estimated_300_human": common.format_duration(estimated_full),
+        "estimated_planned_seconds": estimated_full,
+        "estimated_planned_human": common.format_duration(estimated_full),
         "elapsed_seconds": total_elapsed,
         "elapsed_human": common.format_duration(total_elapsed),
         "paths": {
@@ -734,7 +762,7 @@ def train(args: argparse.Namespace) -> None:
     )
     log(
         f"[TIMING] teacher_avg_epoch={average_epoch:.1f}s "
-        f"estimated_300_teacher={common.format_duration(estimated_full)} "
+        f"estimated_{PLANNED_EPOCHS}_teacher={common.format_duration(estimated_full)} "
         f"elapsed={common.format_duration(total_elapsed)}"
     )
     log(f"[FINAL_RESULT] best_checkpoint={best_path.resolve()}")
