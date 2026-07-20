@@ -119,17 +119,16 @@ Smoke/timing accuracy is not a research result.
 
 The first Flowers attempt inherited CIFAR's 300-epoch strong-augmentation
 recipe and reached 59.33%, 7.00 points below the 66.33% reference. Because the
-public LG commit does not contain its Flowers YAML, recipe v2 changes only the
-two unavailable Flowers choices:
+public LG commit does not contain its Flowers YAML, recipe v2 keeps the same
+300-epoch schedule and changes only augmentation:
 
-- 200 epochs, matching the public LG framework's default `MAX_EPOCH`;
 - the public LG weak-augmentation branch: resize to 32, random crop with
   padding 4, horizontal flip, and ImageNet normalization.
 
 ResNet56, 32 x 32 input, scratch training, SGD 0.1, momentum 0.9, Nesterov,
 weight decay 5e-4, batch size 128, cosine decay, and seed 1 remain unchanged.
 
-Optional two-epoch timing check retaining the 200-epoch cosine schedule:
+Optional two-epoch timing check retaining the 300-epoch cosine schedule:
 
 ```bash
 python train_teacher_flowers.py --timing-run --num-workers 4
@@ -138,7 +137,7 @@ python train_teacher_flowers.py --timing-run --num-workers 4
 For the collected full run, write to `/app/output`:
 
 ```bash
-python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_weakaug_200ep_seed1 --num-workers 4
+python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_weakaug_300ep_seed1 --num-workers 4
 ```
 
 The full Flowers directory contains `best`, `latest`, and

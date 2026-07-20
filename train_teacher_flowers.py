@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Train the adjusted Flowers-102 ResNet56 guidance teacher at 32 x 32.
 
-Recipe v2 keeps the paper-confirmed teacher constraints while using the public
-LG code's weak-augmentation path and default 200-epoch schedule. On the KAU
-H200 runner, pass ``--output-dir /app/output`` for artifacts that must survive
-Pod release. Timing-run artifacts remain in the temporary cloned repository.
+Recipe v2 keeps the first run's 300-epoch schedule and all paper-confirmed
+teacher constraints while changing only augmentation to the public LG code's
+weak-augmentation path. On the KAU H200 runner, pass ``--output-dir
+/app/output`` for artifacts that must survive Pod release. Timing-run artifacts
+remain in the temporary cloned repository.
 """
 
 from __future__ import annotations
@@ -37,14 +38,14 @@ NUM_CLASSES = 102
 IMAGE_SIZE = 32
 TRAIN_BATCH_SIZE = 128
 TEST_BATCH_SIZE = 200
-PLANNED_EPOCHS = 200
+PLANNED_EPOCHS = 300
 BASE_LR = 0.1
 MOMENTUM = 0.9
 WEIGHT_DECAY = 5e-4
 SEED = 1
 REFERENCE_TEACHER_TOP1 = 66.33
 SCIPY_VERSION = "1.15.3"
-RECIPE_NAME = "flowers102_32_weakaug_200ep_v2"
+RECIPE_NAME = "flowers102_32_weakaug_300ep_v2"
 
 FLOWERS_BASE_URL = "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/"
 FLOWERS_FILES = {
@@ -82,8 +83,8 @@ LOCKED_PROTOCOL: Dict[str, Any] = {
     "train_transform": "resize32+random_crop_padding4+hflip+normalize",
     "reference_top1": REFERENCE_TEACHER_TOP1,
     "protocol_basis": (
-        "ALG explicit teacher constraints + public LG weak-augmentation "
-        "branch and default MAX_EPOCH=200"
+        "ALG explicit teacher constraints + attempt-1 300-epoch schedule + "
+        "public LG weak-augmentation branch"
     ),
     "official_lg_commit": common.OFFICIAL_LG_COMMIT,
 }
@@ -147,7 +148,7 @@ def parse_args() -> argparse.Namespace:
     modes.add_argument(
         "--timing-run",
         action="store_true",
-        help="Run two full-dataset epochs while retaining the 200-epoch LR schedule.",
+        help="Run two full-dataset epochs while retaining the 300-epoch LR schedule.",
     )
     modes.add_argument(
         "--smoke",
@@ -181,7 +182,7 @@ def default_run_name(args: argparse.Namespace) -> str:
     elif args.timing_run:
         suffix = "timing_2ep"
     else:
-        suffix = "full_200ep"
+        suffix = "full_300ep"
     return f"teacher_resnet56_flowers102_32_weakaug_seed1_{suffix}"
 
 

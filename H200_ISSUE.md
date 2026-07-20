@@ -1,7 +1,7 @@
 # H200 Issue request values
 
 Use the timing request first when a pipeline is new. CIFAR-100 estimates its
-300-epoch duration; the adjusted Flowers recipe estimates its 200-epoch
+300-epoch duration; the adjusted Flowers recipe also estimates its 300-epoch
 duration without placing temporary artifacts in the collected `/app/output`
 directory.
 
@@ -53,7 +53,7 @@ different GitHub user allocation and writes only temporary timing artifacts.
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
 
-## 4. Flowers-102 adjusted full 200-epoch run (`kau-aimslab`)
+## 4. Flowers-102 adjusted full 300-epoch run (`kau-aimslab`)
 
 The previous Flowers run already verified the H200 data/model pipeline. The
 new timing request is therefore optional; the full request may be submitted
@@ -64,7 +64,7 @@ directly after the updated commit is visible on GitHub.
 | Title | `[Request]: 박철현 Flowers-102 ResNet56 32x32 adjusted teacher training` |
 | 사용자 ID | `kau-aimslab` |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_weakaug_200ep_seed1 --num-workers 4` |
+| 코드 실행 명령어 | `python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_weakaug_300ep_seed1 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |

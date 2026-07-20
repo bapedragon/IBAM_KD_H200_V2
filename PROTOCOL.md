@@ -114,10 +114,11 @@ strong-augmentation switch cannot be claimed as published settings.
 
 The first H200 attempt inherited CIFAR's 300-epoch strong-augmentation recipe
 and reached 59.33% Top-1, 7.00 points below the 66.33% reference. Recipe v2 is
-a controlled, explicitly documented adjustment. It adopts two settings that
-already exist in the public LG framework: its default `MAX_EPOCH=200` and its
-`STRONG_AUGMENTATION=False` transform branch. All paper-confirmed constraints
-remain fixed.
+a controlled, explicitly documented adjustment. It retains the first run's
+300-epoch schedule and changes only augmentation to the public LG framework's
+`STRONG_AUGMENTATION=False` transform branch. This one-variable comparison
+avoids confounding the augmentation result with a different training length.
+All paper-confirmed constraints remain fixed.
 
 | Item | Value |
 |---|---:|
@@ -127,7 +128,7 @@ remain fixed.
 | Teacher | CIFAR-style ResNet56 (`6n+2`, `n=9`) |
 | Input resolution | **32 x 32** |
 | Number of classes | 102 |
-| Epochs | **200** (public LG framework default; Flowers YAML unavailable) |
+| Epochs | **300** (held fixed from attempt 1 for controlled comparison) |
 | Train / test batch size | 128 / 200 |
 | Optimizer | SGD |
 | Initial learning rate | 0.1 |
