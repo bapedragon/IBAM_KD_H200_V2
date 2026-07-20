@@ -41,6 +41,10 @@ teacher** used by LG and ALG, not the previously trained 224 x 224 teacher.
 | Primary metric | CIFAR-100 test Top-1 accuracy |
 | LG reference Top-1 | 70.43% |
 
+These statistical protocol values are constants in the training code and are
+not exposed as command-line overrides. Only operational values such as paths,
+run name, worker count, and smoke/timing mode can be changed.
+
 ## Official strong augmentation
 
 The official configuration inherits `TRAIN.STRONG_AUGMENTATION=True`. This

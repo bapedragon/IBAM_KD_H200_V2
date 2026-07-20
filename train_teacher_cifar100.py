@@ -333,12 +333,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--smoke-train-samples", type=int, default=1024)
     parser.add_argument("--smoke-test-samples", type=int, default=512)
-    parser.add_argument(
-        "--amp",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-        help="Optional operational override. Official LG teacher training uses FP32.",
-    )
     return parser.parse_args()
 
 
@@ -347,8 +341,6 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("--num-workers must be non-negative")
     if args.smoke_train_samples <= 0 or args.smoke_test_samples <= 0:
         raise ValueError("smoke subset sizes must be positive")
-    if args.amp:
-        log("[PROTOCOL][WARN] AMP is enabled; the official LG configuration uses FP32.")
 
 
 def actual_epochs(args: argparse.Namespace) -> int:
@@ -715,7 +707,8 @@ def train(args: argparse.Namespace) -> None:
     torch.backends.cudnn.benchmark = False
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    amp_enabled = bool(args.amp and device.type == "cuda")
+    # Locked to the official LG teacher setting. This is intentionally not a CLI option.
+    amp_enabled = False
     epochs_to_run = actual_epochs(args)
     run_name = args.run_name or default_run_name(args)
     run_dir = args.output_dir / run_name
