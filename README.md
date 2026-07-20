@@ -117,12 +117,13 @@ python train_teacher_cifar100.py --smoke --num-workers 0
 
 Smoke/timing accuracy is not a research result.
 
-## Flowers-102 final recipe v3
+## Flowers-102 final recipe v4
 
-The 300-epoch official-strong run reached 59.33% and was still improving. A
-weak-augmentation control reached only 51.63% while fitting the training set
-to 100%, so it is rejected. The final recipe restores the public LG strong
-augmentation and changes only the schedule length from 300 to 600 epochs:
+The 300-epoch official-strong run reached 59.33%. A weak-augmentation control
+reached only 51.63% while fitting the training set to 100%, so it is rejected.
+The 600-epoch strong run reached 69.87%, with a 66.35% draft-matching
+checkpoint at epoch 457. The final comparison keeps the public LG strong
+augmentation and uses an independent 400-epoch cosine schedule:
 
 - random resized crop to 32 with bicubic interpolation;
 - horizontal flip;
@@ -133,10 +134,10 @@ augmentation and changes only the schedule length from 300 to 600 epochs:
 ResNet56, 32 x 32 input, scratch training, SGD 0.1, momentum 0.9, Nesterov,
 weight decay 5e-4, batch size 128, cosine decay, and seed 1 remain unchanged.
 The draft target (66.33%) and the original LG paper value (59.83%) are logged
-separately. The 600-epoch extension is a documented implementation choice
+separately. The 400-epoch schedule is a documented implementation choice
 because the public LG repository has no Flowers teacher YAML.
 
-Optional two-epoch timing check retaining the 600-epoch cosine schedule:
+Optional two-epoch timing check retaining the 400-epoch cosine schedule:
 
 ```bash
 python train_teacher_flowers.py --timing-run --num-workers 4
@@ -145,17 +146,18 @@ python train_teacher_flowers.py --timing-run --num-workers 4
 For the collected full run, write to `/app/output`:
 
 ```bash
-python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_strongaug_600ep_seed1 --num-workers 4
+python train_teacher_flowers.py --output-dir /app/output --run-name teacher_resnet56_flowers102_32_strongaug_400ep_seed1 --num-workers 4
 ```
 
 The full Flowers directory contains `best`, `latest`, and
 `closest_to_reference` checkpoints plus `config.json`, `metrics.csv`, and
-`summary.json`. The new run name prevents both prior attempts from being
+`summary.json`. The new run name prevents all prior attempts from being
 overwritten.
 
 H200 build 439 verified the original Flowers data/model pipeline. Build 440
 completed the strong 300-epoch recipe at 59.33%; build 441 completed the weak
-control at 51.63%. Timing-run accuracy is not a research result.
+control at 51.63%; build 444 completed the strong 600-epoch run at 69.87%.
+Timing-run accuracy is not a research result.
 
 ## Chaoyang timing and full runs
 
