@@ -12,6 +12,11 @@ from methods.CRD.core import (
     forward_teacher_with_rep,
 )
 from methods.KD.core import create_student, student_view_to_teacher_view
+from methods.Ours.core import (
+    forward_student_features as forward_ours_student_features,
+    forward_teacher_features as forward_ours_teacher_features,
+)
+from methods.Ours.ours import Ours
 from methods.ReviewKD.core import (
     STUDENT_CHANNELS,
     TEACHER_CHANNELS,
@@ -76,6 +81,38 @@ class Cifar100MethodBridgeTest(unittest.TestCase):
         )
         self.assertEqual([tuple(item.shape) for item in reviewed], expected_teacher)
         self.assertEqual(tuple(student_logits.shape), (2, 100))
+
+    def test_ours_v2_teacher_and_larger_grid_bridge(self) -> None:
+        ours = Ours(grid_resize_mode="larger").eval()
+        with torch.inference_mode():
+            teacher_features = forward_ours_teacher_features(
+                self.teacher,
+                self.student_view,
+                "cifar100",
+                32,
+            )
+            student_features, student_logits = forward_ours_student_features(
+                self.student,
+                self.student_view,
+            )
+            alignment, fusion, aligned, fused, targets = ours(
+                student_features,
+                teacher_features,
+            )
+        expected_targets = [
+            (2, 16, 32, 32),
+            (2, 32, 16, 16),
+            (2, 64, 14, 14),
+        ]
+        self.assertEqual(
+            [tuple(item.shape) for item in teacher_features],
+            [(2, 16, 32, 32), (2, 32, 16, 16), (2, 64, 8, 8)],
+        )
+        self.assertEqual([tuple(item.shape) for item in aligned], expected_targets)
+        self.assertEqual([tuple(item.shape) for item in fused], expected_targets)
+        self.assertEqual([tuple(item.shape) for item in targets], expected_targets)
+        self.assertEqual(tuple(student_logits.shape), (2, 100))
+        self.assertTrue(bool(torch.isfinite(alignment + fusion)))
 
 
 if __name__ == "__main__":

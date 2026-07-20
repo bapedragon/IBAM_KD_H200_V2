@@ -33,6 +33,7 @@ IBAM_KD_H200_V2/
 ├── methods/
 │   ├── README.md
 │   ├── run_cifar100_three_methods.py
+│   ├── run_cifar100_crd_mgd_ours.py
 │   ├── run_combined_full_batch.py
 │   ├── run_five_methods.py
 │   ├── run_flowers_chaoyang_timing.py
@@ -40,6 +41,7 @@ IBAM_KD_H200_V2/
 │   ├── CRD/
 │   ├── ReviewKD/
 │   ├── MGD/
+│   ├── Ours/
 │   └── OFA/
 └── teachers/
     ├── checkpoints/
@@ -65,6 +67,8 @@ Ready-to-copy H200 request values are recorded in
 The V2 student pipeline supports all five generic methods in the draft table:
 `KD -> CRD -> ReviewKD -> MGD -> OFA`. Every method reuses the selected fixed
 teacher hash for its dataset while training a scratch DeiT-Ti at 224 x 224.
+The provided `Ours` model is also integrated with the exact documented ALG
+on/off beta controller and its source-faithful larger-grid feature rule.
 
 The teacher input is derived from the same augmented student tensor using
 bilinear resize to 32 x 32, so crop and flip geometry cannot drift between the

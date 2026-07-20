@@ -2,6 +2,9 @@
 
 This directory contains the V2 ResNet56-to-DeiT-Ti student pipelines for the
 five generic KD baselines in the draft table: KD, CRD, ReviewKD, MGD, and OFA.
+The paper's `Ours` implementation is maintained separately under
+[`Ours`](Ours) because its ALG-controlled grid-preserving feature objective is
+not a generic KD baseline.
 Every method uses the same fixed teacher checkpoint and the same base student
 protocol for a given dataset. Only the documented transfer operator and its
 method-specific coefficients may differ.
@@ -38,6 +41,22 @@ teacher. Crop and flip geometry therefore remains shared across both branches.
 | ReviewKD | multi-level features | ResNet 32/16/8 grids bilinearly resized to DeiT 14x14 grid |
 | MGD | masked reconstruction | ResNet stage-3 8x8 bilinearly resized to 14x14; DeiT block-11 tokens; `192 -> 64` alignment |
 | OFA | projected class logits | DeiT blocks 1/3/9/11 and official-behavior transformer projectors |
+| Ours | adaptive grid-preserving features | all 12 DeiT blocks, ResNet stages 1/2/3, supplied larger-grid rule, ALG beta schedule |
+
+## CIFAR-100 CRD + MGD + Ours sequence
+
+Ours has not yet been timed with the fixed V2 32 x 32 teacher. Measure the
+three-method sequence before requesting the 300-epoch batch:
+
+```bash
+python methods/run_cifar100_crd_mgd_ours.py --timing-run \
+  --output-dir /app/output/cifar100_crd_mgd_ours_timing_v2 --num-workers 4
+```
+
+The timing run preserves the 300-epoch LR horizon while executing two full
+dataset epochs per method. It writes independent CRD, MGD, and Ours
+directories plus `crd_mgd_ours_summary.json`. Use `--full-run` only after the
+returned aggregate estimate leaves a safe margin below the 600-minute limit.
 
 Method settings and official-code provenance are recorded under each method
 directory. The CNN-to-ViT adapters are explicit V2 implementation choices;
