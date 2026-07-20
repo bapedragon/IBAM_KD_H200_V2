@@ -100,7 +100,7 @@ confirmed:
 - local smoke run completed forward, backward, evaluation, atomic checkpoint,
   metrics, summary, and SHA-256 generation.
 
-## Flowers-102 reproduction boundary and recipe v2
+## Flowers-102 reproduction boundary and final recipe v3
 
 ALG's implementation details state that its ResNet56 guidance CNN is trained
 on 32 x 32 images and uses SGD with learning rate 0.1, momentum 0.9, weight
@@ -112,13 +112,20 @@ paper's 300-epoch statement describes the 224 x 224 ViT students, not the
 Flowers ResNet56 teacher. Therefore the exact Flowers teacher epoch count and
 strong-augmentation switch cannot be claimed as published settings.
 
-The first H200 attempt inherited CIFAR's 300-epoch strong-augmentation recipe
-and reached 59.33% Top-1, 7.00 points below the 66.33% reference. Recipe v2 is
-a controlled, explicitly documented adjustment. It retains the first run's
-300-epoch schedule and changes only augmentation to the public LG framework's
-`STRONG_AUGMENTATION=False` transform branch. This one-variable comparison
-avoids confounding the augmentation result with a different training length.
-All paper-confirmed constraints remain fixed.
+The first H200 attempt used the public LG strong-augmentation path for 300
+epochs and reached 59.33% Top-1. Its training accuracy was only 66.04% at
+epoch 300 and its test accuracy was still improving (52.85% at epoch 200,
+57.59% at epoch 250, and 59.33% at epoch 299). The weak-augmentation control
+then reached only 51.63% despite 100% training accuracy, demonstrating severe
+overfitting. It is rejected.
+
+Recipe v3 therefore restores the official strong augmentation and changes
+only the schedule length from 300 to 600 epochs. The longer duration is an
+explicit implementation choice selected before this final run; it is not
+presented as an official LG Flowers setting. The primary target from the
+current draft is 66.33%. For provenance, the original LG paper's Table 1
+reports 59.83% for its 32-resolution Flowers ResNet56 teacher. These two
+reference values are logged separately.
 
 | Item | Value |
 |---|---:|
@@ -128,7 +135,7 @@ All paper-confirmed constraints remain fixed.
 | Teacher | CIFAR-style ResNet56 (`6n+2`, `n=9`) |
 | Input resolution | **32 x 32** |
 | Number of classes | 102 |
-| Epochs | **300** (held fixed from attempt 1 for controlled comparison) |
+| Epochs | **600** |
 | Train / test batch size | 128 / 200 |
 | Optimizer | SGD |
 | Initial learning rate | 0.1 |
@@ -138,15 +145,15 @@ All paper-confirmed constraints remain fixed.
 | Label smoothing / Mixup / CutMix | 0 / disabled / disabled |
 | Mixed precision | disabled |
 | Seed / cuDNN benchmark | 1 / disabled |
-| Train augmentation | resize 32, random crop padding 4, horizontal flip |
-| Removed from attempt 1 | random resized crop, RandAugment, random erasing |
+| Train augmentation | official LG strong path: random resized crop 32, bicubic, horizontal flip, RandAugment m9, random erasing p=0.25 |
 | Primary metric | official test Top-1 accuracy |
-| Reference teacher Top-1 | 66.33% |
+| Draft reference teacher Top-1 | 66.33% |
+| Published LG teacher Top-1 | 59.83% |
 
 Evaluation remains direct resize to 32 x 32 plus ImageNet normalization. All
 listed statistical values are constants rather than command-line overrides.
-Recipe v2 must be described as an implementation choice rather than an exact
-official Flowers reproduction.
+The 600-epoch extension must be described as an implementation choice rather
+than an exact official Flowers reproduction.
 
 ## H200 timing verification
 
@@ -167,9 +174,11 @@ verified the official Flowers downloads and MD5 values, the 2,040/6,149 split,
 |---|---:|---:|---:|---:|---:|---|
 | CIFAR-100 official recipe | 438 | 300 | 71.91% | 70.43% | +1.48 pp | accepted |
 | CIFAR-100 closest diagnostic | 438 | - | 70.53% | 70.43% | +0.10 pp | saved |
-| Flowers attempt 1, strong augmentation | 440 | 300 | 59.33% | 66.33% | -7.00 pp | not accepted |
+| Flowers attempt 1, strong augmentation | 440 | 300 | 59.33% | draft 66.33% | -7.00 pp | retained baseline |
+| Flowers attempt 1 vs published LG | 440 | 300 | 59.33% | published 59.83% | -0.50 pp | comparable |
+| Flowers attempt 2, weak augmentation | 441 | 300 | 51.63% | draft 66.33% | -14.70 pp | rejected: overfit |
 
-The Flowers recipe-v2 result will be added only after its full H200 run.
+The Flowers recipe-v3 600-epoch result will be added after its final H200 run.
 
 ## Chaoyang locked protocol
 
