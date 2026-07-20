@@ -21,9 +21,7 @@ extra installation command is required in the execution field.
 
 ## CIFAR-100 Ours + CRD + MGD sequential timing run
 
-Ours has not yet been measured with the fixed V2 teacher, so submit this
-timing request before deciding whether all three full runs fit safely inside
-the 600-minute Pod limit.
+H200 build 451 completed this timing sequence successfully.
 
 | Field | Value |
 |---|---|
@@ -35,10 +33,39 @@ the 600-minute Pod limit.
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
 
-Success requires the individual Ours, CRD, and MGD `[DONE]` messages followed
-by `[DONE] Ours, CRD, and MGD completed successfully`. Do not submit the
-corresponding `--full-run` until this log reports the three-method aggregate
-estimate.
+Measured 300-epoch estimates were Ours `4h 08m 37s`, CRD `3h 15m 04s`, and
+MGD `3h 03m 26s`. Their `10h 27m 07s` total exceeds the 600-minute Pod limit,
+so do not submit all three in one full request.
+
+### CIFAR-100 Ours full training
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti Ours full training` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/run_cifar100_ours_crd_mgd.py --full-run --methods Ours --output-dir /app/output/cifar100_ours_full_v2 --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+Expected training time is approximately `4h 08m 37s`.
+
+### CIFAR-100 CRD + MGD full training
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti CRD MGD full training` |
+| 사용자 ID | `kau-aimslab` (연구실 계정) **or** `bapedragon` (개인 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/run_cifar100_ours_crd_mgd.py --full-run --methods CRD MGD --output-dir /app/output/cifar100_crd_mgd_full_v2 --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+Expected combined training time is approximately `6h 18m 30s`. Run these two
+requests in parallel on the personal and lab accounts when both allocations
+are available.
 
 ## 2. Full 300-epoch run
 

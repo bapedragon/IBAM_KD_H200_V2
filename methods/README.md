@@ -45,19 +45,31 @@ teacher. Crop and flip geometry therefore remains shared across both branches.
 
 ## CIFAR-100 Ours + CRD + MGD sequence
 
-Ours has not yet been timed with the fixed V2 32 x 32 teacher. Measure the
-three-method sequence before requesting the 300-epoch batch:
+H200 build 451 measured the fixed V2 32 x 32 teacher sequence:
 
 ```bash
 python methods/run_cifar100_ours_crd_mgd.py --timing-run \
   --output-dir /app/output/cifar100_ours_crd_mgd_timing_v2 --num-workers 4
 ```
 
-The timing run preserves the 300-epoch LR horizon while executing two full
-dataset epochs per method. It writes independent CRD, MGD, and Ours
-directories plus `ours_crd_mgd_summary.json`. Ours runs first so its new V2
-timing or failure is available immediately. Use `--full-run` only after the
-returned aggregate estimate leaves a safe margin below the 600-minute limit.
+| Method | Measured 300-epoch estimate |
+|---|---:|
+| Ours | `4h 08m 37s` |
+| CRD | `3h 15m 04s` |
+| MGD | `3h 03m 26s` |
+| Total | `10h 27m 07s` |
+
+The total exceeds the 600-minute limit. Run `Ours` alone and `CRD MGD`
+together in two parallel Issues. The runner blocks an unsafe all-three full
+request. Every method still writes an independent directory.
+
+```bash
+python methods/run_cifar100_ours_crd_mgd.py --full-run --methods Ours \
+  --output-dir /app/output/cifar100_ours_full_v2 --num-workers 4
+
+python methods/run_cifar100_ours_crd_mgd.py --full-run --methods CRD MGD \
+  --output-dir /app/output/cifar100_crd_mgd_full_v2 --num-workers 4
+```
 
 Method settings and official-code provenance are recorded under each method
 directory. The CNN-to-ViT adapters are explicit V2 implementation choices;

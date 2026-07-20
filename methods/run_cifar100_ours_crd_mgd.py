@@ -19,6 +19,12 @@ METHODS = (
     ("CRD", Path("methods/CRD/cifar100/train.py"), "crd"),
     ("MGD", Path("methods/MGD/cifar100/train.py"), "mgd"),
 )
+MEASURED_FULL_SECONDS = {
+    "Ours": 4 * 3600 + 8 * 60 + 37,
+    "CRD": 3 * 3600 + 15 * 60 + 4,
+    "MGD": 3 * 3600 + 3 * 60 + 26,
+}
+POD_LIMIT_SECONDS = 600 * 60
 
 
 def log(message: str = "") -> None:
@@ -96,6 +102,16 @@ def main() -> None:
     selected_names = [item[0] for item in selected_methods]
     if len(selected_names) != len(args.methods):
         raise ValueError("--methods must not contain duplicate method names")
+    measured_selected_seconds = sum(
+        MEASURED_FULL_SECONDS[name] for name in selected_names
+    )
+    if args.full_run and measured_selected_seconds >= POD_LIMIT_SECONDS:
+        raise RuntimeError(
+            "Selected full-run methods exceed the 600-minute Pod limit: "
+            f"methods={','.join(selected_names)} "
+            f"measured={format_duration(measured_selected_seconds)}. "
+            "Run Ours alone and CRD+MGD in separate Issues."
+        )
 
     output_root = args.output_dir.resolve()
     output_root.mkdir(parents=True, exist_ok=True)
@@ -111,6 +127,11 @@ def main() -> None:
     log("=" * 80)
     log(f"[MODE] timing_run={args.timing_run} full_run={args.full_run}")
     log(f"[METHODS] selected={','.join(selected_names)}")
+    log(
+        f"[RUNTIME_PLAN] measured_full={format_duration(measured_selected_seconds)} "
+        f"pod_limit={format_duration(POD_LIMIT_SECONDS)} "
+        f"margin={format_duration(POD_LIMIT_SECONDS - measured_selected_seconds)}"
+    )
     log(f"[PATH] repository={REPOSITORY_ROOT}")
     log(f"[PATH] data_dir={args.data_dir.resolve()}")
     log(f"[PATH] teacher_root={args.teacher_root.resolve()}")
