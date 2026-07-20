@@ -33,7 +33,7 @@ IBAM_KD_H200_V2/
 ├── methods/
 │   ├── README.md
 │   ├── run_cifar100_three_methods.py
-│   ├── run_cifar100_crd_mgd_ours.py
+│   ├── run_cifar100_ours_crd_mgd.py
 │   ├── run_combined_full_batch.py
 │   ├── run_five_methods.py
 │   ├── run_flowers_chaoyang_timing.py

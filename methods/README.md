@@ -43,19 +43,20 @@ teacher. Crop and flip geometry therefore remains shared across both branches.
 | OFA | projected class logits | DeiT blocks 1/3/9/11 and official-behavior transformer projectors |
 | Ours | adaptive grid-preserving features | all 12 DeiT blocks, ResNet stages 1/2/3, supplied larger-grid rule, ALG beta schedule |
 
-## CIFAR-100 CRD + MGD + Ours sequence
+## CIFAR-100 Ours + CRD + MGD sequence
 
 Ours has not yet been timed with the fixed V2 32 x 32 teacher. Measure the
 three-method sequence before requesting the 300-epoch batch:
 
 ```bash
-python methods/run_cifar100_crd_mgd_ours.py --timing-run \
-  --output-dir /app/output/cifar100_crd_mgd_ours_timing_v2 --num-workers 4
+python methods/run_cifar100_ours_crd_mgd.py --timing-run \
+  --output-dir /app/output/cifar100_ours_crd_mgd_timing_v2 --num-workers 4
 ```
 
 The timing run preserves the 300-epoch LR horizon while executing two full
 dataset epochs per method. It writes independent CRD, MGD, and Ours
-directories plus `crd_mgd_ours_summary.json`. Use `--full-run` only after the
+directories plus `ours_crd_mgd_summary.json`. Ours runs first so its new V2
+timing or failure is available immediately. Use `--full-run` only after the
 returned aggregate estimate leaves a safe margin below the 600-minute limit.
 
 Method settings and official-code provenance are recorded under each method

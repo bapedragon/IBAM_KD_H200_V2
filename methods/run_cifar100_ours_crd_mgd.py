@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run CIFAR-100 DeiT-Ti CRD, MGD, and Ours sequentially."""
+"""Run CIFAR-100 DeiT-Ti Ours, CRD, and MGD sequentially."""
 
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 METHODS = (
+    ("Ours", Path("methods/Ours/cifar100/train.py"), "ours"),
     ("CRD", Path("methods/CRD/cifar100/train.py"), "crd"),
     ("MGD", Path("methods/MGD/cifar100/train.py"), "mgd"),
-    ("Ours", Path("methods/Ours/cifar100/train.py"), "ours"),
 )
 
 
@@ -71,7 +71,7 @@ def parse_args() -> argparse.Namespace:
         choices=[method for method, _, _ in METHODS],
         default=[method for method, _, _ in METHODS],
         help=(
-            "Subset to execute in canonical CRD -> MGD -> Ours order. "
+            "Subset to execute in canonical Ours -> CRD -> MGD order. "
             "Defaults to all three. "
             "Use this to split a full run across the H200 runtime limit."
         ),
@@ -99,7 +99,7 @@ def main() -> None:
 
     output_root = args.output_dir.resolve()
     output_root.mkdir(parents=True, exist_ok=True)
-    status_path = output_root / "crd_mgd_ours_status.json"
+    status_path = output_root / "ours_crd_mgd_status.json"
     sequence_start = time.time()
     records: list[dict[str, Any]] = []
 
@@ -264,7 +264,7 @@ def main() -> None:
         final_summary["estimated_three_method_full_human"] = format_duration(
             estimated_full_seconds
         )
-    final_path = output_root / "crd_mgd_ours_summary.json"
+    final_path = output_root / "ours_crd_mgd_summary.json"
     atomic_json(final_path, final_summary)
     log("=" * 80)
     log(f"[FINAL_RESULT] completed_methods={','.join(selected_names)}")
@@ -281,7 +281,7 @@ def main() -> None:
     )
     if len(selected_names) == len(METHODS):
         log(
-            "[DONE] CRD, MGD, and Ours completed successfully; "
+            "[DONE] Ours, CRD, and MGD completed successfully; "
             "resources may be released."
         )
     else:
