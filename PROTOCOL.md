@@ -189,6 +189,41 @@ The selected checkpoints are recorded in `teachers/checkpoints/manifest.json`.
 All downstream KD methods must reuse these exact hashes rather than selecting
 a different teacher per method.
 
+## CIFAR-100 DeiT-Ti common student protocol (V2)
+
+KD, CRD, and ReviewKD are compared under one fixed base protocol. Only the
+method-specific transfer loss and its documented adapter may differ.
+
+| Item | Value |
+|---|---:|
+| Student | DeiT-Ti (`deit_tiny_patch16_224`) |
+| Initialization | scratch; no external pretrained weights |
+| Student input | **224 x 224** |
+| Teacher input | **32 x 32** |
+| Epochs | 300 |
+| Batch size | 128 |
+| Optimizer | AdamW |
+| Initial LR | `5e-4` |
+| Weight decay | `0.05` |
+| LR schedule | 20-epoch warm-up, then cosine decay |
+| Label smoothing | `0.1` |
+| AMP | enabled on CUDA |
+| Seed | 42 |
+| Metric | CIFAR-100 test Top-1 |
+
+Training uses random resized crop to 224 (`scale=0.8-1.0`, bicubic) and random
+horizontal flip. Evaluation uses resize to 256 and center crop to 224. The
+student tensor uses CIFAR-100 normalization. For the teacher branch, that same
+tensor is converted back to image space, bilinearly resized to 32, and then
+normalized with the ImageNet statistics used during teacher training. This
+preserves identical crop/flip geometry while respecting each model's training
+normalization.
+
+The exact KD coefficients, CRD official settings, and ReviewKD feature adapter
+are separately recorded in `methods/KD/README.md`, `methods/CRD/README.md`, and
+`methods/ReviewKD/README.md`. These README files are part of the locked
+experimental record.
+
 ## Chaoyang locked protocol
 
 ALG explicitly identifies the guidance teacher as ResNet56 trained from

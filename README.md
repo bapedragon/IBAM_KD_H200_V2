@@ -30,6 +30,12 @@ IBAM_KD_H200_V2/
 ├── README.md
 ├── PROTOCOL.md
 ├── requirements.txt
+├── methods/
+│   ├── README.md
+│   ├── run_cifar100_three_methods.py
+│   ├── KD/
+│   ├── CRD/
+│   └── ReviewKD/
 └── teachers/
     ├── checkpoints/
     │   ├── cifar100/
@@ -48,6 +54,31 @@ The complete locked protocol and source audit are recorded in
 [`PROTOCOL.md`](PROTOCOL.md).
 Ready-to-copy H200 request values are recorded in
 [`H200_ISSUE.md`](H200_ISSUE.md).
+
+## CIFAR-100 student stage
+
+The V2 student pipeline now supports the first three generic methods in one
+sequential job: `KD -> CRD -> ReviewKD`. All three reuse the exact fixed
+CIFAR-100 teacher hash while training a scratch DeiT-Ti at 224 x 224.
+
+The teacher input is derived from the same augmented student tensor using
+bilinear resize to 32 x 32, so crop and flip geometry cannot drift between the
+two branches. The teacher and student normalizations are applied separately.
+ReviewKD teacher features at 32/16/8 are bilinearly matched to the DeiT 14x14
+patch grid.
+
+Run the full-data two-epoch timing sequence first:
+
+```bash
+python methods/run_cifar100_three_methods.py --timing-run --num-workers 4
+```
+
+Each method writes its own `student_best.pt`, `student_latest.pt`, and
+`summary.json` under a distinct run directory. The runner additionally writes
+`three_method_status.json` and `three_method_summary.json`; therefore no method
+can overwrite another method's files. See [`methods/README.md`](methods/README.md)
+for the locked base protocol and the method subdirectories for their exact
+losses, official-code provenance, and heterogeneous adapters.
 
 ## Fixed teachers for downstream KD
 

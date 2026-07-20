@@ -101,3 +101,46 @@ Submit after the timing log contains `[PROTOCOL_CHECK] status=PASS`, the exact
 
 Do not change `/app/output` to `/app/outputs`; the H200 collector uses the
 singular path.
+
+## 7. CIFAR-100 KD + CRD + ReviewKD sequential timing run
+
+This runs two full-dataset epochs for each method in the fixed order
+`KD -> CRD -> ReviewKD`. Each method writes to a different directory. The
+timing artifacts are collected so all three checkpoint/summary sets can be
+inspected after the Pod exits.
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti KD CRD ReviewKD timing run` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/run_cifar100_three_methods.py --timing-run --output-dir /app/output/cifar100_three_methods_timing_v2 --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+Successful completion must print all three per-method `[DONE]` markers and the
+final sequence marker:
+
+```text
+[DONE] All three methods completed successfully; resources may be released.
+```
+
+## 8. CIFAR-100 KD + CRD + ReviewKD sequential full run
+
+Submit only after the timing summary confirms the combined estimate fits the
+Pod runtime limit.
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti KD CRD ReviewKD full training` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/run_cifar100_three_methods.py --full-run --output-dir /app/output/cifar100_three_methods_full_v2 --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+If a later method fails, the runner stops, writes the failing method and error
+to `three_method_status.json`, and leaves every already completed method
+directory untouched.
