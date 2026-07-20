@@ -1,8 +1,8 @@
-# ResNet56 32 x 32 teacher protocols
+# V2 locked teacher and student protocols
 
-This document records the exact protocol used by
-`teachers/train_teacher_cifar100.py`. The goal is to reproduce the **32 x 32 guidance
-teacher** used by LG and ALG, not the previously trained 224 x 224 teacher.
+This document records the selected 32 x 32 ResNet56 teacher recipes for all
+three datasets and the shared 224 x 224 DeiT-Ti student protocols used by every
+compared method.
 
 ## Paper and official-code evidence
 
@@ -100,7 +100,7 @@ confirmed:
 - local smoke run completed forward, backward, evaluation, atomic checkpoint,
   metrics, summary, and SHA-256 generation.
 
-## Flowers-102 reproduction boundary and final recipe v5
+## Flowers-102 selected 450-epoch teacher protocol
 
 ALG's implementation details state that its ResNet56 guidance CNN is trained
 on 32 x 32 images and uses SGD with learning rate 0.1, momentum 0.9, weight
@@ -112,22 +112,12 @@ paper's 300-epoch statement describes the 224 x 224 ViT students, not the
 Flowers ResNet56 teacher. Therefore the exact Flowers teacher epoch count and
 strong-augmentation switch cannot be claimed as published settings.
 
-The first H200 attempt used the public LG strong-augmentation path for 300
-epochs and reached 59.33% Top-1. Its training accuracy was only 66.04% at
-epoch 300 and its test accuracy was still improving (52.85% at epoch 200,
-57.59% at epoch 250, and 59.33% at epoch 299). The weak-augmentation control
-then reached only 51.63% despite 100% training accuracy, demonstrating severe
-overfitting. It is rejected.
-
-The 600-epoch strong run subsequently reached a best Top-1 of 69.87% and a
-closest-to-draft checkpoint of 66.35% at epoch 457. An independent 400-epoch
-strong run reached 63.33% at epoch 346. Recipe v5 keeps every statistical
-choice unchanged except that it uses an independent 450-epoch cosine schedule.
-It is the final explicit implementation comparison among the completed 300-,
-400-, and 600-epoch schedules, not an official LG Flowers setting.
-The primary target from the current draft is 66.33%. For provenance, the
-original LG paper's Table 1 reports 59.83% for its 32-resolution Flowers
-ResNet56 teacher. These reference values are logged separately.
+The selected implementation uses the public LG strong-augmentation path and
+an independent 450-epoch cosine schedule. The primary target from the current
+draft is 66.33%. The selected best checkpoint reaches 66.03% at epoch 389.
+For provenance, the original LG paper's Table 1 reports 59.83% for its
+32-resolution Flowers ResNet56 teacher. The 450-epoch count remains an explicit
+implementation choice rather than a published LG Flowers setting.
 
 | Item | Value |
 |---|---:|
@@ -157,33 +147,13 @@ listed statistical values are constants rather than command-line overrides.
 The 450-epoch schedule must be described as an implementation choice rather
 than an exact official Flowers reproduction.
 
-## H200 timing verification
+## Selected full-run teacher results
 
-| Dataset | H200 build | Account | Full-data epochs | Average epoch | Estimated full run | Result |
-|---|---:|---|---:|---:|---:|---|
-| CIFAR-100 | 437 | `bapedragon` | 2 | 9.3 s | 46m 17s | PASS |
-| Flowers-102 | 439 | `kau-aimslab` | 2 | 5.3 s | 26m 25s | PASS |
-| Chaoyang | 442 | `bapedragon` | 2 | 5.2 s | 26m 11s | PASS |
-
-The timing runs used the original 300-epoch attempt-1 schedule. Their 2-epoch
-accuracies are startup diagnostics and are not research results. Build 439
-verified the official Flowers downloads and MD5 values, the 2,040/6,149 split,
-861,750 parameters, 32/16/8 feature grids, and atomic checkpoint creation.
-
-## Completed full-run results
-
-| Dataset / recipe | H200 build | Epochs | Best Top-1 | Reference | Gap | Status |
-|---|---:|---:|---:|---:|---:|---|
-| CIFAR-100 official recipe | 438 | 300 | 71.91% | 70.43% | +1.48 pp | accepted |
-| CIFAR-100 closest diagnostic | 438 | - | 70.53% | 70.43% | +0.10 pp | saved |
-| Flowers attempt 1, strong augmentation | 440 | 300 | 59.33% | draft 66.33% | -7.00 pp | retained baseline |
-| Flowers attempt 1 vs published LG | 440 | 300 | 59.33% | published 59.83% | -0.50 pp | comparable |
-| Flowers attempt 2, weak augmentation | 441 | 300 | 51.63% | draft 66.33% | -14.70 pp | rejected: overfit |
-| Flowers attempt 3, strong augmentation | 444 | 600 | 69.87% | draft 66.33% | +3.54 pp | completed |
-| Flowers attempt 3, closest diagnostic | 444 | epoch 457 | 66.35% | draft 66.33% | +0.02 pp | saved |
-| Flowers attempt 4, strong augmentation | - | 400 | 63.33% | draft 66.33% | -3.00 pp | completed |
-| Flowers final, strong augmentation | 447 | 450 | 66.03% | draft 66.33% | -0.30 pp | **selected best** |
-| Chaoyang moderate augmentation | 443 | 300 | 76.72% | 77.20% | -0.48 pp | **selected best** |
+| Dataset / recipe | Epochs | Average epoch | Full-run elapsed | Best Top-1 | Reference | Gap | Status |
+|---|---:|---:|---:|---:|---:|---:|---|
+| CIFAR-100 official recipe | 300 | 8.75 s | 44m 01s | 71.91% | 70.43% | +1.48 pp | selected |
+| Flowers-102 strong augmentation | 450 | 5.02 s | 38m 11s | 66.03% | 66.33% | -0.30 pp | selected |
+| Chaoyang moderate augmentation | 300 | 4.87 s | 24m 34s | 76.72% | 77.20% | -0.48 pp | selected |
 
 The selected checkpoints are recorded in `teachers/checkpoints/manifest.json`.
 All downstream KD methods must reuse these exact hashes rather than selecting

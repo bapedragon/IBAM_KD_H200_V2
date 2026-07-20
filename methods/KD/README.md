@@ -27,3 +27,15 @@ summary.json
 
 Both checkpoints include the student state, epoch, Top-1, fixed-teacher
 metadata, method name, and full command configuration.
+
+## Independent dataset entry points
+
+| Dataset | Epochs | Batch | Warm-up | Entry point |
+|---|---:|---:|---:|---|
+| CIFAR-100 | 300 | 128 | 20 | [`cifar100/train.py`](cifar100/train.py) |
+| Flowers-102 | 200 | 64 | 5 | [`flowers102/train.py`](flowers102/train.py) |
+| Chaoyang | 100 | 64 | 5 | [`chaoyang/train.py`](chaoyang/train.py) |
+
+Each dataset directory contains its own README with the locked protocol,
+standalone timing/full commands, and output contract. Multi-method runners call
+these same entry points and do not contain a separate KD implementation.

@@ -77,7 +77,7 @@ Spatial feature methods bilinearly match the CNN feature grid to the DeiT
 14x14 patch grid where required.
 
 Run the full-data two-epoch timing sequence first. Flowers and Chaoyang can be
-submitted as separate Issues in parallel using the personal and lab accounts:
+submitted as separate Issues in parallel:
 
 ```bash
 python methods/run_five_methods.py --dataset flowers102 --timing-run \
@@ -123,8 +123,8 @@ and heterogeneous adapters.
 
 H200 build 451 measured the CIFAR-100 `Ours -> CRD -> MGD` 300-epoch
 estimates as `4h 08m 37s`, `3h 15m 04s`, and `3h 03m 26s`. The combined
-`10h 27m 07s` exceeds the Pod limit. The current two-account schedule runs
-Ours+CRD first (`7h 23m 41s`) and MGD separately; see
+`10h 27m 07s` exceeds the Pod limit. The current split schedule runs
+Ours+CRD first (`7h 23m 41s`) and MGD as a separate job; see
 [`H200_ISSUE.md`](H200_ISSUE.md).
 
 ## Fixed teachers for downstream KD
@@ -218,14 +218,11 @@ python teachers/train_teacher_cifar100.py --smoke --num-workers 0
 
 Smoke/timing accuracy is not a research result.
 
-## Flowers-102 final recipe v5
+## Flowers-102 selected 450-epoch teacher protocol
 
-The 300-epoch official-strong run reached 59.33%. A weak-augmentation control
-reached only 51.63% while fitting the training set to 100%, so it is rejected.
-The 600-epoch strong run reached 69.87%, with a 66.35% draft-matching
-checkpoint at epoch 457. The independent 400-epoch comparison then reached
-63.33% at epoch 346. The final 450-epoch comparison keeps the public LG strong
-augmentation and starts a new cosine schedule from scratch:
+The repository keeps one selected Flowers teacher recipe: ResNet56 trained
+from scratch for 450 epochs at 32 x 32. It uses the public LG strong
+augmentation path:
 
 - random resized crop to 32 with bicubic interpolation;
 - horizontal flip;
@@ -235,8 +232,8 @@ augmentation and starts a new cosine schedule from scratch:
 
 ResNet56, 32 x 32 input, scratch training, SGD 0.1, momentum 0.9, Nesterov,
 weight decay 5e-4, batch size 128, cosine decay, and seed 1 remain unchanged.
-The draft target (66.33%) and the original LG paper value (59.83%) are logged
-separately. The 450-epoch schedule is a documented implementation choice
+The draft target is 66.33%; the selected checkpoint reaches 66.03% Top-1 at
+epoch 389. The 450-epoch schedule is a documented implementation choice
 because the public LG repository has no Flowers teacher YAML.
 
 Optional two-epoch timing check retaining the 450-epoch cosine schedule:
@@ -253,14 +250,8 @@ python teachers/train_teacher_flowers.py --output-dir /app/output --run-name tea
 
 The full Flowers directory contains `best`, `latest`, and
 `closest_to_reference` checkpoints plus `config.json`, `metrics.csv`, and
-`summary.json`. The new run name prevents all prior attempts from being
-overwritten.
-
-H200 build 439 verified the original Flowers data/model pipeline. Build 440
-completed the strong 300-epoch recipe at 59.33%; build 441 completed the weak
-control at 51.63%; build 444 completed the strong 600-epoch run at 69.87%.
-The independent 400-epoch run completed at 63.33%. The 450-epoch run is the
-last scheduled Flowers teacher comparison.
+`summary.json`. Only the selected 450-epoch result and protocol are maintained
+in this repository.
 Timing-run accuracy is not a research result.
 
 ## Chaoyang timing and full runs

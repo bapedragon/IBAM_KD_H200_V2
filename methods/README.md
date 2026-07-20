@@ -9,6 +9,11 @@ Every method uses the same fixed teacher checkpoint and the same base student
 protocol for a given dataset. Only the documented transfer operator and its
 method-specific coefficients may differ.
 
+Every method/dataset directory owns an executable `train.py` and a local
+`README.md`. The sequential scripts in this directory are scheduling helpers:
+they launch those independent entry points as subprocesses and keep every run
+in a separate output directory.
+
 ## Locked common student protocols
 
 | Dataset | Epochs | Batch | Warm-up | Student input | Teacher input |
@@ -59,9 +64,9 @@ python methods/run_cifar100_ours_crd_mgd.py --timing-run \
 | MGD | `3h 03m 26s` |
 | Total | `10h 27m 07s` |
 
-The total exceeds the 600-minute limit. For the current two-account schedule,
-run `Ours CRD` together first and submit `MGD` separately after an account is
-available. `Ours CRD` is estimated at `7h 23m 41s`, leaving `2h 36m 19s`
+The total exceeds the 600-minute limit. For the current execution schedule,
+run `Ours CRD` together first and submit `MGD` as a separate job.
+`Ours CRD` is estimated at `7h 23m 41s`, leaving `2h 36m 19s`
 under the limit. The runner blocks an unsafe all-three full request. Every
 method still writes an independent directory.
 

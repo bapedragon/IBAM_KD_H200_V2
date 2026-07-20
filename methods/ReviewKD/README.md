@@ -32,3 +32,15 @@ term ramps linearly over 20 epochs. No additional logit KL term is used.
 The ABF adapter state is stored with the student in every checkpoint. The
 cross-architecture feature selection and bilinear bridge are documented V2
 choices; base optimization and input settings are in `methods/README.md`.
+
+## Independent dataset entry points
+
+| Dataset | Epochs | Batch | Warm-up | Entry point |
+|---|---:|---:|---:|---|
+| CIFAR-100 | 300 | 128 | 20 | [`cifar100/train.py`](cifar100/train.py) |
+| Flowers-102 | 200 | 64 | 5 | [`flowers102/train.py`](flowers102/train.py) |
+| Chaoyang | 100 | 64 | 5 | [`chaoyang/train.py`](chaoyang/train.py) |
+
+Each dataset directory contains its own README and standalone commands. Batch
+runners call these same wrappers, so the ReviewKD protocol does not depend on
+the convenience runner.

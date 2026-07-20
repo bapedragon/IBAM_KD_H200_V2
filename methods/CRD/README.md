@@ -27,3 +27,15 @@ feature interpolation is required.
 The checkpoint stores both the student and CRD criterion/memory-bank state so
 the result is self-contained. Base optimization and input settings are fixed
 in `methods/README.md`.
+
+## Independent dataset entry points
+
+| Dataset | Epochs | Batch | Warm-up | Entry point |
+|---|---:|---:|---:|---|
+| CIFAR-100 | 300 | 128 | 20 | [`cifar100/train.py`](cifar100/train.py) |
+| Flowers-102 | 200 | 64 | 5 | [`flowers102/train.py`](flowers102/train.py) |
+| Chaoyang | 100 | 64 | 5 | [`chaoyang/train.py`](chaoyang/train.py) |
+
+Each dataset directory contains its own README and can be run without a batch
+runner. Multi-method runners invoke these same wrappers and preserve separate
+CRD checkpoints, memory-bank state, summaries, and output directories.

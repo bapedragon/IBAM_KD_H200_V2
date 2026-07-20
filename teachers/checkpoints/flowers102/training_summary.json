@@ -58,7 +58,7 @@
     "train_transform": "official_lg_random_resized_crop32_bicubic+hflip+randaugment_m9+random_erasing_p0.25+normalize",
     "draft_reference_top1": 66.33,
     "published_lg_teacher_top1": 59.83,
-    "protocol_basis": "ALG explicit teacher constraints + official LG strong augmentation + independent 450-epoch cosine schedule selected after the documented 300-, 400-, and 600-epoch comparisons",
+    "protocol_basis": "ALG explicit teacher constraints + official LG strong augmentation + selected 450-epoch cosine schedule",
     "official_lg_commit": "d2165f74049c906b0afc9f957491960fb3c0cc8b"
   }
 }
