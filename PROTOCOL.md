@@ -169,3 +169,39 @@ verified the official Flowers downloads and MD5 values, the 2,040/6,149 split,
 | Flowers attempt 1, strong augmentation | 440 | 300 | 59.33% | 66.33% | -7.00 pp | not accepted |
 
 The Flowers recipe-v2 result will be added only after its full H200 run.
+
+## Chaoyang locked protocol
+
+ALG explicitly identifies the guidance teacher as ResNet56 trained from
+scratch at 32 x 32, with SGD learning rate 0.1, momentum 0.9, weight decay
+5e-4, and batch size 128. The draft reference teacher Top-1 is 77.20%.
+
+The audited LG commit does not contain a Chaoyang teacher YAML. Consequently,
+the 300-epoch schedule and augmentation below are documented implementation
+choices. The crop policy is the moderate policy already validated on the
+mounted Chaoyang images, scaled from 224 to the required 32 x 32 input.
+
+| Item | Value |
+|---|---:|
+| Dataset | Chaoyang |
+| Train / test split | official 4,021 / 2,139 |
+| Classes | normal, serrated, adenocarcinoma, adenoma |
+| Teacher | CIFAR-style ResNet56 (`6n+2`, `n=9`) |
+| Input resolution | **32 x 32** |
+| Epochs | **300** |
+| Train / test batch size | 128 / 200 |
+| Optimizer | SGD |
+| Initial learning rate | 0.1 |
+| Momentum / Nesterov | 0.9 / enabled |
+| Weight decay | 5e-4, excluding bias and normalization parameters |
+| LR schedule | cosine decay to 0; no warm-up |
+| Mixed precision | disabled |
+| Seed / cuDNN benchmark | 1 / disabled |
+| Train augmentation | random resized crop 32, scale 0.8-1.0, bicubic; horizontal flip |
+| Evaluation | direct resize to 32, ImageNet normalization |
+| Reference teacher Top-1 | 77.20% |
+
+The H200 script resolves one nested extraction directory when present and
+requires the exact official per-class counts before any optimizer step. It
+writes atomic best/latest/closest checkpoints, metrics, config, summary, and
+SHA-256 hashes.

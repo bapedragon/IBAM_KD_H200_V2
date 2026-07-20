@@ -12,6 +12,7 @@ The low-resolution teacher stage currently covers:
 |---|---|---:|---:|
 | CIFAR-100 | CIFAR-style ResNet56 | **32 x 32** | 70.43% |
 | Flowers-102 | CIFAR-style ResNet56 | **32 x 32** | 66.33% |
+| Chaoyang | CIFAR-style ResNet56 | **32 x 32** | 77.20% |
 
 The Flowers implementation uses the official `train+val` split (2,040 images)
 for training and the official test split (6,149 images) for evaluation.
@@ -28,6 +29,7 @@ IBAM_KD_H200_V2/
 ├── README.md
 ├── PROTOCOL.md
 ├── requirements.txt
+├── train_teacher_chaoyang.py
 ├── train_teacher_cifar100.py
 └── train_teacher_flowers.py
 ```
@@ -149,6 +151,28 @@ H200 build 439 verified the original Flowers data/model pipeline. Build 440
 completed the first 300-epoch recipe at 59.33%; that checkpoint is retained as
 an unsuccessful reproduction attempt. Timing-run accuracy is not a research
 result.
+
+## Chaoyang timing and full runs
+
+Chaoyang is read from the persistent mount at `/app/data/chaoyang`. The script
+validates all 4,021/2,139 JSON records, class counts, files, and 512 x 512 source
+image format before training.
+
+Run the full-data two-epoch timing check first:
+
+```bash
+python train_teacher_chaoyang.py --timing-run --num-workers 4
+```
+
+After it prints `[PROTOCOL_CHECK] status=PASS` and `[DONE]`, run:
+
+```bash
+python train_teacher_chaoyang.py --output-dir /app/output --run-name teacher_resnet56_chaoyang_32_moderateaug_300ep_seed1 --num-workers 4
+```
+
+The statistical recipe is fixed at ResNet56, 32 x 32, 300 epochs, SGD 0.1,
+batch size 128, and seed 1. The exact Chaoyang teacher YAML is unavailable, so
+the moderate crop policy is explicitly recorded as an implementation choice.
 
 ## Failure behavior
 
