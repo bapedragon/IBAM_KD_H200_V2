@@ -260,3 +260,26 @@ python methods/run_five_methods.py --dataset flowers102 --full-run \
 Every selected method has an independent result directory. If one method
 fails, `five_method_status.json` records the error and all earlier completed
 checkpoints and summaries remain under `/app/output`.
+
+## 13. Combined full batch: Chaoyang five + Flowers five + CIFAR-100 KD
+
+Build 449 measured the expected total as `7h 45m 59s`, leaving approximately
+`2h 14m 01s` under the 600-minute Pod limit. The runner uses the short-first
+order Chaoyang -> Flowers -> CIFAR-100 so ten shorter completed results are
+already collected before the longest final task begins.
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 Flowers Chaoyang 5-method and CIFAR-100 KD full training` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/run_combined_full_batch.py --cifar-method KD --output-dir /app/output/combined_flowers_chaoyang_cifar100_kd_v2 --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+The output tree contains separate `chaoyang`, `flowers102`, and `cifar100_kd`
+directories. Each method retains its own best/latest checkpoint and summary.
+The root additionally contains `combined_batch_status.json` and
+`combined_batch_summary.json`. If a later task fails, previously completed
+directories are not deleted or overwritten.

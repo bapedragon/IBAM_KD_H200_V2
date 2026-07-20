@@ -33,6 +33,7 @@ IBAM_KD_H200_V2/
 ├── methods/
 │   ├── README.md
 │   ├── run_cifar100_three_methods.py
+│   ├── run_combined_full_batch.py
 │   ├── run_five_methods.py
 │   ├── run_flowers_chaoyang_timing.py
 │   ├── KD/
@@ -92,6 +93,20 @@ python methods/run_flowers_chaoyang_timing.py \
 The timing artifacts stay in the temporary clone by default; all duration
 estimates needed for job packing are printed in the Issue log. Full training
 must instead use an explicit singular `/app/output/...` collection path.
+
+The measured Flowers and Chaoyang total is 4h 39m 31s. One measured CIFAR-100
+method can therefore be appended safely in the same 600-minute Pod. The locked
+short-first full batch runs Chaoyang five methods, Flowers five methods, and
+then CIFAR-100 KD:
+
+```bash
+python methods/run_combined_full_batch.py --cifar-method KD \
+  --output-dir /app/output/combined_flowers_chaoyang_cifar100_kd_v2 \
+  --num-workers 4
+```
+
+The expected total is 7h 45m 59s, leaving approximately 2h 14m under the Pod
+limit. Dataset and method directories remain independent throughout the batch.
 
 Each method writes its own `student_best.pt`, `student_latest.pt`, and
 `summary.json` under a distinct run directory. The runner additionally writes

@@ -90,3 +90,21 @@ python methods/run_five_methods.py --dataset flowers102 --full-run \
 The exact grouping must be chosen from the returned H200 timing log. A safe
 target is at most about 540 minutes per Issue, leaving roughly one hour for
 downloads, setup, evaluation, checkpoint writes, and runtime variance.
+
+## Measured combined full batch
+
+H200 build 449 measured Flowers five methods at `3h 20m 01s` and Chaoyang five
+methods at `1h 19m 30s`. Appending the measured CIFAR-100 KD estimate of
+`3h 06m 28s` gives `7h 45m 59s`, which retains `2h 14m 01s` below the
+600-minute limit.
+
+```bash
+python methods/run_combined_full_batch.py --cifar-method KD \
+  --output-dir /app/output/combined_flowers_chaoyang_cifar100_kd_v2 \
+  --num-workers 4
+```
+
+Execution is short-first: Chaoyang all five, Flowers all five, then CIFAR-100
+KD. This maximizes the number of completed results preserved if a later task
+fails. The runner also accepts the other already measured CIFAR choices `CRD`
+and `ReviewKD`; all three plans retain more than two hours below the Pod limit.
