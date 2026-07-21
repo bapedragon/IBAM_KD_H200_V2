@@ -19,6 +19,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision import transforms
+from torchvision.datasets import CIFAR100
 from torchvision.transforms import InterpolationMode
 
 
@@ -334,11 +335,6 @@ def build_alg_loaders(
     device: torch.device,
     timm: Any,
 ) -> tuple[Any, Any]:
-    from teachers.train_teacher_chaoyang import (
-        ChaoyangDataset,
-        resolve_dataset_root,
-    )
-
     # Exact public LG strong-augmentation arguments from
     # pycls/datasets/transforms.py at OFFICIAL_LG_COMMIT.
     train_transform = timm.data.create_transform(
@@ -364,20 +360,51 @@ def build_alg_loaders(
         ]
     )
 
-    dataset_root = resolve_dataset_root(args.data_dir)
-    log(f"[DATA] requested_root={args.data_dir.expanduser().resolve()}")
-    log(f"[DATA] resolved_root={dataset_root}")
-    log("[DATA] Validating official Chaoyang train/test splits and labels")
-    train_dataset: Dataset[Any] = ChaoyangDataset(
-        dataset_root,
-        "train",
-        train_transform,
-    )
-    test_dataset: Dataset[Any] = ChaoyangDataset(
-        dataset_root,
-        "test",
-        test_transform,
-    )
+    if args.dataset == "cifar100":
+        from teachers.train_teacher_cifar100 import ensure_cifar100
+
+        log(f"[DATA] CIFAR-100 root={args.data_dir.expanduser().resolve()}")
+        log("[DATA] Preparing CIFAR-100 with verified mirror fallback")
+        ensure_cifar100(args.data_dir)
+        train_dataset: Dataset[Any] = CIFAR100(
+            root=args.data_dir,
+            train=True,
+            transform=train_transform,
+            download=False,
+        )
+        test_dataset: Dataset[Any] = CIFAR100(
+            root=args.data_dir,
+            train=False,
+            transform=test_transform,
+            download=False,
+        )
+        split_description = "train:official_train eval:official_test"
+    elif args.dataset == "chaoyang":
+        from teachers.train_teacher_chaoyang import (
+            ChaoyangDataset,
+            resolve_dataset_root,
+        )
+
+        dataset_root = resolve_dataset_root(args.data_dir)
+        log(f"[DATA] requested_root={args.data_dir.expanduser().resolve()}")
+        log(f"[DATA] resolved_root={dataset_root}")
+        log("[DATA] Validating official Chaoyang train/test splits and labels")
+        train_dataset = ChaoyangDataset(
+            dataset_root,
+            "train",
+            train_transform,
+        )
+        test_dataset = ChaoyangDataset(
+            dataset_root,
+            "test",
+            test_transform,
+        )
+        split_description = "train:official_train eval:official_test"
+    else:
+        raise ValueError(
+            "The audited public LG loader currently supports CIFAR-100 and "
+            "Chaoyang only"
+        )
     if args.smoke:
         generator = torch.Generator().manual_seed(args.seed)
         train_indexes = torch.randperm(len(train_dataset), generator=generator)[
@@ -422,7 +449,7 @@ def build_alg_loaders(
         f"[DATA] student_image=224 teacher_image=32 train_batch={args.batch_size} "
         f"eval_batch={args.eval_batch_size} num_workers={args.num_workers} "
         f"drop_last_train=True smoke={args.smoke} "
-        "split=train:official_train eval:official_test"
+        f"split={split_description}"
     )
     return train_loader, test_loader
 

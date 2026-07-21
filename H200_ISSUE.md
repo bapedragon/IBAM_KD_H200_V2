@@ -480,3 +480,65 @@ Require these markers before the full run:
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
+
+## 17. Researcher-sync Ours CIFAR-100
+
+This entry matches the researcher-provided CIFAR-100 config: train/test batch
+`64/200`, 300 epochs, AdamW `5e-4`, minimum LR `5e-6`, weight decay `0.05`,
+20-epoch warm-up with factor `0.001`, drop path `0.1`, public LG strong
+augmentation, FP32, teacher input 32, student input 224, and larger-grid
+`32/16/14` matching. The researcher controller observes the complete Ours
+guidance loss.
+
+### 17.1 Timing run
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti Ours researcher-sync timing run` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/Ours/cifar100/train.py --timing-run --num-workers 4 --run-name ours_cifar100_researcher_sync_timing_2ep --output-dir /app/output` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+### 17.2 Full 300-epoch run
+
+Submit after the timing log confirms `batch=64`, `warmup=20`,
+`min_lr=5e-06`, `drop_path=0.1`, `base=lg_official`, the `32/16/14` feature
+targets, and an estimate below the 600-minute limit.
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 CIFAR-100 DeiT-Ti Ours researcher-sync 300-epoch training` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/Ours/cifar100/train.py --output-dir /app/output --run-name ours_cifar100_researcher_sync_300ep_seed1 --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+## 18. Flowers-102 + Chaoyang generic KD 300-epoch rerun
+
+This request runs `KD -> CRD -> ReviewKD -> MGD -> OFA` for Chaoyang first,
+then the same five for Flowers-102. It changes only the historical training
+length (`100/200 -> 300`) and its cosine horizon. Batch 64, warm-up 5, seed 42,
+augmentation, teacher hashes, adapters, and method losses remain fixed.
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 Flowers-102 Chaoyang generic KD five-method 300-epoch training` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/run_flowers_chaoyang_300ep.py --num-workers 4 --output-dir /app/output/generic_kd_flowers_chaoyang_300ep_seed42` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+Measured estimate: Chaoyang `3h 41m 30s`, Flowers `4h 36m 48s`, total
+`8h 18m 18s`. This leaves `1h 41m 42s` under the 600-minute limit. Every one
+of the ten runs has its own directory, best/latest checkpoint, and summary;
+earlier completed outputs remain intact if a later run fails.
+
+The script installs its pinned `timm==1.0.27` dependency automatically, so no
+extra installation command is required in the execution field.

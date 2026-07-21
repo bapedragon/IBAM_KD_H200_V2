@@ -195,6 +195,25 @@ adapters are separately recorded under `methods/KD`, `methods/CRD`,
 `methods/ReviewKD`, `methods/MGD`, and `methods/OFA`. These README files are
 part of the locked experimental record.
 
+### Generic-KD 300-epoch comparison override
+
+The new comparison run uses 300 epochs for Flowers-102 and Chaoyang as well as
+CIFAR-100. This does not adopt the Ours/ALG data or regularization config.
+Instead, it deliberately preserves each generic-KD dataset protocol above and
+changes only:
+
+1. the optimizer-step training length to 300 epochs; and
+2. the cosine scheduler horizon to the same 300 epochs.
+
+Flowers and Chaoyang therefore retain batch 64, warm-up 5, label smoothing
+0.1, CUDA AMP, seed 42, the same transforms and fixed teacher hash. KD, CRD,
+ReviewKD, MGD, and OFA also retain their existing transfer operators,
+coefficients, and CNN-to-ViT adapters. This controlled override is identified
+in saved configs as `*_300ep_epoch_only_v1`.
+
+Measured H200 averages predict `3h 41m 30s` for all five Chaoyang runs and
+`4h 36m 48s` for all five Flowers runs, totaling `8h 18m 18s`.
+
 ## Chaoyang locked protocol
 
 ALG explicitly identifies the guidance teacher as ResNet56 trained from

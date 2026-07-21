@@ -97,6 +97,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=Path("./outputs"))
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--planned-epochs",
+        type=int,
+        default=None,
+        help=(
+            "Override only the dataset's training length and cosine horizon. "
+            "Batch size, warm-up, seed, augmentation, and method losses stay "
+            "locked to the dataset protocol."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -109,6 +119,8 @@ def main() -> None:
     args = parse_args()
     if args.num_workers < 0:
         raise ValueError("--num-workers must be non-negative")
+    if args.planned_epochs is not None and args.planned_epochs <= 0:
+        raise ValueError("--planned-epochs must be positive")
 
     requested = set(args.methods)
     selected_methods = tuple(item for item in METHODS if item[0] in requested)
@@ -118,7 +130,9 @@ def main() -> None:
 
     config = DATASET_CONFIGS[args.dataset]
     data_dir = args.data_dir or config["default_data_dir"]
-    planned_epochs = int(config["planned_epochs"])
+    default_planned_epochs = int(config["planned_epochs"])
+    planned_epochs = int(args.planned_epochs or default_planned_epochs)
+    epoch_override = planned_epochs != default_planned_epochs
     batch_size = int(config["batch_size"])
     warmup_epochs = int(config["warmup_epochs"])
     output_root = args.output_dir.resolve()
@@ -136,6 +150,10 @@ def main() -> None:
     log("=" * 80)
     log(f"[MODE] timing_run={args.timing_run} full_run={args.full_run}")
     log(f"[METHODS] selected={','.join(selected_names)}")
+    log(
+        f"[EPOCH_PLAN] default={default_planned_epochs} "
+        f"selected={planned_epochs} epoch_only_override={epoch_override}"
+    )
     log(f"[PATH] repository={REPOSITORY_ROOT}")
     log(f"[PATH] data_dir={data_dir.expanduser().resolve()}")
     log(f"[PATH] teacher_root={args.teacher_root.resolve()}")
@@ -178,7 +196,12 @@ def main() -> None:
                 sys.executable,
                 str(REPOSITORY_ROOT / f"methods/{directory}/{args.dataset}/train.py"),
                 "--protocol-name",
-                f"{args.dataset}_deit_ti_common_kd_v2",
+                (
+                    f"{args.dataset}_deit_ti_common_kd_"
+                    f"{planned_epochs}ep_epoch_only_v1"
+                    if epoch_override
+                    else f"{args.dataset}_deit_ti_common_kd_v2"
+                ),
                 "--data-dir",
                 str(data_dir),
                 "--teacher-root",
@@ -288,6 +311,8 @@ def main() -> None:
         "teacher_input": 32,
         "student_input": 224,
         "planned_epochs": planned_epochs,
+        "default_planned_epochs": default_planned_epochs,
+        "epoch_only_override": epoch_override,
         "batch_size": batch_size,
         "warmup_epochs": warmup_epochs,
         "selected_methods": selected_names,

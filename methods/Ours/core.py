@@ -414,9 +414,13 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError("--drop-path-rate must be in [0, 1)")
     if args.min_lr > args.lr:
         raise ValueError("--min-lr must not exceed --lr")
-    if args.base_protocol == "lg_official" and args.dataset != "chaoyang":
+    if args.base_protocol == "lg_official" and args.dataset not in {
+        "cifar100",
+        "chaoyang",
+    }:
         raise ValueError(
-            "The audited lg_official loader is currently locked to Chaoyang"
+            "The audited lg_official loader currently supports CIFAR-100 and "
+            "Chaoyang only"
         )
     if args.image_size != 224:
         raise ValueError("The fixed dataset protocols require --image-size 224")
@@ -437,10 +441,22 @@ def forward_teacher_features(
     images: torch.Tensor,
     dataset: str,
     teacher_image_size: int,
+    base_protocol: str = "common",
 ) -> list[torch.Tensor]:
     if teacher_image_size != 32:
         raise ValueError("V2 fixed teachers require --teacher-image-size 32")
-    teacher_images = student_view_to_teacher_view(images, dataset)
+    if base_protocol == "lg_official":
+        # The public LG pipeline feeds ImageNet-normalized student tensors to
+        # the teacher after a direct bilinear resize; do not apply the generic
+        # KD denormalize/renormalize bridge a second time.
+        teacher_images = F.interpolate(
+            images,
+            size=(teacher_image_size, teacher_image_size),
+            mode="bilinear",
+            align_corners=False,
+        )
+    else:
+        teacher_images = student_view_to_teacher_view(images, dataset)
     return list(teacher.forward_features(teacher_images))
 
 
@@ -452,6 +468,7 @@ def evaluate_teacher_at_runtime_size(
     amp_enabled: bool,
     dataset: str,
     teacher_image_size: int,
+    base_protocol: str = "common",
 ) -> float:
     teacher.eval()
     correct = 0
@@ -461,7 +478,15 @@ def evaluate_teacher_at_runtime_size(
         targets = targets.to(device, non_blocking=True)
         if teacher_image_size != 32:
             raise ValueError("V2 fixed teachers require --teacher-image-size 32")
-        images = student_view_to_teacher_view(images, dataset)
+        if base_protocol == "lg_official":
+            images = F.interpolate(
+                images,
+                size=(teacher_image_size, teacher_image_size),
+                mode="bilinear",
+                align_corners=False,
+            )
+        else:
+            images = student_view_to_teacher_view(images, dataset)
         with autocast_context(amp_enabled):
             logits = teacher(images)
         correct += top1_correct(logits, targets)
@@ -633,6 +658,7 @@ def train_one_epoch(
                     images,
                     args.dataset,
                     args.teacher_image_size,
+                    args.base_protocol,
                 )
         with autocast_context(amp_enabled):
             student_features, student_logits = forward_student_features(student, images)
@@ -940,6 +966,7 @@ def main() -> None:
         amp_enabled,
         args.dataset,
         args.teacher_image_size,
+        args.base_protocol,
     )
     student = create_ours_student(
         timm,
@@ -960,7 +987,11 @@ def main() -> None:
         probe = torch.zeros(2, 3, args.image_size, args.image_size, device=device)
         student_probe, logits_probe = forward_student_features(student, probe)
         teacher_probe = forward_teacher_features(
-            teacher, probe, args.dataset, args.teacher_image_size
+            teacher,
+            probe,
+            args.dataset,
+            args.teacher_image_size,
+            args.base_protocol,
         )
         if args.grid_resize_mode == "teacher":
             target_spatial_sizes = [feature.shape[-2:] for feature in teacher_probe]

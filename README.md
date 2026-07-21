@@ -37,6 +37,7 @@ IBAM_KD_H200_V2/
 │   ├── run_combined_full_batch.py
 │   ├── run_five_methods.py
 │   ├── run_flowers_chaoyang_timing.py
+│   ├── run_flowers_chaoyang_300ep.py
 │   ├── KD/
 │   ├── CRD/
 │   ├── ReviewKD/
@@ -124,10 +125,26 @@ The timing artifacts stay in the temporary clone by default; all duration
 estimates needed for job packing are printed in the Issue log. Full training
 must instead use an explicit singular `/app/output/...` collection path.
 
-The measured Flowers and Chaoyang total is 4h 39m 31s. One measured CIFAR-100
-method can therefore be appended safely in the same 600-minute Pod. The locked
-short-first full batch runs Chaoyang five methods, Flowers five methods, and
-then CIFAR-100 KD:
+For the harmonized 300-epoch rerun, the measured per-epoch times predict
+Chaoyang five methods in `3h 41m 30s` and Flowers five methods in
+`4h 36m 48s`. The dedicated short-first batch runs all ten in `8h 18m 18s`,
+leaving `1h 41m 42s` below the 600-minute Pod limit:
+
+```bash
+python methods/run_flowers_chaoyang_300ep.py --num-workers 4 \
+  --output-dir /app/output/generic_kd_flowers_chaoyang_300ep_seed42
+```
+
+This rerun changes only the epoch count and the corresponding cosine horizon.
+Flowers/Chaoyang batch size 64, warm-up 5, augmentation, seed 42, fixed
+teachers, adapters, and every method-specific loss remain unchanged. The older
+100/200-epoch results remain historical records rather than being silently
+overwritten.
+
+The earlier measured Flowers and Chaoyang total was 4h 39m 31s. One measured
+CIFAR-100 method could therefore be appended safely in the same 600-minute
+Pod. That historical full batch ran Chaoyang five methods, Flowers five
+methods, and then CIFAR-100 KD:
 
 ```bash
 python methods/run_combined_full_batch.py --cifar-method KD \

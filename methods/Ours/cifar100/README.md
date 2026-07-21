@@ -4,9 +4,11 @@
 - Student: DeiT-Ti from scratch
 - Evaluation: direct full-image resize to `224 x 224`, matching the supplied
   locality-guidance loader
-- Base protocol: 300 epochs, batch 128, AdamW `5e-4`, minimum LR `0`,
-  weight decay `0.05`, 20-epoch warm-up, cosine decay
-- Input/recorded choices: 224 pixels, label smoothing `0.1`, seed `42`
+- Researcher-synchronized config: 300 epochs, train batch 64, test batch 200,
+  AdamW `5e-4`, minimum LR `5e-6`, weight decay `0.05`, warm-up factor
+  `0.001`, 20-epoch warm-up, cosine decay
+- Input/regularization: student 224 pixels, teacher 32 pixels, strong public
+  LG augmentation, label smoothing `0`, drop path `0.1`, FP32, seed `1`
 - Ours: all 12 student blocks, ResNet stages 1/2/3, learned stage mixtures,
   `1x1` projection/QKV, `5x5` deformable attention, four heads
 - Grid: supplied-source larger-grid policy, producing targets `32/16/14`
@@ -30,7 +32,7 @@ python methods/Ours/cifar100/train.py --timing-run --num-workers 4
 Full run only after the timing log and teacher audit pass:
 
 ```bash
-python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_sourcegrid_300ep --output-dir /app/output
+python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_researcher_sync_300ep_seed1 --output-dir /app/output
 ```
 
 See [`../PAPER_AUDIT.md`](../PAPER_AUDIT.md) for the paper/source/researcher

@@ -24,6 +24,28 @@ in a separate output directory.
 | Flowers-102 | 200 | 64 | 5 | 224 x 224 | 32 x 32 |
 | Chaoyang | 100 | 64 | 5 | 224 x 224 | 32 x 32 |
 
+### Harmonized 300-epoch rerun
+
+The current comparison rerun fixes all three datasets to 300 student epochs.
+For Flowers-102 and Chaoyang this is an **epoch-only override**: their batch
+size remains 64, warm-up remains 5, and all other common and method-specific
+values below remain unchanged. The cosine scheduler horizon is necessarily
+extended to 300 together with the training length.
+
+| Dataset | Rerun epochs | Batch | Warm-up | Changed from historical run |
+|---|---:|---:|---:|---|
+| Flowers-102 | **300** | 64 | 5 | epochs/cosine horizon only (was 200) |
+| Chaoyang | **300** | 64 | 5 | epochs/cosine horizon only (was 100) |
+
+```bash
+python methods/run_flowers_chaoyang_300ep.py --num-workers 4 \
+  --output-dir /app/output/generic_kd_flowers_chaoyang_300ep_seed42
+```
+
+The measured estimate is `8h 18m 18s`, leaving `1h 41m 42s` under the
+600-minute Pod limit. Execution is short-first (`Chaoyang -> Flowers-102`),
+and every method writes an independent result directory.
+
 All datasets use scratch DeiT-Ti (`deit_tiny_patch16_224`), AdamW with initial
 learning rate `5e-4` and weight decay `0.05`, cosine decay after warm-up, label
 smoothing `0.1`, CUDA AMP, seed `42`, and test Top-1 evaluation. No external

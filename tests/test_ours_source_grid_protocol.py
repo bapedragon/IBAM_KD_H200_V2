@@ -88,6 +88,31 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         self.assertEqual(defaults["--grid-resize-mode"], "larger")
         self.assertEqual(defaults["--eval-resize-mode"], "direct")
 
+    def test_cifar100_researcher_sync_protocol_is_locked(self) -> None:
+        defaults = defaults_map(CIFAR_DEFAULTS)
+        self.assertEqual(
+            defaults["--protocol-name"],
+            "cifar100_deit_ti_ours_researcher_sync_v1",
+        )
+        self.assertEqual(defaults["--student-epochs"], "300")
+        self.assertEqual(defaults["--batch-size"], "64")
+        self.assertEqual(defaults["--eval-batch-size"], "200")
+        self.assertEqual(defaults["--min-lr"], "0.000005")
+        self.assertEqual(defaults["--warmup-epochs"], "20")
+        self.assertEqual(defaults["--warmup-factor"], "0.001")
+        self.assertEqual(defaults["--label-smoothing"], "0.0")
+        self.assertEqual(defaults["--drop-path-rate"], "0.1")
+        self.assertEqual(defaults["--seed"], "1")
+        self.assertEqual(defaults["--base-protocol"], "lg_official")
+        self.assertEqual(defaults["--teacher-image-size"], "32")
+        self.assertEqual(defaults["--beta-schedule"], "alg")
+        self.assertEqual(defaults["--beta-on"], "2.5")
+        self.assertEqual(defaults["--alg-threshold"], "-0.02")
+        self.assertEqual(defaults["--alg-smoothing-window"], "50")
+        self.assertEqual(defaults["--alg-warmup-epochs"], "20")
+        self.assertEqual(defaults["--grid-resize-mode"], "larger")
+        self.assertEqual(defaults["--eval-resize-mode"], "direct")
+
 
 if __name__ == "__main__":
     unittest.main()
