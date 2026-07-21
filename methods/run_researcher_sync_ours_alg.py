@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run researcher-sync Ours CIFAR/Flowers and ALG Flowers sequentially."""
+"""Run researcher-sync Ours CIFAR/Flowers and ALG CIFAR sequentially."""
 
 from __future__ import annotations
 
@@ -17,8 +17,10 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 TASKS = (
     ("Ours", "cifar100", Path("methods/Ours/cifar100/train.py")),
     ("Ours", "flowers102", Path("methods/Ours/flowers102/train.py")),
-    ("ALG", "flowers102", Path("methods/ALG/flowers102/train.py")),
+    ("ALG", "cifar100", Path("methods/ALG/cifar100/train.py")),
 )
+
+POD_LIMIT_SECONDS = 600 * 60
 
 
 def log(message: str = "") -> None:
@@ -97,7 +99,7 @@ def main() -> None:
     sequence_start = time.time()
 
     log("=" * 80)
-    log("RESEARCHER-SYNC SEQUENCE: OURS CIFAR -> OURS FLOWERS -> ALG FLOWERS")
+    log("RESEARCHER-SYNC SEQUENCE: OURS CIFAR -> OURS FLOWERS -> ALG CIFAR")
     log("=" * 80)
     log(f"[MODE] timing_run={args.timing_run} full_run={args.full_run}")
     log("[PROTOCOL_LOCK] epochs=300 train/eval_batch=64/200 AdamW")
@@ -211,6 +213,8 @@ def main() -> None:
         float(record.get("estimated_planned_seconds") or 0.0)
         for record in records
     )
+    pod_limit_passed = estimated_full_seconds < POD_LIMIT_SECONDS
+    pod_limit_delta_seconds = abs(POD_LIMIT_SECONDS - estimated_full_seconds)
     payload = {
         "status": "complete",
         "mode": "timing" if args.timing_run else "full",
@@ -221,6 +225,10 @@ def main() -> None:
         "elapsed_human": format_duration(elapsed),
         "estimated_full_seconds": estimated_full_seconds,
         "estimated_full_human": format_duration(estimated_full_seconds),
+        "pod_limit_seconds": POD_LIMIT_SECONDS,
+        "pod_limit_passed": pod_limit_passed,
+        "pod_limit_delta_seconds": pod_limit_delta_seconds,
+        "pod_limit_delta_human": format_duration(pod_limit_delta_seconds),
         "records": records,
     }
     atomic_json(summary_path, payload)
@@ -228,6 +236,12 @@ def main() -> None:
     log(
         f"[FINAL_RESULT] completed_tasks={len(records)}/{len(TASKS)} "
         f"estimated_full={format_duration(estimated_full_seconds)}"
+    )
+    log(
+        f"[POD_LIMIT_CHECK] status={'PASS' if pod_limit_passed else 'FAIL'} "
+        f"limit=10h 00m 00s estimated={format_duration(estimated_full_seconds)} "
+        f"{'headroom' if pod_limit_passed else 'over_by'}="
+        f"{format_duration(pod_limit_delta_seconds)}"
     )
     log(f"[FINAL_RESULT] summary={summary_path}")
     log("[DONE] All researcher-sync tasks completed successfully.")

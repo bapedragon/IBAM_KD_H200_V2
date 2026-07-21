@@ -5,6 +5,7 @@ import unittest
 import torch
 
 from methods.ALG.chaoyang.train import PROTOCOL_DEFAULTS as PUBLIC_DEFAULTS
+from methods.ALG.cifar100.train import PROTOCOL_DEFAULTS as CIFAR_DEFAULTS
 from methods.ALG.flowers102.train import PROTOCOL_DEFAULTS as FLOWERS_DEFAULTS
 from methods.ALG.chaoyang.train_draft_common import (
     PROTOCOL_DEFAULTS as DRAFT_COMMON_DEFAULTS,
@@ -86,6 +87,35 @@ class AlgProtocolVariantsTest(unittest.TestCase):
         self.assertEqual(
             defaults["--protocol-name"],
             "flowers102_deit_ti_alg_researcher_sync_v1",
+        )
+        for option in (
+            "--student-epochs",
+            "--batch-size",
+            "--eval-batch-size",
+            "--lr",
+            "--min-lr",
+            "--weight-decay",
+            "--warmup-epochs",
+            "--warmup-factor",
+            "--label-smoothing",
+            "--drop-path-rate",
+            "--teacher-image-size",
+            "--beta",
+            "--alg-threshold",
+            "--alg-smoothing-window",
+            "--alg-warmup-epochs",
+            "--base-protocol",
+            "--eval-resize-mode",
+            "--seed",
+        ):
+            self.assertEqual(defaults[option], public[option], option)
+
+    def test_cifar100_uses_researcher_sync_base(self) -> None:
+        defaults = as_map(CIFAR_DEFAULTS)
+        public = as_map(PUBLIC_DEFAULTS)
+        self.assertEqual(
+            defaults["--protocol-name"],
+            "cifar100_deit_ti_alg_researcher_sync_v1",
         )
         for option in (
             "--student-epochs",

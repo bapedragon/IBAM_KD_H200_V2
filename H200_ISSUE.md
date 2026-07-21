@@ -19,10 +19,10 @@ runs, so its final 450-epoch request may be submitted directly.
 The script installs its pinned `timm==1.0.27` dependency automatically, so no
 extra installation command is required in the execution field.
 
-## 19. Researcher-sync Ours CIFAR/Flowers + ALG Flowers
+## 19. Researcher-sync Ours CIFAR/Flowers + ALG CIFAR
 
 This batch contains exactly three independent 300-epoch tasks in this order:
-Ours CIFAR-100, Ours Flowers-102, and ALG Flowers-102. All three use the
+Ours CIFAR-100, Ours Flowers-102, and ALG CIFAR-100. All three use the
 researcher-sync base: train/eval batch `64/200`, AdamW `5e-4`, minimum LR
 `5e-6`, weight decay `0.05`, warm-up 20 with factor `0.001`, drop path `0.1`,
 label smoothing `0`, public LG strong augmentation, FP32, seed 1, 32-pixel
@@ -33,7 +33,7 @@ feature matching. Ours and ALG retain their distinct method losses.
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 Ours CIFAR Flowers and ALG Flowers researcher-sync timing run` |
+| Title | `[Request]: 박철현 Ours CIFAR Flowers and ALG CIFAR researcher-sync timing run` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
 | 코드 실행 명령어 | `python methods/run_researcher_sync_ours_alg.py --timing-run --num-workers 4` |
@@ -41,9 +41,10 @@ feature matching. Ours and ALG retain their distinct method losses.
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
 
-The final timing log must contain `completed_tasks=3/3` and an
-`estimated_full` value below the 600-minute Pod limit. Timing artifacts are
-written to `/tmp` and are not collected as research results.
+The final timing log must contain `completed_tasks=3/3` and
+`[POD_LIMIT_CHECK] status=PASS` before a combined full run is submitted. A
+`FAIL` means the jobs must be split across Issues. Timing artifacts are written
+to `/tmp` and are not collected as research results.
 
 ### 19.2 Combined full run
 
@@ -51,7 +52,7 @@ Submit only after the timing estimate passes.
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 Ours CIFAR Flowers and ALG Flowers researcher-sync 300-epoch training` |
+| Title | `[Request]: 박철현 Ours CIFAR Flowers and ALG CIFAR researcher-sync 300-epoch training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
 | 코드 실행 명령어 | `python methods/run_researcher_sync_ours_alg.py --full-run --num-workers 4 --output-dir /app/output/researcher_sync_ours_alg_300ep_seed1` |
@@ -60,7 +61,7 @@ Submit only after the timing estimate passes.
 | GPU 할당량 (MIG 개수) | `7` |
 
 The output tree is split by `Ours/cifar100`, `Ours/flowers102`, and
-`ALG/flowers102`. Each task has independent best/latest checkpoints and a
+`ALG/cifar100`. Each task has independent best/latest checkpoints and a
 summary. The root sequence status is updated after every task, so already
 completed results remain available if a later subprocess fails. Historical
 Flowers 200-epoch and Chaoyang 100-epoch results use explicit `historical`

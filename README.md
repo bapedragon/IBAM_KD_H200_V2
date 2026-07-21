@@ -143,7 +143,7 @@ teachers, adapters, and every method-specific loss remain unchanged. The older
 overwritten.
 
 The researcher-sync Ours/ALG batch is separate from the generic rerun. It
-executes Ours CIFAR-100, Ours Flowers-102, then ALG Flowers-102, with every
+executes Ours CIFAR-100, Ours Flowers-102, then ALG CIFAR-100, with every
 task fixed to 300 epochs, seed 1, FP32, train/eval batch 64/200, 20-epoch
 warm-up, public LG augmentation, and independent output directories:
 
@@ -154,8 +154,10 @@ python methods/run_researcher_sync_ours_alg.py --full-run --num-workers 4 \
   --output-dir /app/output/researcher_sync_ours_alg_300ep_seed1
 ```
 
-Run the timing command first to confirm the combined estimate remains below
-the current 600-minute Pod limit.
+Run the timing command first. Its final `[POD_LIMIT_CHECK]` reports `PASS` or
+`FAIL`, the combined 300-epoch estimate, and exact headroom/overrun against the
+current 600-minute Pod limit. Do not submit the combined full run on `FAIL`;
+split the three independent jobs across Issues instead.
 
 The earlier measured Flowers and Chaoyang total was 4h 39m 31s. One measured
 CIFAR-100 method could therefore be appended safely in the same 600-minute

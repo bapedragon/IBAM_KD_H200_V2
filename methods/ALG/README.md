@@ -26,6 +26,10 @@ Flowers-102 uses the same researcher-sync base and controller, the official
 LG `67.02%`, and ALG `68.54%`. Its dedicated entry point is
 [`flowers102/train.py`](flowers102/train.py).
 
+CIFAR-100 uses the same researcher-sync base and controller, the official
+train/test split, and the working-paper ALG reference `81.98%`. Its dedicated
+entry point is [`cifar100/train.py`](cifar100/train.py).
+
 ## Exact method path
 
 LG behavior is ported from `lkhl/tiny-transformers` commit
