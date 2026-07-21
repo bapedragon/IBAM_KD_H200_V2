@@ -95,14 +95,14 @@ student image geometry is used for both branches: the 224 x 224 student tensor
 is converted back to image space, bilinearly resized to 32 x 32, and normalized
 with the teacher's ImageNet statistics. This matches the other V2 KD methods
 and prevents independent crop/flip drift. The startup
-`[TEACHER_RUNTIME_AUDIT]` remains as a consistency check, not as a workaround
-for a 224-pixel teacher mismatch.
+`[TEACHER_NATIVE_AUDIT]` evaluates the checkpoint through its own direct-32px
+recipe and is the full-run safety gate. `[TEACHER_SHARED_VIEW]` separately
+reports the source-faithful 224-to-32 guidance view as a diagnostic.
 
 At evaluation time, Ours directly resizes the full image to `224 x 224`
 before making the shared 32-pixel teacher view. This matches the
 supplied/public locality-guidance loader. It intentionally does not use the
-generic-KD compatibility transform `Resize(256)+CenterCrop(224)`, which caused
-a 21.60 pp Chaoyang teacher runtime-audit drop.
+generic-KD compatibility transform `Resize(256)+CenterCrop(224)`.
 
 ## H200 execution
 

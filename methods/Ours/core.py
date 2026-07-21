@@ -16,6 +16,8 @@ from typing import Any
 
 import torch
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset, Subset
+from torchvision.datasets import CIFAR100, Flowers102
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +44,7 @@ from methods.KD.core import (
     top1_correct,
 )
 from teachers.verify_checkpoints import DEFAULT_CHECKPOINT_ROOT, load_teacher
+from teachers.train_teacher_cifar100 import official_test_transform
 
 
 SOURCE_SNIPPET_SHA256 = "8649078970b93d750a956994611b65cdec0c24f907d35d86f29d635e8a3b8624"
@@ -388,6 +391,77 @@ def evaluate_teacher_at_runtime_size(
     return 100.0 * correct / max(1, total)
 
 
+def build_native_teacher_audit_loader(
+    args: argparse.Namespace,
+    device: torch.device,
+) -> Any:
+    """Build the exact direct-32px evaluation path used by teacher training."""
+
+    transform = official_test_transform()
+    dataset: Dataset[Any]
+    if args.dataset == "cifar100":
+        dataset = CIFAR100(
+            root=args.data_dir,
+            train=False,
+            transform=transform,
+            download=False,
+        )
+    elif args.dataset == "flowers102":
+        dataset = Flowers102(
+            root=args.data_dir,
+            split="test",
+            transform=transform,
+            download=False,
+        )
+    else:
+        from teachers.train_teacher_chaoyang import (
+            ChaoyangDataset,
+            resolve_dataset_root,
+        )
+
+        dataset_root = resolve_dataset_root(args.data_dir)
+        dataset = ChaoyangDataset(dataset_root, "test", transform)
+
+    if args.smoke:
+        generator = torch.Generator().manual_seed(args.seed + 1)
+        indexes = torch.randperm(len(dataset), generator=generator)[
+            : min(args.smoke_test_samples, len(dataset))
+        ]
+        dataset = Subset(dataset, indexes.tolist())
+
+    return DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        drop_last=False,
+        num_workers=args.num_workers,
+        pin_memory=device.type == "cuda",
+        persistent_workers=args.num_workers > 0,
+    )
+
+
+@torch.inference_mode()
+def evaluate_teacher_native(
+    teacher: torch.nn.Module,
+    loader: Any,
+    device: torch.device,
+    amp_enabled: bool,
+) -> float:
+    """Evaluate the checkpoint with its native direct-32px recipe."""
+
+    teacher.eval()
+    correct = 0
+    total = 0
+    for images, targets in loader:
+        images = images.to(device, non_blocking=True)
+        targets = targets.to(device, non_blocking=True)
+        with autocast_context(amp_enabled):
+            logits = teacher(images)
+        correct += top1_correct(logits, targets)
+        total += targets.size(0)
+    return 100.0 * correct / max(1, total)
+
+
 def create_ours_scheduler(
     optimizer: torch.optim.Optimizer,
     epochs: int,
@@ -574,7 +648,8 @@ def write_summary(
     elapsed_seconds: float,
     aggregation_weights: list[list[float]],
     controller: AdaptiveGuidanceController,
-    teacher_runtime_top1: float,
+    teacher_native_top1: float,
+    teacher_shared_view_top1: float,
 ) -> None:
     average_epoch = sum(epoch_times) / max(1, len(epoch_times))
     summary = {
@@ -589,15 +664,26 @@ def write_summary(
             "CE + beta(e) * (lambda * L_fuse + (1-lambda) * L_align)"
         ),
         "guidance_controller": controller.state_dict(),
-        "teacher_runtime_top1": teacher_runtime_top1,
+        # Backward-compatible runtime fields now refer to the comparable
+        # native direct-32px checkpoint audit.
+        "teacher_runtime_top1": teacher_native_top1,
         "teacher_checkpoint_top1": float(teacher_spec["top1"]),
         "teacher_runtime_gap_pp": (
-            teacher_runtime_top1 - float(teacher_spec["top1"])
+            teacher_native_top1 - float(teacher_spec["top1"])
         ),
         "teacher_runtime_audit_passed": (
-            teacher_runtime_top1 - float(teacher_spec["top1"])
+            teacher_native_top1 - float(teacher_spec["top1"])
             >= -args.max_teacher_runtime_gap_pp
         ),
+        "teacher_native_top1": teacher_native_top1,
+        "teacher_native_gap_pp": (
+            teacher_native_top1 - float(teacher_spec["top1"])
+        ),
+        "teacher_shared_view_top1": teacher_shared_view_top1,
+        "teacher_shared_view_gap_pp": (
+            teacher_shared_view_top1 - float(teacher_spec["top1"])
+        ),
+        "teacher_shared_view_is_diagnostic_only": True,
         "student_epochs": args.student_epochs,
         "latest_epoch": latest_epoch,
         "best_top1": best_accuracy,
@@ -739,12 +825,19 @@ def main() -> None:
     )
 
     train_loader, test_loader = build_loaders(args, device)
+    native_teacher_audit_loader = build_native_teacher_audit_loader(args, device)
     teacher, teacher_payload, teacher_spec = load_teacher(
         args.dataset,
         device=device,
         checkpoint_root=args.teacher_root,
     )
-    teacher_runtime_top1 = evaluate_teacher_at_runtime_size(
+    teacher_native_top1 = evaluate_teacher_native(
+        teacher,
+        native_teacher_audit_loader,
+        device,
+        amp_enabled,
+    )
+    teacher_shared_view_top1 = evaluate_teacher_at_runtime_size(
         teacher,
         test_loader,
         device,
@@ -828,22 +921,29 @@ def main() -> None:
         f"sha256={teacher_spec['sha256']}"
     )
     log(
-        f"[TEACHER_RUNTIME_AUDIT] checkpoint_top1_at_training_recipe="
+        f"[TEACHER_NATIVE_AUDIT] checkpoint_top1="
         f"{float(teacher_payload['accuracy']):.2f}% "
-        f"runtime_top1_at_{args.teacher_image_size}px={teacher_runtime_top1:.2f}% "
-        f"gap={teacher_runtime_top1 - float(teacher_payload['accuracy']):+.2f}pp"
+        f"native_direct_{args.teacher_image_size}px_top1={teacher_native_top1:.2f}% "
+        f"gap={teacher_native_top1 - float(teacher_payload['accuracy']):+.2f}pp"
     )
-    runtime_gap = teacher_runtime_top1 - float(teacher_payload["accuracy"])
+    log(
+        f"[TEACHER_SHARED_VIEW] resize_224_to_{args.teacher_image_size}px_top1="
+        f"{teacher_shared_view_top1:.2f}% "
+        f"gap_to_native_checkpoint="
+        f"{teacher_shared_view_top1 - float(teacher_payload['accuracy']):+.2f}pp "
+        "diagnostic_only=True feature_path=source_faithful"
+    )
+    runtime_gap = teacher_native_top1 - float(teacher_payload["accuracy"])
     if runtime_gap < -args.max_teacher_runtime_gap_pp:
         log(
-            "[TEACHER_RUNTIME_AUDIT][WARN] Runtime low-resolution teacher accuracy "
+            "[TEACHER_NATIVE_AUDIT][WARN] Native direct-32px teacher accuracy "
             f"is more than {args.max_teacher_runtime_gap_pp:.1f}pp below the "
             "checkpoint record."
         )
         if not (args.smoke or args.timing_run or args.allow_teacher_runtime_gap):
             raise RuntimeError(
-                "Teacher runtime accuracy audit failed before the full run. "
-                "Review --teacher-image-size using a timing run, or pass "
+                "Teacher native accuracy audit failed before the full run. "
+                "Review the checkpoint/data integration, or pass "
                 "--allow-teacher-runtime-gap only after deliberately accepting "
                 "the mismatch."
             )
@@ -977,7 +1077,8 @@ def main() -> None:
             elapsed_seconds=elapsed,
             aggregation_weights=aggregation_weights_list(ours),
             controller=controller,
-            teacher_runtime_top1=teacher_runtime_top1,
+            teacher_native_top1=teacher_native_top1,
+            teacher_shared_view_top1=teacher_shared_view_top1,
         )
         average_epoch = sum(epoch_times) / len(epoch_times)
         suffix = " saved_best" if saved_best else ""

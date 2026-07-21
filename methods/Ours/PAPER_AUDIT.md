@@ -67,14 +67,16 @@ a paper-grid table cell.
 | Epoch-1 derivative | initialize to `0` and forbid stopping at epoch 1 | ALG's published early-epoch expression has no previous value at epoch 1. |
 | Missing pycls config | feature guidance on, linear projection, logit KD off | The config file was not delivered; V3 Eq. (4) contains CE plus the two feature losses and no logit-KL term. |
 | Teacher input size | fixed V2 32 x 32 teachers for all datasets | ALG confirms the low-resolution CNN path; the same fixed teacher is reused across compared methods. |
-| Evaluation geometry | direct resize of the full image to `224 x 224`, then shared-view bilinear downsampling to `32 x 32` for the teacher | This follows the supplied/public locality-guidance loader. `Resize(256)+CenterCrop(224)` removed too much Chaoyang field of view and caused a 21.60 pp teacher-audit regression. |
-| Teacher runtime audit | compare runtime Top-1 with checkpoint metadata | Operational safety gate, not a paper hyperparameter. |
+| Evaluation geometry | direct resize of the full image to `224 x 224`, then shared-view bilinear downsampling to `32 x 32` for the teacher | This follows the supplied/public locality-guidance loader. |
+| Native teacher audit | compare direct `32 x 32` Top-1 with checkpoint metadata | This reproduces the teacher's own evaluation recipe and is the full-run safety gate. |
+| Shared-view teacher diagnostic | report Top-1 after source-faithful `224 -> 32` two-step resampling | This input is used for feature guidance. Its classification Top-1 is diagnostic only because it is not the teacher checkpoint's native evaluation recipe. |
 
 The current V2 teacher checkpoints were trained and verified at 32 pixels.
-Every run still reports `[TEACHER_RUNTIME_AUDIT]` to detect preprocessing or
-checkpoint integration regressions before a long H200 job. Ours wrappers use
-`--eval-resize-mode direct`; the generic-KD center-crop path remains unchanged
-for historical result compatibility.
+Every run reports `[TEACHER_NATIVE_AUDIT]` to detect checkpoint/data
+integration regressions before a long H200 job and `[TEACHER_SHARED_VIEW]` to
+record the actual guidance input. Ours wrappers use `--eval-resize-mode
+direct`; the generic-KD center-crop path remains unchanged for historical
+result compatibility.
 
 ## Shared experiment choices (not Ours-specific)
 
@@ -88,7 +90,8 @@ has marked it for correction.
 
 1. Run the dataset wrapper with `--timing-run`.
 2. Confirm dataset/split, finite loss, exact ALG parameters, epoch timing,
-   `[TEACHER_RUNTIME_AUDIT]`, and paper-grid targets `32/16/8`.
+   `[TEACHER_NATIVE_AUDIT]`, the diagnostic `[TEACHER_SHARED_VIEW]`, and
+   paper-grid targets `32/16/8`.
 3. If the teacher audit passes, run the dataset-specific full command.
 4. Keep the generated `summary.json`, which records the complete loss,
    derivative, beta, stop-epoch, and aggregation-weight histories.

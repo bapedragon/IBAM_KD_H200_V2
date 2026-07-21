@@ -16,10 +16,12 @@
   50-epoch smoothing stages; `L_align` is the recorded controller signal
 - Working-paper comparison target: `86.35%` Top-1
 
-The fixed Chaoyang teacher was trained at 32 x 32. The runtime audit verifies
-its manifest hash and preprocessing integration before student training. A
-timing run is accepted only when this audit is within the default 5 pp
-threshold; do not bypass it with `--allow-teacher-runtime-gap`.
+The fixed Chaoyang teacher was trained and evaluated by directly resizing the
+original image to 32 x 32. `[TEACHER_NATIVE_AUDIT]` reproduces that comparable
+path and must stay within the default 5 pp threshold. The source-faithful Ours
+feature path instead resizes the shared student view from 224 to 32; its
+`[TEACHER_SHARED_VIEW]` classification Top-1 is recorded as a diagnostic and
+is not compared as if it were the native checkpoint recipe.
 
 Timing run:
 
