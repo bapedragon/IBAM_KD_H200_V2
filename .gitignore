@@ -13,3 +13,6 @@ __pycache__/
 
 # The three explicitly selected, hash-verified teacher checkpoints are tracked.
 !teachers/checkpoints/**/*.pt
+
+# Keep only selected best student checkpoints under the curated results tree.
+!results/**/*.pt

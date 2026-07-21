@@ -43,6 +43,13 @@ IBAM_KD_H200_V2/
 │   ├── MGD/
 │   ├── Ours/
 │   └── OFA/
+├── results/
+│   ├── README.md
+│   ├── CHECKSUMS.sha256
+│   ├── cifar100/
+│   ├── flowers102/
+│   ├── chaoyang/
+│   └── logs/
 └── teachers/
     ├── checkpoints/
     │   ├── cifar100/
@@ -61,6 +68,8 @@ The complete locked protocol and source audit are recorded in
 [`PROTOCOL.md`](PROTOCOL.md).
 Ready-to-copy H200 request values are recorded in
 [`H200_ISSUE.md`](H200_ISSUE.md).
+Curated completed runs, selected best checkpoints, exact summaries, and result
+tables are recorded in [`results/README.md`](results/README.md).
 
 ## DeiT-Ti student stage
 
