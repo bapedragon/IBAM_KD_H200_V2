@@ -43,3 +43,31 @@ code. This wrapper uses the standalone ALG run's complete base configuration,
 then replaces the ALG-only feature objective with the delivered Ours module
 and the paper/researcher-confirmed 0.5/0.5 objective. See
 [`../PAPER_AUDIT.md`](../PAPER_AUDIT.md).
+
+## Protocol decision and run lineage
+
+The final comparison protocol is the audited public LG/ALG base implemented by
+this wrapper. ALG and Ours must share this base; Ours changes only the feature
+module/objective described above. A higher result from an older, different
+base protocol must not be substituted into the final comparison.
+
+| Run | Base / grid | Seed | Best Top-1 | Status |
+|---|---|---:|---:|---|
+| Earlier Ours, 100 epochs | common base, teacher grid `32/16/8` | 42 | 81.21% | historical diagnostic |
+| Earlier Ours, 300 epochs | common base, teacher grid `32/16/8` | 42 | 81.11% | historical diagnostic |
+| Audited ALG, 300 epochs | public LG/ALG base, ALG larger-grid path | 1 | 80.32% | current matched baseline |
+| Audited Ours, 300 epochs | public LG/ALG base, source larger grid `32/16/14` | 1 | 77.14% | current matched Ours result; requires investigation |
+
+The old common base used light `RandomResizedCrop+flip`, label smoothing
+`0.1`, drop path `0`, AMP, `Resize(256)+CenterCrop(224)` evaluation, minimum
+LR `0`, and seed `42`. The audited public LG/ALG base instead uses the strong
+LG augmentation listed above, label smoothing `0`, drop path `0.1`, FP32,
+direct-resize evaluation, minimum LR `5e-6`, and seed `1`. The two result
+families are therefore not repeated runs of one protocol.
+
+In the matched public-LG/ALG pair, ALG stops guidance at epoch 217 and reaches
+80.32%, while Ours stops at epoch 234 and reaches 77.14%. This reverses the
+working-paper ordering, so the Ours controller signal/feature-loss scale must
+be audited before treating 77.14% as a validated reproduction. Running ALG
+once under the old common base is permitted only as a controlled ablation to
+measure the base-protocol effect; it is not the final ALG number.
