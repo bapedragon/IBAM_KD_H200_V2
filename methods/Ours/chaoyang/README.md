@@ -15,7 +15,8 @@
   bilinearly resized to the larger grid, producing `32 x 32`, `16 x 16`, and
   `14 x 14` targets.
 - Adaptive beta: exact ALG equations with `beta=2.5`, `tau=-0.02`, two
-  50-epoch smoothing stages; `L_align` is the recorded controller signal
+  50-epoch smoothing stages; `L_align` is the recorded controller signal. The
+  one-way stop is armed only after first observing a derivative below `tau`.
 - Working-paper comparison target: `86.35%` Top-1
 
 The fixed Chaoyang teacher was trained and evaluated by directly resizing the

@@ -12,7 +12,8 @@
 - Grid: supplied-source larger-grid policy, producing targets `32/16/14`
 - Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
 - Adaptive beta: exact ALG equations with `beta=2.5`, `tau=-0.02`, two
-  50-epoch smoothing stages; `L_align` is the recorded controller signal
+  50-epoch smoothing stages; `L_align` is the recorded controller signal. The
+  one-way stop is armed only after first observing a derivative below `tau`.
 - Working-paper comparison target: `82.42%` Top-1
 
 The teacher is already trained at 32 x 32. It receives the same crop/flip view
