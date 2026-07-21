@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import platform
 import random
 import signal
@@ -197,8 +198,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--alg-threshold", type=float, default=-0.02)
     parser.add_argument("--alg-smoothing-window", type=int, default=50)
     parser.add_argument(
+        "--base-protocol",
+        choices=("lg_official", "draft_common"),
+        default="lg_official",
+        help=(
+            "lg_official uses the audited public LG/ALG loader and scheduler; "
+            "draft_common reproduces the historical Ours 81.11%% shared base."
+        ),
+    )
+    parser.add_argument(
         "--eval-resize-mode",
-        choices=("direct",),
+        choices=("direct", "center_crop"),
         default="direct",
     )
     parser.add_argument(
@@ -239,7 +249,6 @@ def finalize_args(args: argparse.Namespace) -> None:
         "smoke_train_samples",
         "smoke_test_samples",
         "lr",
-        "min_lr",
         "warmup_factor",
         "beta",
         "alg_smoothing_window",
@@ -249,6 +258,8 @@ def finalize_args(args: argparse.Namespace) -> None:
             raise ValueError(f"--{field.replace('_', '-')} must be positive")
     if args.num_workers < 0:
         raise ValueError("--num-workers must be non-negative")
+    if args.min_lr < 0:
+        raise ValueError("--min-lr must be non-negative")
     if args.warmup_epochs < 0:
         raise ValueError("--warmup-epochs must be non-negative")
     if args.min_lr > args.lr:
@@ -361,6 +372,32 @@ def build_alg_loaders(
         "split=train:official_train eval:official_test"
     )
     return train_loader, test_loader
+
+
+def create_draft_common_scheduler(
+    optimizer: torch.optim.Optimizer,
+    epochs: int,
+    warmup_epochs: int,
+    min_lr: float,
+    base_lr: float,
+) -> tuple[torch.optim.lr_scheduler.LambdaLR, int]:
+    """Historical shared scheduler used by the 81.11% Ours run."""
+
+    effective_warmup = warmup_epochs if epochs > warmup_epochs else 0
+    minimum_ratio = min_lr / base_lr
+
+    def lr_multiplier(epoch_index: int) -> float:
+        if effective_warmup and epoch_index < effective_warmup:
+            return (epoch_index + 1) / effective_warmup
+        cosine_epochs = max(1, epochs - effective_warmup)
+        progress = min(
+            max((epoch_index - effective_warmup) / cosine_epochs, 0.0), 1.0
+        )
+        cosine = 0.5 * (1.0 + math.cos(math.pi * progress))
+        return minimum_ratio + (1.0 - minimum_ratio) * cosine
+
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_multiplier)
+    return scheduler, effective_warmup
 
 
 def build_native_teacher_audit_loader(
@@ -693,13 +730,21 @@ def main() -> None:
         f"warmup={args.warmup_epochs} warmup_factor={args.warmup_factor} "
         f"cosine batch={args.batch_size} eval_batch={args.eval_batch_size} "
         f"student_image=224 teacher_image=32 drop_path={args.drop_path_rate} "
-        f"label_smoothing={args.label_smoothing} pretrained=False"
+        f"label_smoothing={args.label_smoothing} pretrained=False "
+        f"base={args.base_protocol} eval_resize={args.eval_resize_mode}"
     )
-    log(
-        "[AUGMENT] color_jitter=0.4 auto_augment=rand-m9-mstd0.5-inc1 "
-        "random_erasing=0.25/pixel/1 interpolation=bicubic "
-        "normalization=ImageNet"
-    )
+    if args.base_protocol == "lg_official":
+        log(
+            "[AUGMENT] color_jitter=0.4 auto_augment=rand-m9-mstd0.5-inc1 "
+            "random_erasing=0.25/pixel/1 interpolation=bicubic "
+            "normalization=ImageNet drop_last_train=True"
+        )
+    else:
+        log(
+            "[AUGMENT] RandomResizedCrop(scale=0.8..1.0)+HorizontalFlip "
+            "interpolation=bicubic normalization=ImageNet "
+            "drop_last_train=False eval=Resize256+CenterCrop224"
+        )
     log(
         f"[ALG] loss=CE+beta*LG*indicator(smoothed_derivative<tau) "
         f"beta={args.beta} tau={args.alg_threshold} "
@@ -719,7 +764,12 @@ def main() -> None:
         f"[SOURCE] ALG_DOI={ALG_PAPER_DOI} LG_repo_commit={OFFICIAL_LG_COMMIT}"
     )
 
-    train_loader, test_loader = build_alg_loaders(args, device, timm)
+    if args.base_protocol == "lg_official":
+        train_loader, test_loader = build_alg_loaders(args, device, timm)
+    else:
+        from methods.KD.core import build_loaders
+
+        train_loader, test_loader = build_loaders(args, device)
     native_loader = build_native_teacher_audit_loader(args, device)
     teacher, teacher_payload, teacher_spec = load_teacher(
         "chaoyang",
@@ -824,14 +874,30 @@ def main() -> None:
         lr=args.lr,
         weight_decay=args.weight_decay,
     )
-    scheduler = create_scheduler(
-        optimizer,
-        planned_epochs=args.planned_epochs,
-        lr=args.lr,
-        min_lr=args.min_lr,
-        warmup_epochs=args.warmup_epochs,
-        warmup_factor=args.warmup_factor,
-    )
+    if args.base_protocol == "lg_official":
+        scheduler = create_scheduler(
+            optimizer,
+            planned_epochs=args.planned_epochs,
+            lr=args.lr,
+            min_lr=args.min_lr,
+            warmup_epochs=args.warmup_epochs,
+            warmup_factor=args.warmup_factor,
+        )
+        warmup_description = (
+            f"official_warmup_start_lr={args.lr * args.warmup_factor:.8g}"
+        )
+    else:
+        scheduler, effective_warmup = create_draft_common_scheduler(
+            optimizer,
+            args.planned_epochs,
+            args.warmup_epochs,
+            args.min_lr,
+            args.lr,
+        )
+        warmup_description = (
+            f"common_effective_warmup={effective_warmup} "
+            f"first_epoch_lr={args.lr / max(1, effective_warmup):.8g}"
+        )
     scaler = create_grad_scaler(amp_enabled)
     controller = AdaptiveGuidanceController(
         beta=args.beta,
@@ -841,7 +907,7 @@ def main() -> None:
     log(
         f"[STUDENT] epochs={args.student_epochs} planned={args.planned_epochs} "
         f"initial_optimizer_lr={optimizer.param_groups[0]['lr']:.8g} "
-        f"official_warmup_start_lr={args.lr * args.warmup_factor:.8g}"
+        f"{warmup_description}"
     )
 
     best_accuracy = 0.0

@@ -438,3 +438,45 @@ approximately `76.72%`, and a passing native teacher audit.
 The full run saves independent `student_best.pt`, `student_latest.pt`, and
 `summary.json` files. The final log prints measured Top-1 versus `83.50%` and
 the observed guidance stop epoch versus `108`; no correction ratio is applied.
+
+## 16. Chaoyang ALG on the historical draft-common base
+
+This controlled run keeps the ALG operator and all draft-visible shared values
+fixed while replacing the public LG/ALG augmentation/regularization base with
+the historical common base used by the earlier Ours `81.11%` run. It is a
+separate protocol family and must be compared only with that historical Ours
+result.
+
+### 16.1 Full-data two-epoch timing run
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG draft-common timing run` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/ALG/chaoyang/train_draft_common.py --timing-run --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+Require these markers before the full run:
+
+```text
+[PROTOCOL] name=chaoyang_deit_ti_alg_draft_common_v1 ... base=draft_common ...
+[ENV] ... amp=True seed=42 ...
+[AUGMENT] RandomResizedCrop(scale=0.8..1.0)+HorizontalFlip ...
+[FEATURE_CHECK] ... aligned=[(2, 16, 32, 32), (2, 32, 16, 16), (2, 64, 14, 14)] ...
+[DONE] ALG training completed successfully; resources may be released.
+```
+
+### 16.2 Full 300-epoch run
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG draft-common full training` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/ALG/chaoyang/train_draft_common.py --output-dir /app/output --run-name alg_chaoyang_deit_ti_draft_common_300ep_seed42 --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
