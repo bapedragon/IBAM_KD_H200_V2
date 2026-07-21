@@ -70,6 +70,11 @@ class AdaptiveGuidanceController:
         self.smoothing_window = int(args.alg_smoothing_window)
         self.manual_stop_epoch = args.guidance_stop_epoch
         self.active = True
+        # Arm the convergence transition only after the guidance loss has
+        # actually entered ALG's decreasing regime. This prevents an early
+        # noisy increase from permanently disabling guidance before any
+        # descent has been observed.
+        self.descent_observed = False
         self.stop_epoch: int | None = None
         self.guidance_loss_history: list[float] = []
         self.derivative_history: list[float] = []
@@ -120,7 +125,14 @@ class AdaptiveGuidanceController:
         window = self.derivative_history[-self.smoothing_window :]
         smoothed_derivative = sum(window) / len(window)
         self.smoothed_derivative_history.append(smoothed_derivative)
-        if epoch > 1 and self.active and smoothed_derivative >= self.threshold:
+        if epoch > 1 and smoothed_derivative < self.threshold:
+            self.descent_observed = True
+        if (
+            epoch > 1
+            and self.active
+            and self.descent_observed
+            and smoothed_derivative >= self.threshold
+        ):
             self.active = False
             self.stop_epoch = epoch
         return self.state_dict()
@@ -130,6 +142,7 @@ class AdaptiveGuidanceController:
             "schedule": self.schedule,
             "beta_on": self.beta_on,
             "active": self.active,
+            "descent_observed": self.descent_observed,
             "stop_epoch": self.stop_epoch,
             "threshold": self.threshold,
             "smoothing_window": self.smoothing_window,
@@ -827,7 +840,8 @@ def main() -> None:
         log(
             "[BETA] ALG Eqs.(10)-(19): smooth the epoch loss over 50 epochs, "
             "differentiate it, smooth that derivative over 50 epochs, and switch "
-            "permanently to CE-only when the derivative reaches tau=-0.02."
+            "permanently to CE-only when the derivative returns to tau=-0.02 "
+            "after first entering the decreasing regime below tau."
         )
     else:
         log(
@@ -848,7 +862,8 @@ def main() -> None:
     )
     log(
         "[REPRO_STATUS] Ours-specific documented choices: L_align drives the "
-        "ALG controller; epoch-1 derivative is initialized to zero; attention "
+        "ALG controller; epoch-1 derivative is initialized to zero and the "
+        "stop is armed after first observing descent; attention "
         "heads/reduction/loss reduction follow the supplied source."
     )
 
@@ -1133,6 +1148,7 @@ def main() -> None:
             f"ce={ce:.4f} align={alignment_loss:.4f} "
             f"fuse={fusion_loss:.4f} feature={feature_loss:.4f} "
             f"beta={beta:.4f} guidance_active_next={controller.active} "
+            f"descent_observed={controller.descent_observed} "
             f"alg_raw_derivative={raw_derivative_text} "
             f"alg_smoothed_derivative={smoothed_derivative_text} "
             f"guidance_stop_epoch={controller.stop_epoch} "
@@ -1166,6 +1182,7 @@ def main() -> None:
     log(
         f"[BETA_FINAL] schedule={controller.schedule} "
         f"stop_epoch={controller.stop_epoch} "
+        f"descent_observed={controller.descent_observed} "
         f"guided_epochs={sum(beta > 0.0 for beta in controller.beta_history)} "
         f"ce_only_epochs={sum(beta == 0.0 for beta in controller.beta_history)} "
         "full_history_saved_in=summary.json"

@@ -22,7 +22,10 @@ The dataset-specific base protocols are intentionally documented elsewhere.
 The ALG derivative controller follows Eqs. (10)-(19). For epoch `e<=50`, it
 uses the current LG loss versus the mean of previous available losses. For
 `e>50`, it uses the current loss versus the loss 50 epochs earlier. Those raw
-derivatives are averaged over up to 50 epochs before applying `tau`.
+derivatives are averaged over up to 50 epochs before applying `tau`. Because
+the published expression is undefined at epoch 1, the implementation starts
+active and arms its permanent stop only after the smoothed derivative first
+falls below `tau`; the next return to `tau` or above is the last guided epoch.
 
 ## Fixed by the supplied Ours model source, not stated numerically in V3
 
@@ -59,7 +62,7 @@ and all three target shapes are printed and stored in every run.
 | Choice | Repository decision | Reason |
 |---|---|---|
 | Signal observed by ALG | epoch-average `L_align` | It is the direct CNN/ViT distance most closely corresponding to ALG's `L_LG`; V3 does not say whether to observe align, fuse, or the combined loss. |
-| Epoch-1 derivative | initialize to `0` and forbid stopping at epoch 1 | ALG's published early-epoch expression has no previous value at epoch 1. |
+| Initial derivative boundary | initialize epoch 1 to `0`; arm the one-way stop only after the smoothed derivative first falls below `tau` | ALG's published early-epoch expression has no previous value at epoch 1. The descent-first guard prevents a noisy initial increase from being misclassified as convergence; it does not impose a fixed stop epoch. |
 | Missing pycls config | feature guidance on, linear projection, logit KD off | The config file was not delivered; V3 Eq. (4) contains CE plus the two feature losses and no logit-KL term. |
 | Teacher input size | fixed V2 32 x 32 teachers for all datasets | ALG confirms the low-resolution CNN path; the same fixed teacher is reused across compared methods. |
 | Evaluation geometry | direct resize of the full image to `224 x 224`, then shared-view bilinear downsampling to `32 x 32` for the teacher | This follows the supplied/public locality-guidance loader. |

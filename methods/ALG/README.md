@@ -40,7 +40,9 @@ L_total(e) = CE + 2.5 * L_LG(e) * 1(smoothed_derivative(e) < -0.02)
 
 The LG loss is smoothed over 50 epochs, differentiated, and the derivative is
 smoothed over another 50 epochs. The crossing epoch is the final guided epoch;
-all later epochs are CE-only.
+all later epochs are CE-only. The one-way crossing is armed only after the
+smoothed derivative has first entered the decreasing regime below `tau`, so an
+initial noisy increase cannot be mistaken for convergence.
 
 ## Paper/public-code-matched base protocol
 

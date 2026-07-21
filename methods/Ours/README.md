@@ -66,7 +66,10 @@ V3 does not state which of its two feature losses should be observed by the
 ALG controller. This implementation observes `L_align`, because it is the
 direct CNN/ViT feature distance corresponding most closely to ALG's `L_LG`.
 At epoch 1, where ALG's published expression has no previous loss, the raw
-derivative is initialized to zero and cannot stop guidance. These two boundary
+derivative is initialized to zero and cannot stop guidance. The one-way stop is
+armed only after the smoothed derivative first enters the decreasing regime
+below `tau`; a noisy early increase therefore cannot disable guidance before
+any descent has been observed. These boundary
 decisions are explicitly saved in logs/checkpoints. `manual_stop` remains
 available only for controlled diagnostics.
 

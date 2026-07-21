@@ -76,6 +76,10 @@ class AdaptiveGuidanceController:
         self.threshold = float(threshold)
         self.smoothing_window = int(smoothing_window)
         self.active = True
+        # Treat ALG's one-way switch as a convergence transition: the
+        # derivative must first enter the decreasing regime below tau before
+        # a later return to tau or above can disable guidance.
+        self.descent_observed = False
         self.stop_epoch: int | None = None
         self.guidance_loss_history: list[float] = []
         self.derivative_history: list[float] = []
@@ -118,8 +122,15 @@ class AdaptiveGuidanceController:
         self.smoothed_derivative_history.append(smoothed_derivative)
 
         # Epoch one has no preceding LG history and is used only to initialize
-        # the published smoothing equations. It cannot end guidance by itself.
-        if epoch > 1 and smoothed_derivative >= self.threshold:
+        # the published smoothing equations. A stop is allowed only after a
+        # genuine decreasing regime has first been observed.
+        if epoch > 1 and smoothed_derivative < self.threshold:
+            self.descent_observed = True
+        if (
+            epoch > 1
+            and self.descent_observed
+            and smoothed_derivative >= self.threshold
+        ):
             self.active = False
             self.stop_epoch = epoch
         return self.state_dict()
@@ -130,6 +141,7 @@ class AdaptiveGuidanceController:
             "threshold": self.threshold,
             "smoothing_window": self.smoothing_window,
             "active": self.active,
+            "descent_observed": self.descent_observed,
             "stop_epoch": self.stop_epoch,
             "guidance_loss_history": list(self.guidance_loss_history),
             "derivative_history": list(self.derivative_history),
@@ -914,6 +926,7 @@ def main() -> None:
             f"[ALG][{epoch:03d}/{args.student_epochs:03d}] loss={loss:.4f} "
             f"ce={ce:.4f} lg={lg_loss:.4f} beta={beta:.4f} "
             f"guidance_active_next={controller.active} "
+            f"descent_observed={controller.descent_observed} "
             f"raw_derivative={raw_text} smoothed_derivative={smooth_text} "
             f"guidance_stop_epoch={controller.stop_epoch} "
             f"train_acc={train_accuracy:.2f}% val_acc={latest_accuracy:.2f}% "
@@ -939,6 +952,7 @@ def main() -> None:
     log(
         f"[BETA_FINAL] observed_stop_epoch={controller.stop_epoch} "
         f"paper_stop_epoch={ALG_PAPER_STOP_EPOCH} "
+        f"descent_observed={controller.descent_observed} "
         f"guided_epochs={sum(value > 0 for value in controller.beta_history)} "
         f"ce_only_epochs={sum(value == 0 for value in controller.beta_history)}"
     )

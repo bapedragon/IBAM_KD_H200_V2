@@ -83,6 +83,15 @@ class AdaptiveGuidanceControllerTest(unittest.TestCase):
         self.assertTrue(controller.active)
         self.assertIsNone(controller.stop_epoch)
 
+    def test_early_increase_cannot_stop_before_descent(self) -> None:
+        controller = AdaptiveGuidanceController(controller_args())
+        for epoch, loss in enumerate([4.0, 4.2], 1):
+            self.assertEqual(controller.beta_for_epoch(epoch), 2.5)
+            controller.observe(epoch, loss)
+        self.assertFalse(controller.descent_observed)
+        self.assertTrue(controller.active)
+        self.assertIsNone(controller.stop_epoch)
+
 
 if __name__ == "__main__":
     unittest.main()

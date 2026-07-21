@@ -74,6 +74,19 @@ class AlgControllerTest(unittest.TestCase):
         self.assertEqual(controller.beta_history[controller.stop_epoch - 1], 2.5)
         self.assertEqual(controller.beta_for_epoch(controller.stop_epoch + 1), 0.0)
 
+    def test_early_increase_cannot_stop_before_descent(self) -> None:
+        controller = AdaptiveGuidanceController(
+            beta=2.5,
+            threshold=-0.02,
+            smoothing_window=50,
+        )
+        for epoch, loss in enumerate([4.0, 4.2], 1):
+            self.assertEqual(controller.beta_for_epoch(epoch), 2.5)
+            controller.observe(epoch, loss)
+        self.assertFalse(controller.descent_observed)
+        self.assertTrue(controller.active)
+        self.assertIsNone(controller.stop_epoch)
+
 
 class OfficialLgPortTest(unittest.TestCase):
     def test_shapes_and_loss_match_public_implementation(self) -> None:
