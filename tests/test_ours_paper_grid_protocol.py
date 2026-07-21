@@ -47,11 +47,11 @@ class OursPaperGridProtocolTest(unittest.TestCase):
         defaults = defaults_map(CHAOYANG_DEFAULTS)
         self.assertEqual(
             defaults["--protocol-name"],
-            "chaoyang_deit_ti_ours_papergrid_v2",
+            "chaoyang_deit_ti_ours_draftmatched_v3",
         )
-        self.assertEqual(defaults["--student-epochs"], "100")
-        self.assertEqual(defaults["--batch-size"], "64")
-        self.assertEqual(defaults["--warmup-epochs"], "5")
+        self.assertEqual(defaults["--student-epochs"], "300")
+        self.assertEqual(defaults["--batch-size"], "128")
+        self.assertEqual(defaults["--warmup-epochs"], "20")
         self.assertEqual(defaults["--teacher-image-size"], "32")
         self.assertEqual(defaults["--beta-schedule"], "alg")
         self.assertEqual(defaults["--beta-on"], "2.5")

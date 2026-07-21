@@ -338,7 +338,7 @@ The root additionally contains `combined_batch_status.json` and
 `combined_batch_summary.json`. If a later task fails, previously completed
 directories are not deleted or overwritten.
 
-## 14. Chaoyang Ours paper-grid run
+## 14. Chaoyang Ours draft-matched paper-grid run
 
 This request follows V3 rather than the supplied source's larger-grid rule.
 The verified ResNet56 stages are `32 x 32`, `16 x 16`, and `8 x 8`; the DeiT
@@ -348,7 +348,7 @@ features must be bilinearly resampled to those three teacher grids.
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 Chaoyang DeiT-Ti Ours paper-grid timing run` |
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti Ours draft-matched timing run` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
 | 코드 실행 명령어 | `python methods/Ours/chaoyang/train.py --timing-run --grid-resize-mode teacher --num-workers 4` |
@@ -359,8 +359,8 @@ features must be bilinearly resampled to those three teacher grids.
 Before launching the full run, require all of the following in the log:
 
 ```text
-[MODE] ... timing_run=True ... planned_epochs=100
-[PROTOCOL] name=chaoyang_deit_ti_ours_papergrid_v1
+[MODE] ... timing_run=True ... planned_epochs=300
+[PROTOCOL] name=chaoyang_deit_ti_ours_draftmatched_v3 ... warmup=20 ... batch=128 ...
 [OURS] ... stage_grid=teacher ...
 [BETA] schedule=alg_exact beta_on=2.5 ... threshold=-0.02 smoothing_window=50
 [FEATURE_CHECK] ... stage_targets=[(2, 16, 32, 32), (2, 32, 16, 16), (2, 64, 8, 8)] ...
@@ -371,19 +371,21 @@ Also confirm the official Chaoyang split counts `4,021/2,139`, the fixed
 teacher Top-1 `76.7181%` (approximately `76.72%`), and a passing teacher
 runtime audit.
 
-### 14.2 Full 100-epoch run
+### 14.2 Full 300-epoch run
 
 Submit only after the timing checklist passes.
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 Chaoyang DeiT-Ti Ours paper-grid full training` |
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti Ours draft-matched full training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/Ours/chaoyang/train.py --student-epochs 100 --grid-resize-mode teacher --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_100ep_seed42 --output-dir /app/output` |
+| 코드 실행 명령어 | `python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --grid-resize-mode teacher --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_300ep_seed42 --output-dir /app/output` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
 
 The comparison reference is `86.35%` Top-1. Report the raw measured best
-Top-1; the code does not apply a teacher-gap correction.
+Top-1; the code does not apply a teacher-gap correction. This request follows
+the current draft's explicit uniform student schedule rather than the earlier
+Chaoyang `100/64/5` dataset-specific profile.

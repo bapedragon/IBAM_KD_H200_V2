@@ -68,18 +68,20 @@ derivative is initialized to zero and cannot stop guidance. These two boundary
 decisions are explicitly saved in logs/checkpoints. `manual_stop` remains
 available only for controlled diagnostics.
 
-## Dataset-specific base protocols
+## Student base protocols
 
-The draft's single 300-epoch statement is not used for Flowers-102 or
-Chaoyang, per the experiment-team correction. The locked V2 common student
-protocol is retained so Ours differs from the generic baselines only in its
-transfer operator.
+The current working draft states that every student uses 300 epochs, batch
+size 128, and a 20-epoch warm-up. CIFAR-100 already follows that statement.
+Chaoyang Ours now also uses it explicitly so the measured result can be
+compared with the draft's `86.35%` table cell. Flowers-102 still retains the
+earlier dataset-specific profile and therefore must not be described as a
+strict reproduction of the draft's uniform protocol.
 
 | Dataset | Epochs | Batch | Optimizer | LR / min LR | Weight decay | Warm-up | Schedule |
 |---|---:|---:|---|---:|---:|---:|---|
 | CIFAR-100 | 300 | 128 | AdamW | `5e-4` / `0` | `0.05` | 20 | Cosine |
 | Flowers-102 | 200 | 64 | AdamW | `5e-4` / `0` | `0.05` | 5 | Cosine |
-| Chaoyang | 100 | 64 | AdamW | `5e-4` / `0` | `0.05` | 5 | Cosine |
+| Chaoyang | 300 | 128 | AdamW | `5e-4` / `0` | `0.05` | 20 | Cosine |
 
 All use 224-pixel student inputs, label smoothing `0.1`, AMP, seed `42`, no
 external student pretraining, the established dataset splits, and best Top-1

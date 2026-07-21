@@ -15,13 +15,13 @@ from methods.Ours.core import cli_main
 
 
 PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "chaoyang_deit_ti_ours_papergrid_v2"),
-    ("--student-epochs", "100"),
-    ("--batch-size", "64"),
+    ("--protocol-name", "chaoyang_deit_ti_ours_draftmatched_v3"),
+    ("--student-epochs", "300"),
+    ("--batch-size", "128"),
     ("--lr", "0.0005"),
     ("--min-lr", "0.0"),
     ("--weight-decay", "0.05"),
-    ("--warmup-epochs", "5"),
+    ("--warmup-epochs", "20"),
     ("--label-smoothing", "0.1"),
     ("--drop-path-rate", "0.0"),
     ("--teacher-image-size", "32"),

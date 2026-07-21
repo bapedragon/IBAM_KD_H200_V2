@@ -3,8 +3,8 @@
 - Data: official mounted dataset under `/app/data/chaoyang`
 - Teacher: fixed V2 32 x 32 ResNet56 checkpoint selected by the manifest
 - Student: DeiT-Ti from scratch
-- Base protocol: 100 epochs, batch 64, AdamW `5e-4`, minimum LR `0`,
-  weight decay `0.05`, 5-epoch warm-up, cosine decay
+- Working-draft comparison protocol: 300 epochs, batch 128, AdamW `5e-4`,
+  minimum LR `0`, weight decay `0.05`, 20-epoch warm-up, cosine decay
 - Input/recorded choices: 224 pixels, label smoothing `0.1`, seed `42`
 - Evaluation geometry: direct full-image resize to `224 x 224` (no center
   crop), then shared-view bilinear downsampling to `32 x 32` for the teacher
@@ -32,9 +32,11 @@ python methods/Ours/chaoyang/train.py --timing-run --grid-resize-mode teacher --
 Full run only after the timing log and teacher audit pass:
 
 ```bash
-python methods/Ours/chaoyang/train.py --student-epochs 100 --grid-resize-mode teacher --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_100ep_seed42 --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --grid-resize-mode teacher --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_300ep_seed42 --output-dir /app/output
 ```
 
 Raw measured accuracy is retained; no teacher-gap correction is applied by
-code. The 100-epoch dataset protocol is intentional. See
+code. This wrapper intentionally follows the current working draft's uniform
+student statement (`300` epochs, batch `128`, 20-epoch warm-up) so its result
+can be compared with the draft's `86.35%` Chaoyang cell. See
 [`../PAPER_AUDIT.md`](../PAPER_AUDIT.md).

@@ -80,11 +80,12 @@ result compatibility.
 
 ## Shared experiment choices (not Ours-specific)
 
-Dataset-specific epochs, batch size/warm-up, common augmentation,
-normalization, label smoothing `0.1`, seed `42`, AMP, and best-checkpoint
-selection belong to the shared comparison protocol. V3's single 300-epoch
-statement is intentionally not applied to Flowers/Chaoyang because the team
-has marked it for correction.
+Epochs, batch size/warm-up, common augmentation, normalization, label
+smoothing `0.1`, seed `42`, AMP, and best-checkpoint selection belong to the
+shared comparison protocol. For the explicit comparison with V3, CIFAR-100
+and Chaoyang Ours follow V3's stated 300 epochs, batch 128, and 20-epoch
+warm-up. Flowers-102 still uses the earlier dataset-specific profile and its
+result must not be labeled as a strict reproduction of V3's uniform schedule.
 
 ## Full-run gate
 
