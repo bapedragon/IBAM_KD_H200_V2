@@ -8,9 +8,9 @@ student runs. Raw Pod output folders contained repeated batch wrappers and both
 results/
 ├── KD/{cifar100,flowers102,chaoyang}/
 ├── CRD/{cifar100,flowers102,chaoyang}/
-├── ReviewKD/{flowers102,chaoyang}/
-├── MGD/{flowers102,chaoyang}/
-├── OFA/{flowers102,chaoyang}/
+├── ReviewKD/{cifar100,flowers102,chaoyang}/
+├── MGD/{cifar100,flowers102,chaoyang}/
+├── OFA/{cifar100,flowers102,chaoyang}/
 ├── Ours/cifar100/
 ├── run_logs/
 └── CHECKSUMS.sha256
@@ -26,7 +26,7 @@ outputs retain `student_latest.pt`; its exact final-epoch accuracy is also
 preserved in `run_summary.json`. This avoids doubling repository size and H200
 clone time without discarding the reported result.
 
-All 13 committed checkpoints were loaded with PyTorch and verified against
+All 16 committed checkpoints were loaded with PyTorch and verified against
 their summaries for dataset, method, best accuracy, and checkpoint epoch.
 Checkpoint file names show Top-1 rounded to two decimals; summaries preserve
 full precision.
@@ -42,9 +42,9 @@ Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
 | KD | 191 | **69.10%** | 68.59% | +4.02 pp | Verified |
 | CRD | 79 | **68.59%** | 66.74% | +3.51 pp | Verified |
 | Ours | 296 | **79.52%** | 79.49% | +14.44 pp | Historical source-grid run; not the paper-grid table result |
-| ReviewKD | - | - | - | - | Pending |
-| MGD | - | - | - | - | Pending |
-| OFA | - | - | - | - | Pending |
+| ReviewKD | 233 | **75.65%** | 75.50% | +10.57 pp | Verified |
+| MGD | 215 | **75.68%** | 75.31% | +10.60 pp | Verified |
+| OFA | 263 | **67.73%** | 67.50% | +2.65 pp | Verified |
 
 The current Ours checkpoint used the supplied larger-grid rule, producing
 stage targets `32 x 32`, `16 x 16`, and `14 x 14`. The experiment policy is
@@ -86,6 +86,9 @@ Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
 - `run_logs/h200_build-450_combined-generic-kd.log`: Chaoyang five methods,
   Flowers-102 five methods, then CIFAR-100 KD.
 - `run_logs/h200_build-452_cifar100-ours-crd.log`: CIFAR-100 Ours and CRD.
+- `run_logs/h200_build-453_cifar100-reviewkd-mgd.log`: CIFAR-100 ReviewKD
+  and MGD.
+- `run_logs/h200_build-454_cifar100-ofa.log`: CIFAR-100 OFA.
 
 Generic methods use the CNN-to-ViT adapters documented in each method
 directory. They should not be described as unmodified original CNN-to-CNN
