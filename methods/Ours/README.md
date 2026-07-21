@@ -121,7 +121,7 @@ Conditional full runs after the timing log and teacher audit are accepted:
 ```bash
 python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_papergrid_300ep --output-dir /app/output
 python methods/Ours/flowers102/train.py --student-epochs 200 --num-workers 4 --run-name ours_flowers102_deit_ti_papergrid_200ep --output-dir /app/output
-python methods/Ours/chaoyang/train.py --student-epochs 100 --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_100ep --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_300ep --output-dir /app/output
 ```
 
 For a manual diagnostic stop epoch, use:
