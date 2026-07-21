@@ -37,3 +37,9 @@ original pycls trainer passed zero-based `cur_epoch` without adding one, that
 would create a one-epoch/index lag and should be confirmed from the missing
 call-site line before claiming byte-identical execution. This does not block a
 timing run, and the chosen numbering is printed/saved in the run metadata.
+
+All unresolved reproduction questions are isolated in
+[`RESEARCHER_QUESTIONS.md`](RESEARCHER_QUESTIONS.md). Values in that checklist
+are not silently promoted to paper-confirmed settings. When the researcher
+answers, record the answer and evidence there before changing an executable
+default or relabeling a result.

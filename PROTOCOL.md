@@ -222,6 +222,11 @@ shared by the researcher: the public LG data path and model defaults, plus the
 supplied ALG controller. The three currently scheduled runs are Ours on
 CIFAR-100, Ours on Flowers-102, and ALG on Flowers-102.
 
+Canonical protocol ID: `researcher_sync_v1_300ep_seed1`. Its verified outputs
+must live under `results/<Method>/<dataset>/researcher_sync_v1_300ep_seed1/`.
+The current H200 job is tracked in `results/PENDING_IMPORTS.md`; it is not a
+completed result until the checkpoint and summary pass the import gate.
+
 | Item | Researcher-sync value |
 |---|---:|
 | Student / initialization | DeiT-Ti / scratch |

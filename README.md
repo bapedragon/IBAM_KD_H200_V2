@@ -48,6 +48,7 @@ IBAM_KD_H200_V2/
 │   └── OFA/
 ├── results/
 │   ├── README.md
+│   ├── PENDING_IMPORTS.md
 │   ├── CHECKSUMS.sha256
 │   ├── KD/
 │   ├── CRD/
@@ -76,6 +77,10 @@ Ready-to-copy H200 request values are recorded in
 [`H200_ISSUE.md`](H200_ISSUE.md).
 Curated completed runs, selected best checkpoints, exact summaries, and result
 tables are recorded in [`results/README.md`](results/README.md).
+Runs that have started on H200 but whose artifacts have not yet been received
+are tracked separately in
+[`results/PENDING_IMPORTS.md`](results/PENDING_IMPORTS.md). A pending run is
+never listed as a verified result.
 
 ## DeiT-Ti student stage
 

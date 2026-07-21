@@ -6,33 +6,43 @@ student runs. Raw Pod output folders contained repeated batch wrappers and both
 
 ```text
 results/
-├── KD/{cifar100,flowers102,chaoyang}/
-├── CRD/{cifar100,flowers102,chaoyang}/
-├── ReviewKD/{cifar100,flowers102,chaoyang}/
-├── MGD/{cifar100,flowers102,chaoyang}/
-├── OFA/{cifar100,flowers102,chaoyang}/
-├── ALG/chaoyang/
-├── Ours/{cifar100,chaoyang}/
+├── <Method>/<dataset>/<protocol-id>/
+│   ├── run_summary.json
+│   └── student_best.pt
+├── PENDING_IMPORTS.md
 ├── run_logs/
 └── CHECKSUMS.sha256
 ```
 
-Each completed method/dataset folder contains a summary and the selected best
-checkpoint. Historical Flowers and Chaoyang generic runs are deliberately
-named with `_200ep_seed42_historical` and `_100ep_seed42_historical`; their
-files cannot be mistaken for or overwritten by the pending 300-epoch reruns.
+The protocol-ID directory is mandatory. No checkpoint or summary may be placed
+directly under a dataset directory. This prevents a new researcher-sync run
+from overwriting or being mistaken for an older run of the same method and
+dataset. The canonical IDs currently used are:
+
+| Protocol ID | Meaning |
+|---|---|
+| `generic_kd_v2_300ep_seed42` | completed CIFAR-100 generic KD-family run |
+| `generic_kd_v2_200ep_seed42_historical` | historical Flowers generic run |
+| `generic_kd_v2_100ep_seed42_historical` | historical Chaoyang generic run |
+| `pre_researcher_sourcegrid_300ep_seed42_historical` | pre-sync Ours CIFAR run |
+| `pre_researcher_papergrid_100ep_seed42_historical` | pre-sync Ours Chaoyang run |
+| `pre_researcher_batch128_300ep_seed1_historical` | pre-sync ALG Chaoyang run |
+| `researcher_sync_v1_300ep_seed1` | current researcher-synchronized Ours/ALG family |
+| `generic_kd_300ep_epoch_only_v1_seed42` | pending 300-epoch Flowers/Chaoyang generic reruns |
+
 Account names and H200 build numbers are kept only under `run_logs`; they do
-not determine checkpoint placement.
+not determine checkpoint placement. `PENDING_IMPORTS.md` records jobs that
+have started but whose output archives have not yet been verified and added.
 
 Only the selected best checkpoint is committed. The original downloaded
 outputs retain `student_latest.pt`; its exact final-epoch accuracy is also
 preserved in `run_summary.json`. This avoids doubling repository size and H200
 clone time without discarding the reported result.
 
-All 18 committed checkpoints were loaded with PyTorch and verified against
+All 18 currently committed checkpoints were loaded with PyTorch and verified against
 their summaries for dataset, method, best accuracy, and checkpoint epoch.
-Checkpoint file names show Top-1 rounded to two decimals; summaries preserve
-full precision.
+The Top-1 value is read from the adjacent summary; file names are deliberately
+stable (`student_best.pt`) inside the provenance-rich protocol directory.
 
 ## CIFAR-100
 
@@ -107,7 +117,8 @@ separate collection roots and provenance-rich names:
 
 No current 300-epoch result should replace a historical file in place. After
 collection and verification, it must be added with its epoch, seed, and
-protocol family in both the file name and summary.
+protocol family in the protocol-ID directory. See `PENDING_IMPORTS.md` for the
+exact expected destinations of the jobs currently running.
 
 ## Source runs
 
