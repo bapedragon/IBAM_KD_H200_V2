@@ -41,15 +41,17 @@ Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
 | Vanilla DeiT-Ti | - | 65.08% | - | - | Draft reference |
 | KD | 191 | **69.10%** | 68.59% | +4.02 pp | Verified |
 | CRD | 79 | **68.59%** | 66.74% | +3.51 pp | Verified |
-| Ours | 296 | **79.52%** | 79.49% | +14.44 pp | Provisional; final grid rule pending |
+| Ours | 296 | **79.52%** | 79.49% | +14.44 pp | Historical source-grid run; not the paper-grid table result |
 | ReviewKD | - | - | - | - | Pending |
 | MGD | - | - | - | - | Pending |
 | OFA | - | - | - | - | Pending |
 
 The current Ours checkpoint used the supplied larger-grid rule, producing
-stage targets `32 x 32`, `16 x 16`, and `14 x 14`. It remains provisional until
-the authors confirm whether the paper result instead used the teacher-grid
-targets `32 x 32`, `16 x 16`, and `8 x 8`.
+stage targets `32 x 32`, `16 x 16`, and `14 x 14`. The experiment policy is
+now fixed to V3's teacher-resolution rule, which produces `32 x 32`,
+`16 x 16`, and `8 x 8` with the committed ResNet56. Therefore this historical
+checkpoint remains reproducible but must not be reported as the final
+paper-grid result; CIFAR-100 requires a separately labeled rerun.
 
 ## Flowers-102
 

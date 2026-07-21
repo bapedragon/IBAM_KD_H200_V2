@@ -80,7 +80,11 @@ The V2 student pipeline supports all five generic methods in the draft table:
 `KD -> CRD -> ReviewKD -> MGD -> OFA`. Every method reuses the selected fixed
 teacher hash for its dataset while training a scratch DeiT-Ti at 224 x 224.
 The provided `Ours` model is also integrated with the exact documented ALG
-on/off beta controller and its source-faithful larger-grid feature rule.
+on/off beta controller. New table-targeted Ours runs follow V3's
+teacher-resolution rule: the DeiT grids are bilinearly resampled to the fixed
+ResNet56 stage grids `32 x 32`, `16 x 16`, and `8 x 8`. The supplied source's
+larger-grid behavior remains available only as an explicitly labeled
+compatibility mode; its results are not mixed with paper-grid results.
 
 The teacher input is derived from the same augmented student tensor using
 bilinear resize to 32 x 32, so crop and flip geometry cannot drift between the
@@ -133,11 +137,11 @@ Pod limit. See [`methods/README.md`](methods/README.md) for the locked base
 protocols and each method directory for exact losses, official-code provenance,
 and heterogeneous adapters.
 
-H200 build 451 measured the CIFAR-100 `Ours -> CRD -> MGD` 300-epoch
-estimates as `4h 08m 37s`, `3h 15m 04s`, and `3h 03m 26s`. The combined
-`10h 27m 07s` exceeds the Pod limit. The current split schedule runs
-Ours+CRD first (`7h 23m 41s`) and MGD as a separate job; see
-[`H200_ISSUE.md`](H200_ISSUE.md).
+H200 build 451 measured CIFAR-100 Ours with the historical supplied-source
+`32/16/14` grid. That Ours timing/result is not reused for the new V3
+paper-grid protocol. CRD/MGD timings remain valid, while Ours must be timed
+again with `stage_grid=teacher` before a new multi-method packing decision;
+see [`H200_ISSUE.md`](H200_ISSUE.md).
 
 ## Fixed teachers for downstream KD
 

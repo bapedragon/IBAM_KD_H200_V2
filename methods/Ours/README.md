@@ -7,8 +7,9 @@ available in the supplied materials. See [`PAPER_AUDIT.md`](PAPER_AUDIT.md)
 for the evidence matrix.
 
 `ours.py` is a standalone PyTorch port rather than a byte-for-byte copy of the
-original pycls wrapper. The active feature path, aggregation, projection,
-larger-grid resizing, attention blocks, and MSE calculation are preserved.
+original pycls wrapper. Its aggregation, projection, attention blocks, and MSE
+calculation preserve the supplied implementation. Grid sizing is an explicit
+runtime policy because the supplied source and V3 disagree.
 The unavailable pycls configuration is fixed to feature guidance enabled,
 linear feature projection, and optional logit KD disabled, which matches V3
 Eq. (4). The original source SHA-256 is recorded in every run.
@@ -31,23 +32,25 @@ The previous extra fixed multiplication
 `CE + 1.0 * 2.5 * (...)` has been removed. `beta=2.5` is represented once as
 `beta(e)`, following the ALG paper cited by V3.
 
-## Feature path matched to the supplied Ours module
+## Feature path and paper-grid decision
 
 - frozen ResNet56 teacher stages 1/2/3
 - patch-grid outputs from all 12 DeiT-Ti blocks
 - one learned convex 12-block mixture per CNN stage
 - stage-specific `1 x 1` channel projection
-- bilinear resizing of both features to the larger stage grid, exactly as in
-  the supplied Ours source
+- bilinear resizing of the student representation to the teacher-stage grid,
+  following V3
 - channel attention and `5 x 5` deformable spatial attention
 - four-head convolutional cross-attention with `1 x 1` Q/K/V
 - teacher and Ours module discarded at inference
 
-V3 instead says to resize to the teacher resolution. For the first
-reproduction, the supplied executable source is treated as authoritative, so
-`--grid-resize-mode larger` is the default. The paper-text interpretation is
-retained only as `--grid-resize-mode teacher` for a separately labeled check.
-Results from the two modes must not be mixed.
+V3 explicitly says that the student representation reaches the teacher grid
+after bilinear resampling. The fixed ResNet56 stages are verified as
+`32 x 32`, `16 x 16`, and `8 x 8`; therefore table-targeted runs use
+`--grid-resize-mode teacher`. The supplied source instead takes the larger of
+the student and teacher grids, producing `32/16/14`. That behavior is retained
+as `--grid-resize-mode larger` only for compatibility checks. Results from the
+two modes must not be mixed.
 
 ## Adaptive beta from ALG
 
@@ -108,9 +111,9 @@ python methods/Ours/chaoyang/train.py --timing-run --num-workers 4
 Conditional full runs after the timing log and teacher audit are accepted:
 
 ```bash
-python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_300ep --output-dir /app/output
-python methods/Ours/flowers102/train.py --student-epochs 200 --num-workers 4 --run-name ours_flowers102_deit_ti_200ep --output-dir /app/output
-python methods/Ours/chaoyang/train.py --student-epochs 100 --num-workers 4 --run-name ours_chaoyang_deit_ti_100ep --output-dir /app/output
+python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_papergrid_300ep --output-dir /app/output
+python methods/Ours/flowers102/train.py --student-epochs 200 --num-workers 4 --run-name ours_flowers102_deit_ti_papergrid_200ep --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 100 --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_100ep --output-dir /app/output
 ```
 
 For a manual diagnostic stop epoch, use:

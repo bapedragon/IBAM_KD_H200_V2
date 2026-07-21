@@ -45,11 +45,19 @@ executed objective matches V3 Eq. (4). Thus the active Ours feature path is
 source-faithful, but the repository file is not a byte-for-byte copy of the
 pycls wrapper.
 
-There is one paper/source inconsistency. V3 says to resample to the teacher
-resolution, while the supplied source resizes both tensors to the larger grid.
-The first reproduction preserves the delivered executable source with
-`--grid-resize-mode larger`. `--grid-resize-mode teacher` is retained only for
-an explicitly labeled paper-text comparison.
+There is one paper/source inconsistency. V3 says to resample the student to the
+teacher resolution, while the supplied source resizes both tensors to the
+larger grid. The reporting policy now treats V3 as authoritative:
+`--grid-resize-mode teacher` is the default for all table-targeted runs. With
+the committed 32-pixel ResNet56, its three raw stages are `32 x 32`,
+`16 x 16`, and `8 x 8`. V3 does not print those three numbers directly; they
+follow from applying its teacher-resolution sentence to the verified teacher
+architecture. `--grid-resize-mode larger` remains only for reproducing the
+delivered source behavior and must be labeled separately.
+
+The earlier CIFAR-100 checkpoint with targets `32/16/14` is retained as a
+historical source-grid run. It is not interchangeable with, and must not fill,
+a paper-grid table cell.
 
 ## Ours-specific reproduction choices not fixed by either paper
 
@@ -76,8 +84,8 @@ has marked it for correction.
 ## Full-run gate
 
 1. Run the dataset wrapper with `--timing-run`.
-2. Confirm dataset/split, feature shapes, finite loss, exact ALG parameters,
-   epoch timing, and `[TEACHER_RUNTIME_AUDIT]`.
+2. Confirm dataset/split, finite loss, exact ALG parameters, epoch timing,
+   `[TEACHER_RUNTIME_AUDIT]`, and paper-grid targets `32/16/8`.
 3. If the teacher audit passes, run the dataset-specific full command.
 4. Keep the generated `summary.json`, which records the complete loss,
    derivative, beta, stop-epoch, and aggregation-weight histories.

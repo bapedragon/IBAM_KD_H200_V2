@@ -19,9 +19,12 @@ runs, so its final 450-epoch request may be submitted directly.
 The script installs its pinned `timm==1.0.27` dependency automatically, so no
 extra installation command is required in the execution field.
 
-## CIFAR-100 Ours + CRD + MGD sequential timing run
+## Historical CIFAR-100 Ours + CRD + MGD timing (retired for Ours)
 
-H200 build 451 completed this timing sequence successfully.
+H200 build 451 completed this timing sequence successfully, but Ours used the
+supplied-source `32/16/14` grid. Its Ours duration and result are historical;
+do not use the sections below as a current paper-grid request. CRD/MGD are
+unaffected. Re-time Ours with `stage_grid=teacher` before repacking it.
 
 | Field | Value |
 |---|---|
@@ -37,7 +40,7 @@ Measured 300-epoch estimates were Ours `4h 08m 37s`, CRD `3h 15m 04s`, and
 MGD `3h 03m 26s`. Their `10h 27m 07s` total exceeds the 600-minute Pod limit,
 so do not submit all three in one full request.
 
-### CIFAR-100 Ours + CRD full training
+### Historical CIFAR-100 Ours + CRD full request (do not resubmit as-is)
 
 | Field | Value |
 |---|---|
@@ -334,3 +337,53 @@ directories. Each method retains its own best/latest checkpoint and summary.
 The root additionally contains `combined_batch_status.json` and
 `combined_batch_summary.json`. If a later task fails, previously completed
 directories are not deleted or overwritten.
+
+## 14. Chaoyang Ours paper-grid run
+
+This request follows V3 rather than the supplied source's larger-grid rule.
+The verified ResNet56 stages are `32 x 32`, `16 x 16`, and `8 x 8`; the DeiT
+features must be bilinearly resampled to those three teacher grids.
+
+### 14.1 Timing run (submit this first)
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti Ours paper-grid timing run` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/Ours/chaoyang/train.py --timing-run --grid-resize-mode teacher --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+Before launching the full run, require all of the following in the log:
+
+```text
+[MODE] ... timing_run=True ... planned_epochs=100
+[PROTOCOL] name=chaoyang_deit_ti_ours_papergrid_v1
+[OURS] ... stage_grid=teacher ...
+[BETA] schedule=alg_exact beta_on=2.5 ... threshold=-0.02 smoothing_window=50
+[FEATURE_CHECK] ... stage_targets=[(2, 16, 32, 32), (2, 32, 16, 16), (2, 64, 8, 8)] ...
+[DONE] Ours training completed successfully; resources may be released.
+```
+
+Also confirm the official Chaoyang split counts `4,021/2,139`, the fixed
+teacher Top-1 `76.7181%` (approximately `76.72%`), and a passing teacher
+runtime audit.
+
+### 14.2 Full 100-epoch run
+
+Submit only after the timing checklist passes.
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti Ours paper-grid full training` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/Ours/chaoyang/train.py --student-epochs 100 --grid-resize-mode teacher --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_100ep_seed42 --output-dir /app/output` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+The comparison reference is `86.35%` Top-1. Report the raw measured best
+Top-1; the code does not apply a teacher-gap correction.

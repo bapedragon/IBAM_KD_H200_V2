@@ -7,6 +7,7 @@
 - Input/recorded choices: 224 pixels, label smoothing `0.1`, seed `42`
 - Ours: all 12 student blocks, ResNet stages 1/2/3, learned stage mixtures,
   `1x1` projection/QKV, `5x5` deformable attention, four heads
+- Grid: V3 teacher-resolution policy, producing stage targets `32/16/8`
 - Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
 - Adaptive beta: exact ALG equations with `beta=2.5`, `tau=-0.02`, two
   50-epoch smoothing stages; `L_align` is the recorded controller signal
@@ -26,7 +27,7 @@ python methods/Ours/cifar100/train.py --timing-run --num-workers 4
 Full run only after the timing log and teacher audit pass:
 
 ```bash
-python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_300ep --output-dir /app/output
+python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_papergrid_300ep --output-dir /app/output
 ```
 
 The ALG equations/values are paper-confirmed; selecting `L_align` as the

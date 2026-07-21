@@ -46,11 +46,13 @@ teacher. Crop and flip geometry therefore remains shared across both branches.
 | ReviewKD | multi-level features | ResNet 32/16/8 grids bilinearly resized to DeiT 14x14 grid |
 | MGD | masked reconstruction | ResNet stage-3 8x8 bilinearly resized to 14x14; DeiT block-11 tokens; `192 -> 64` alignment |
 | OFA | projected class logits | DeiT blocks 1/3/9/11 and official-behavior transformer projectors |
-| Ours | adaptive grid-preserving features | all 12 DeiT blocks, ResNet stages 1/2/3, supplied larger-grid rule, ALG beta schedule |
+| Ours | adaptive grid-preserving features | all 12 DeiT blocks, ResNet stages 1/2/3, V3 teacher grids `32/16/8`, ALG beta schedule |
 
-## CIFAR-100 Ours + CRD + MGD sequence
+## Historical CIFAR-100 Ours + CRD + MGD timing
 
-H200 build 451 measured the fixed V2 32 x 32 teacher sequence:
+H200 build 451 measured the fixed V2 32 x 32 teacher sequence, but its Ours
+entry used the supplied-source `32/16/14` grid rather than the now-selected V3
+`32/16/8` paper grid:
 
 ```bash
 python methods/run_cifar100_ours_crd_mgd.py --timing-run \
@@ -64,16 +66,12 @@ python methods/run_cifar100_ours_crd_mgd.py --timing-run \
 | MGD | `3h 03m 26s` |
 | Total | `10h 27m 07s` |
 
-The total exceeds the 600-minute limit. For the current execution schedule,
-run `Ours CRD` together first and submit `MGD` as a separate job.
-`Ours CRD` is estimated at `7h 23m 41s`, leaving `2h 36m 19s`
-under the limit. The runner blocks an unsafe all-three full request. Every
-method still writes an independent directory.
+The old total exceeded the 600-minute limit. Do not reuse its Ours estimate
+for current scheduling. Run a paper-grid timing check first; CRD and MGD do
+not depend on this Ours grid decision. Every method still writes an
+independent directory.
 
 ```bash
-python methods/run_cifar100_ours_crd_mgd.py --full-run --methods Ours CRD \
-  --output-dir /app/output/cifar100_ours_crd_full_v2 --num-workers 4
-
 python methods/run_cifar100_ours_crd_mgd.py --full-run --methods MGD \
   --output-dir /app/output/cifar100_mgd_full_v2 --num-workers 4
 ```

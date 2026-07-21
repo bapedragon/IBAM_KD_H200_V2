@@ -234,11 +234,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--grid-resize-mode",
         choices=("teacher", "larger"),
-        default="larger",
+        default="teacher",
         help=(
-            "larger preserves the supplied model snippet's "
-            "max(student, teacher) grid rule; teacher is a paper-text "
-            "comparison mode and is not the reproduction default."
+            "teacher follows V3 by resampling the student to each teacher-stage "
+            "grid; larger preserves the supplied model snippet's "
+            "max(student, teacher) compatibility rule."
         ),
     )
     parser.add_argument(
@@ -710,12 +710,16 @@ def main() -> None:
             f"last_guided_epoch={args.guidance_stop_epoch}"
         )
     log(f"[SOURCE] provided_snippet_sha256={SOURCE_SNIPPET_SHA256}")
+    grid_evidence = (
+        "V3 teacher-resolution policy"
+        if args.grid_resize_mode == "teacher"
+        else "supplied-source larger-grid compatibility policy"
+    )
     log(
         "[REPRO_STATUS] Paper-confirmed: Eq.(4), lambda=0.5, ALG beta=2.5, "
         "tau=-0.02 and 50-epoch smoothing, all-block aggregation, 1x1 "
         "projection/QKV, bilinear grid alignment, 5x5 deformable attention, "
-        "and frozen teacher. The active larger-grid rule follows the supplied "
-        "source; V3 instead describes teacher-grid resizing."
+        f"and frozen teacher. Active grid policy={grid_evidence}."
     )
     log(
         "[REPRO_STATUS] Ours-specific documented choices: L_align drives the "
