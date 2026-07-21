@@ -11,7 +11,8 @@ results/
 ├── ReviewKD/{cifar100,flowers102,chaoyang}/
 ├── MGD/{cifar100,flowers102,chaoyang}/
 ├── OFA/{cifar100,flowers102,chaoyang}/
-├── Ours/cifar100/
+├── ALG/chaoyang/
+├── Ours/{cifar100,chaoyang}/
 ├── run_logs/
 └── CHECKSUMS.sha256
 ```
@@ -26,7 +27,7 @@ outputs retain `student_latest.pt`; its exact final-epoch accuracy is also
 preserved in `run_summary.json`. This avoids doubling repository size and H200
 clone time without discarding the reported result.
 
-All 16 committed checkpoints were loaded with PyTorch and verified against
+All 18 committed checkpoints were loaded with PyTorch and verified against
 their summaries for dataset, method, best accuracy, and checkpoint epoch.
 Checkpoint file names show Top-1 rounded to two decimals; summaries preserve
 full precision.
@@ -69,17 +70,26 @@ Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
 
 ## Chaoyang
 
-Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
-224 x 224, 100 epochs, seed 42.
+All rows use the fixed ResNet56 teacher at 32 x 32 and a scratch DeiT-Ti
+student at 224 x 224. The five generic methods and the historical Ours run use
+100 epochs and seed 42. The standalone ALG reproduction uses the audited
+public LG/ALG base: 300 epochs, batch 128, 20-epoch warm-up, FP32, and seed 1.
 
-| Method | Best epoch | Best Top-1 | Last Top-1 | Vanilla gap |
-|---|---:|---:|---:|---:|
-| Vanilla DeiT-Ti | - | 82.00% | - | - |
-| KD | 15 | **62.79%** | 56.80% | -19.21 pp |
-| CRD | 61 | **79.66%** | 77.93% | -2.34 pp |
-| ReviewKD | 86 | **81.72%** | 81.07% | -0.28 pp |
-| MGD | 80 | **80.69%** | 79.94% | -1.31 pp |
-| OFA | 90 | **75.55%** | 74.99% | -6.45 pp |
+| Method | Best epoch | Best Top-1 | Last Top-1 | Vanilla gap | Status |
+|---|---:|---:|---:|---:|---|
+| Vanilla DeiT-Ti | - | 82.00% | - | - | Draft reference |
+| ALG | 235 | **80.32%** | 79.71% | -1.68 pp | Verified public LG/ALG-base run |
+| Ours | 82 | **81.21%** | 80.46% | -0.79 pp | Historical 100-epoch paper-grid run |
+| KD | 15 | **62.79%** | 56.80% | -19.21 pp | Verified |
+| CRD | 61 | **79.66%** | 77.93% | -2.34 pp | Verified |
+| ReviewKD | 86 | **81.72%** | 81.07% | -0.28 pp | Verified |
+| MGD | 80 | **80.69%** | 79.94% | -1.31 pp | Verified |
+| OFA | 90 | **75.55%** | 74.99% | -6.45 pp | Verified |
+
+The stored Ours result is the earlier 100-epoch, seed-42 run with teacher-grid
+targets `32 x 32`, `16 x 16`, and `8 x 8`. Its checkpoint and summary are
+explicitly named `historical` so they cannot be confused with the pending
+300-epoch matched ALG-base reruns.
 
 ## Source runs
 
@@ -89,6 +99,10 @@ Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
 - `run_logs/h200_build-453_cifar100-reviewkd-mgd.log`: CIFAR-100 ReviewKD
   and MGD.
 - `run_logs/h200_build-454_cifar100-ofa.log`: CIFAR-100 OFA.
+- `run_logs/h200_build-457_chaoyang-ours-papergrid-100ep.log`: historical
+  Chaoyang Ours paper-grid run (100 epochs, seed 42).
+- `run_logs/h200_build-461_chaoyang-alg-public-base-300ep.log`: Chaoyang ALG
+  run on the audited public LG/ALG base (300 epochs, seed 1).
 
 Generic methods use the CNN-to-ViT adapters documented in each method
 directory. They should not be described as unmodified original CNN-to-CNN
