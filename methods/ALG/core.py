@@ -57,10 +57,15 @@ from teachers.verify_checkpoints import DEFAULT_CHECKPOINT_ROOT, load_teacher
 
 ALG_PAPER_DOI = "10.1109/TNNLS.2024.3515076"
 REFERENCE_TOP1 = {
+    "cifar100": {"alg": 81.98, "lg": 77.38, "baseline": 65.08},
     "flowers102": {"alg": 68.54, "lg": 67.02, "baseline": 50.06},
     "chaoyang": {"alg": 83.50, "lg": 83.26, "baseline": 80.65},
 }
-PAPER_GUIDANCE_STOP_EPOCH = {"flowers102": None, "chaoyang": 108}
+PAPER_GUIDANCE_STOP_EPOCH = {
+    "cifar100": None,
+    "flowers102": None,
+    "chaoyang": 108,
+}
 TEACHER_IMAGE_SIZE = 32
 STUDENT_IMAGE_SIZE = 224
 
@@ -215,7 +220,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--dataset",
-        choices=("flowers102", "chaoyang"),
+        choices=("cifar100", "flowers102", "chaoyang"),
         default="chaoyang",
     )
     parser.add_argument("--student", choices=("deit_ti",), default="deit_ti")
@@ -518,7 +523,14 @@ def build_native_teacher_audit_loader(
     args: argparse.Namespace,
     device: torch.device,
 ) -> Any:
-    if args.dataset == "flowers102":
+    if args.dataset == "cifar100":
+        dataset: Dataset[Any] = CIFAR100(
+            root=args.data_dir,
+            train=False,
+            transform=official_test_transform(),
+            download=False,
+        )
+    elif args.dataset == "flowers102":
         dataset: Dataset[Any] = Flowers102(
             root=args.data_dir,
             split="test",

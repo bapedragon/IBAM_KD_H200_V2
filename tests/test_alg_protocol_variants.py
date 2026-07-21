@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from pathlib import Path
 import unittest
+from unittest import mock
 
 import torch
 
 from methods.ALG.chaoyang.train import PROTOCOL_DEFAULTS as PUBLIC_DEFAULTS
 from methods.ALG.cifar100.train import PROTOCOL_DEFAULTS as CIFAR_DEFAULTS
 from methods.ALG.flowers102.train import PROTOCOL_DEFAULTS as FLOWERS_DEFAULTS
+from methods.ALG import core as alg_core
 from methods.ALG.chaoyang.train_draft_common import (
     PROTOCOL_DEFAULTS as DRAFT_COMMON_DEFAULTS,
     PROTOCOL_FLAGS as DRAFT_COMMON_FLAGS,
@@ -138,6 +141,43 @@ class AlgProtocolVariantsTest(unittest.TestCase):
             "--seed",
         ):
             self.assertEqual(defaults[option], public[option], option)
+
+    def test_alg_core_accepts_cifar100_dataset(self) -> None:
+        with mock.patch("sys.argv", ["train.py", "--dataset", "cifar100"]):
+            args = alg_core.parse_args()
+        self.assertEqual(args.dataset, "cifar100")
+        self.assertEqual(alg_core.REFERENCE_TOP1["cifar100"]["alg"], 81.98)
+        self.assertIn("cifar100", alg_core.PAPER_GUIDANCE_STOP_EPOCH)
+
+    def test_cifar100_native_teacher_audit_uses_official_test_split(self) -> None:
+        fake_dataset = torch.utils.data.TensorDataset(
+            torch.zeros(4, 3, 32, 32),
+            torch.zeros(4, dtype=torch.long),
+        )
+        args = mock.Mock(
+            dataset="cifar100",
+            data_dir=Path("data"),
+            smoke=False,
+            seed=1,
+            smoke_test_samples=2,
+            eval_batch_size=2,
+            num_workers=0,
+        )
+        with mock.patch.object(
+            alg_core, "official_test_transform", return_value=mock.sentinel.transform
+        ), mock.patch.object(
+            alg_core, "CIFAR100", return_value=fake_dataset
+        ) as cifar100:
+            loader = alg_core.build_native_teacher_audit_loader(
+                args, torch.device("cpu")
+            )
+        cifar100.assert_called_once_with(
+            root=Path("data"),
+            train=False,
+            transform=mock.sentinel.transform,
+            download=False,
+        )
+        self.assertEqual(len(loader.dataset), 4)
 
 
 if __name__ == "__main__":
