@@ -2,6 +2,8 @@
 
 - Teacher: fixed V2 32 x 32 ResNet56 checkpoint selected by the manifest
 - Student: DeiT-Ti from scratch
+- Evaluation: direct full-image resize to `224 x 224`, matching the supplied
+  locality-guidance loader
 - Base protocol: 300 epochs, batch 128, AdamW `5e-4`, minimum LR `0`,
   weight decay `0.05`, 20-epoch warm-up, cosine decay
 - Input/recorded choices: 224 pixels, label smoothing `0.1`, seed `42`

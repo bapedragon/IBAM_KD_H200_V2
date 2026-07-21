@@ -218,6 +218,49 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError("The shared paper protocol requires --image-size 224")
 
 
+def build_eval_transform(
+    dataset: str,
+    resize_mode: str = "center_crop",
+) -> transforms.Compose:
+    """Build the recorded student evaluation transform.
+
+    Generic KD keeps the previously locked Resize(256)+CenterCrop(224)
+    protocol. Ours can explicitly request the direct 224x224 resize used by
+    the supplied/public locality-guidance code, which also preserves the full
+    field of view before the shared image is downsampled for the 32px teacher.
+    """
+
+    if resize_mode not in {"center_crop", "direct"}:
+        raise ValueError(
+            "eval resize mode must be one of {'center_crop', 'direct'}, "
+            f"got {resize_mode!r}"
+        )
+    student_mean, student_std = STUDENT_NORMALIZATION[dataset]
+    if resize_mode == "direct":
+        spatial_transforms: list[Any] = [
+            transforms.Resize(
+                (STUDENT_IMAGE_SIZE, STUDENT_IMAGE_SIZE),
+                interpolation=InterpolationMode.BICUBIC,
+            )
+        ]
+    else:
+        resize_size = int(round(STUDENT_IMAGE_SIZE / 0.875))
+        spatial_transforms = [
+            transforms.Resize(
+                resize_size,
+                interpolation=InterpolationMode.BICUBIC,
+            ),
+            transforms.CenterCrop(STUDENT_IMAGE_SIZE),
+        ]
+    return transforms.Compose(
+        [
+            *spatial_transforms,
+            transforms.ToTensor(),
+            transforms.Normalize(student_mean, student_std),
+        ]
+    )
+
+
 def build_loaders(args: argparse.Namespace, device: torch.device) -> tuple[Any, Any]:
     student_mean, student_std = STUDENT_NORMALIZATION[args.dataset]
     train_transform = transforms.Compose(
@@ -232,14 +275,10 @@ def build_loaders(args: argparse.Namespace, device: torch.device) -> tuple[Any, 
             transforms.Normalize(student_mean, student_std),
         ]
     )
-    resize_size = int(round(STUDENT_IMAGE_SIZE / 0.875))
-    test_transform = transforms.Compose(
-        [
-            transforms.Resize(resize_size, interpolation=InterpolationMode.BICUBIC),
-            transforms.CenterCrop(STUDENT_IMAGE_SIZE),
-            transforms.ToTensor(),
-            transforms.Normalize(student_mean, student_std),
-        ]
+    eval_resize_mode = getattr(args, "eval_resize_mode", "center_crop")
+    test_transform = build_eval_transform(
+        args.dataset,
+        resize_mode=eval_resize_mode,
     )
 
     if args.dataset == "cifar100":
@@ -338,6 +377,7 @@ def build_loaders(args: argparse.Namespace, device: torch.device) -> tuple[Any, 
     log(
         f"[DATA] student_image={STUDENT_IMAGE_SIZE} teacher_image={TEACHER_IMAGE_SIZE} "
         f"batch_size={args.batch_size} num_workers={args.num_workers} smoke={args.smoke} "
+        f"eval_resize={eval_resize_mode} "
         f"{split_description}"
     )
     return train_loader, test_loader

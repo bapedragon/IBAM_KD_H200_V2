@@ -67,11 +67,14 @@ a paper-grid table cell.
 | Epoch-1 derivative | initialize to `0` and forbid stopping at epoch 1 | ALG's published early-epoch expression has no previous value at epoch 1. |
 | Missing pycls config | feature guidance on, linear projection, logit KD off | The config file was not delivered; V3 Eq. (4) contains CE plus the two feature losses and no logit-KL term. |
 | Teacher input size | fixed V2 32 x 32 teachers for all datasets | ALG confirms the low-resolution CNN path; the same fixed teacher is reused across compared methods. |
+| Evaluation geometry | direct resize of the full image to `224 x 224`, then shared-view bilinear downsampling to `32 x 32` for the teacher | This follows the supplied/public locality-guidance loader. `Resize(256)+CenterCrop(224)` removed too much Chaoyang field of view and caused a 21.60 pp teacher-audit regression. |
 | Teacher runtime audit | compare runtime Top-1 with checkpoint metadata | Operational safety gate, not a paper hyperparameter. |
 
 The current V2 teacher checkpoints were trained and verified at 32 pixels.
 Every run still reports `[TEACHER_RUNTIME_AUDIT]` to detect preprocessing or
-checkpoint integration regressions before a long H200 job.
+checkpoint integration regressions before a long H200 job. Ours wrappers use
+`--eval-resize-mode direct`; the generic-KD center-crop path remains unchanged
+for historical result compatibility.
 
 ## Shared experiment choices (not Ours-specific)
 

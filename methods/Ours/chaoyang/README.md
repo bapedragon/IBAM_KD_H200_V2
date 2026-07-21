@@ -6,6 +6,8 @@
 - Base protocol: 100 epochs, batch 64, AdamW `5e-4`, minimum LR `0`,
   weight decay `0.05`, 5-epoch warm-up, cosine decay
 - Input/recorded choices: 224 pixels, label smoothing `0.1`, seed `42`
+- Evaluation geometry: direct full-image resize to `224 x 224` (no center
+  crop), then shared-view bilinear downsampling to `32 x 32` for the teacher
 - Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
 - Grid: V3 teacher-resolution policy. The student feature is bilinearly
   resampled onto the verified teacher stages `32 x 32`, `16 x 16`, and
@@ -15,7 +17,9 @@
 - Working-paper comparison target: `86.35%` Top-1
 
 The fixed Chaoyang teacher was trained at 32 x 32. The runtime audit verifies
-its manifest hash and preprocessing integration before student training.
+its manifest hash and preprocessing integration before student training. A
+timing run is accepted only when this audit is within the default 5 pp
+threshold; do not bypass it with `--allow-teacher-runtime-gap`.
 
 Timing run:
 

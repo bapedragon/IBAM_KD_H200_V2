@@ -15,7 +15,7 @@ from methods.Ours.core import cli_main
 
 
 PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "chaoyang_deit_ti_ours_papergrid_v1"),
+    ("--protocol-name", "chaoyang_deit_ti_ours_papergrid_v2"),
     ("--student-epochs", "100"),
     ("--batch-size", "64"),
     ("--lr", "0.0005"),
@@ -30,6 +30,7 @@ PROTOCOL_DEFAULTS = (
     ("--alg-threshold", "-0.02"),
     ("--alg-smoothing-window", "50"),
     ("--grid-resize-mode", "teacher"),
+    ("--eval-resize-mode", "direct"),
 )
 
 

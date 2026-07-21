@@ -15,7 +15,7 @@ from methods.Ours.core import cli_main
 
 
 PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "cifar100_deit_ti_ours_papergrid_v1"),
+    ("--protocol-name", "cifar100_deit_ti_ours_papergrid_v2"),
     ("--student-epochs", "300"),
     ("--batch-size", "128"),
     ("--lr", "0.0005"),
@@ -30,6 +30,7 @@ PROTOCOL_DEFAULTS = (
     ("--alg-threshold", "-0.02"),
     ("--alg-smoothing-window", "50"),
     ("--grid-resize-mode", "teacher"),
+    ("--eval-resize-mode", "direct"),
 )
 
 

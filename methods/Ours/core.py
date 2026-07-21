@@ -169,6 +169,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--image-size", type=int, default=224)
+    parser.add_argument(
+        "--eval-resize-mode",
+        choices=("direct", "center_crop"),
+        default="direct",
+        help=(
+            "Evaluation geometry. direct matches the supplied/public locality-"
+            "guidance code by resizing the full image to 224x224; center_crop "
+            "is retained only for explicitly labeled compatibility checks."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--smoke-train-samples", type=int, default=1024)
     parser.add_argument("--smoke-test-samples", type=int, default=512)
@@ -678,7 +688,8 @@ def main() -> None:
     )
     log(
         f"[INPUT] shared_geometry=True student=224x224({args.dataset} norm) "
-        "teacher=bilinear_downsample_to_32x32(ImageNet norm)"
+        "teacher=bilinear_downsample_to_32x32(ImageNet norm) "
+        f"eval_resize={args.eval_resize_mode}"
     )
     log(
         f"[OURS] loss=CE+beta(e)*(lambda*L_fuse+(1-lambda)*L_align) "

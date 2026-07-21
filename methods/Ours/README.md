@@ -98,6 +98,12 @@ and prevents independent crop/flip drift. The startup
 `[TEACHER_RUNTIME_AUDIT]` remains as a consistency check, not as a workaround
 for a 224-pixel teacher mismatch.
 
+At evaluation time, Ours directly resizes the full image to `224 x 224`
+before making the shared 32-pixel teacher view. This matches the
+supplied/public locality-guidance loader. It intentionally does not use the
+generic-KD compatibility transform `Resize(256)+CenterCrop(224)`, which caused
+a 21.60 pp Chaoyang teacher runtime-audit drop.
+
 ## H200 execution
 
 Timing checks (full dataset, two epochs):
