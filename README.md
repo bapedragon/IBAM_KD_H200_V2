@@ -143,7 +143,7 @@ teachers, adapters, and every method-specific loss remain unchanged. The older
 overwritten.
 
 The researcher-sync Ours/ALG batch is separate from the generic rerun. It
-executes Ours CIFAR-100, Ours Flowers-102, then ALG CIFAR-100, with every
+executes Ours CIFAR-100, Ours Flowers-102, then ALG Flowers-102, with every
 task fixed to 300 epochs, seed 1, FP32, train/eval batch 64/200, 20-epoch
 warm-up, public LG augmentation, and independent output directories:
 

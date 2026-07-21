@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run researcher-sync Ours CIFAR/Flowers and ALG CIFAR sequentially."""
+"""Run researcher-sync Ours CIFAR/Flowers and ALG Flowers sequentially."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 TASKS = (
     ("Ours", "cifar100", Path("methods/Ours/cifar100/train.py")),
     ("Ours", "flowers102", Path("methods/Ours/flowers102/train.py")),
-    ("ALG", "cifar100", Path("methods/ALG/cifar100/train.py")),
+    ("ALG", "flowers102", Path("methods/ALG/flowers102/train.py")),
 )
 
 POD_LIMIT_SECONDS = 600 * 60
@@ -99,7 +99,7 @@ def main() -> None:
     sequence_start = time.time()
 
     log("=" * 80)
-    log("RESEARCHER-SYNC SEQUENCE: OURS CIFAR -> OURS FLOWERS -> ALG CIFAR")
+    log("RESEARCHER-SYNC SEQUENCE: OURS CIFAR -> OURS FLOWERS -> ALG FLOWERS")
     log("=" * 80)
     log(f"[MODE] timing_run={args.timing_run} full_run={args.full_run}")
     log("[PROTOCOL_LOCK] epochs=300 train/eval_batch=64/200 AdamW")

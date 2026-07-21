@@ -12,7 +12,7 @@ class ResearcherSyncOursAlgRunnerTest(unittest.TestCase):
             [
                 ("Ours", "cifar100"),
                 ("Ours", "flowers102"),
-                ("ALG", "cifar100"),
+                ("ALG", "flowers102"),
             ],
         )
 
