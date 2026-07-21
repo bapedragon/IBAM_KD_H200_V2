@@ -3,7 +3,8 @@
 This directory implements ALG for the fixed V2 ResNet56-to-DeiT-Ti setup.
 ALG is **not** the repository's `Ours` method. It uses the original LG feature
 matching objective and turns that objective off automatically when the
-twice-smoothed LG-loss derivative reaches the published threshold.
+researcher-supplied controller's smoothed LG-loss derivative crosses its
+threshold.
 
 ## Chaoyang target
 
@@ -32,19 +33,21 @@ LG behavior is ported from `lkhl/tiny-transformers` commit
   `32 x 32`, `16 x 16`, and `14 x 14`;
 - element-wise MSE at each stage, summed across all three stages.
 
-The ALG controller follows Eqs. (10)-(19):
+The ALG controller is synchronized to the researcher implementation supplied
+on 2026-07-21:
 
 ```text
-L_total(e) = CE + 2.5 * L_LG(e) * 1(smoothed_derivative(e) < -0.02)
+L_total(e) = CE + 2.5 * L_LG(e), while guidance is active
+stop after epoch e when smoothed_derivative(e) > -0.02
 ```
 
-The LG loss is smoothed over 50 epochs, differentiated, and the derivative is
-smoothed over another 50 epochs. The crossing epoch is the final guided epoch;
-all later epochs are CE-only. The one-way crossing is armed only after the
-smoothed derivative has first entered the decreasing regime below `tau`, so an
-initial noisy increase cannot be mistaken for convergence.
+The controller records the complete three-stage LG loss, uses the exact
+researcher three-case derivative calculation with a 50-epoch window, and does
+not test for stopping before controller warm-up epoch 20. The comparison is
+strictly `> tau`; there is no additional descent-first guard. The crossing
+epoch is the final guided epoch and every later epoch is CE-only.
 
-## Paper/public-code-matched base protocol
+## Researcher-synchronized base protocol
 
 | Setting | Value | Evidence |
 |---|---:|---|
@@ -52,12 +55,13 @@ initial noisy increase cannot be mistaken for convergence.
 | Student resolution | 224 x 224 | ALG paper |
 | Teacher resolution | 32 x 32 | ALG paper / LG code |
 | Epochs | 300 | ALG paper |
-| Train / eval batch | 128 / 200 | LG public config |
+| Train / eval batch | 64 / 200 | researcher CIFAR config / supplied run config |
 | Optimizer | AdamW | ALG paper |
 | Initial / minimum LR | `5e-4` / `5e-6` | ALG paper / LG config |
 | Weight decay | `0.05` | ALG paper |
 | LR schedule | cosine | ALG paper |
 | Warm-up | 20 epochs from factor `0.001` | ALG paper / LG config |
+| Controller warm-up | 20 epochs | researcher trainer implementation |
 | Drop path | `0.1` | LG public DeiT-Ti config |
 | Label smoothing / Mixup / CutMix | `0` / off / off | LG public defaults |
 | AMP | off (FP32) | LG public default |
@@ -73,8 +77,8 @@ this is the original code path rather than a newly invented augmentation.
 
 ## Reproduction boundaries
 
-- The ALG paper does not publish a separate official repository; its method is
-  reconstructed from the published equations on top of the cited LG code.
+- The ALG feature path is ported from cited LG code; the adaptive controller
+  is synchronized to the researcher-supplied trainer screenshots.
 - `timm==1.0.27` supplies DeiT-Ti instead of the older pycls implementation.
 - Epoch 1 has no preceding loss in the derivative formula; it initializes the
   derivative to zero and cannot turn guidance off.
@@ -93,7 +97,7 @@ Full run after the timing checklist passes:
 
 ```bash
 python methods/ALG/chaoyang/train.py --output-dir /app/output \
-  --run-name alg_chaoyang_deit_ti_300ep_seed1 --num-workers 4
+  --run-name alg_chaoyang_researcher_sync_300ep_seed1 --num-workers 4
 ```
 
 Every epoch prints CE/LG/total loss, beta, both derivative values, guidance

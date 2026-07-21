@@ -72,13 +72,15 @@ Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
 
 All rows use the fixed ResNet56 teacher at 32 x 32 and a scratch DeiT-Ti
 student at 224 x 224. The five generic methods and the historical Ours run use
-100 epochs and seed 42. The standalone ALG reproduction uses the audited
-public LG/ALG base: 300 epochs, batch 128, 20-epoch warm-up, FP32, and seed 1.
+100 epochs and seed 42. The stored ALG row below is the earlier pre-sync
+300-epoch, batch-128 result. The current researcher-synchronized ALG entry
+point instead fixes batch 64 and the exact supplied controller; its result is
+pending and must be recorded as a new run rather than overwriting provenance.
 
 | Method | Best epoch | Best Top-1 | Last Top-1 | Vanilla gap | Status |
 |---|---:|---:|---:|---:|---|
 | Vanilla DeiT-Ti | - | 82.00% | - | - | Draft reference |
-| ALG | 235 | **80.32%** | 79.71% | -1.68 pp | Verified public LG/ALG-base run |
+| ALG | 235 | **80.32%** | 79.71% | -1.68 pp | Verified pre-sync batch-128 run |
 | Ours | 82 | **81.21%** | 80.46% | -0.79 pp | Historical 100-epoch paper-grid run |
 | KD | 15 | **62.79%** | 56.80% | -19.21 pp | Verified |
 | CRD | 61 | **79.66%** | 77.93% | -2.34 pp | Verified |

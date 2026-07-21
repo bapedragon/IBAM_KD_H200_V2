@@ -94,11 +94,13 @@ two branches. The teacher and student normalizations are applied separately.
 Spatial feature methods bilinearly match the CNN feature grid to the DeiT
 14x14 patch grid where required.
 
-The Chaoyang ALG reproduction is deliberately source-specific rather than
-sharing the generic-KD data recipe: 300 epochs, batch 128, 20-epoch warm-up
-from factor 0.001, cosine `5e-4 -> 5e-6`, drop path 0.1, official LG strong
-augmentation, FP32, and seed 1. See [`methods/ALG`](methods/ALG) for the full
-audit and the paper targets `83.50%` Top-1 / stop epoch `108`.
+The Chaoyang ALG reproduction is researcher-synchronized rather than sharing
+the generic-KD data recipe: 300 epochs, batch 64, 20-epoch optimizer and
+controller warm-ups, cosine `5e-4 -> 5e-6`, drop path 0.1, official LG strong
+augmentation, FP32, and seed 1. Its exact three-case derivative controller
+uses window 50, strict `smoothed_derivative > -0.02`, and no descent-first
+guard, matching the synchronized Ours controller. See [`methods/ALG`](methods/ALG)
+for the full audit and paper targets `83.50%` Top-1 / stop epoch `108`.
 
 Run the full-data two-epoch timing sequence first. Flowers and Chaoyang can be
 submitted as separate Issues in parallel:

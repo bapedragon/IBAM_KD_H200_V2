@@ -15,9 +15,9 @@ from methods.ALG.core import cli_main
 
 
 PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "chaoyang_deit_ti_alg_paper_v1"),
+    ("--protocol-name", "chaoyang_deit_ti_alg_researcher_sync_v1"),
     ("--student-epochs", "300"),
-    ("--batch-size", "128"),
+    ("--batch-size", "64"),
     ("--eval-batch-size", "200"),
     ("--lr", "0.0005"),
     ("--min-lr", "0.000005"),
@@ -30,6 +30,7 @@ PROTOCOL_DEFAULTS = (
     ("--beta", "2.5"),
     ("--alg-threshold", "-0.02"),
     ("--alg-smoothing-window", "50"),
+    ("--alg-warmup-epochs", "20"),
     ("--base-protocol", "lg_official"),
     ("--eval-resize-mode", "direct"),
     ("--seed", "1"),

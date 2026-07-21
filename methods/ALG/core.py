@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train DeiT-Ti with paper-matched Adaptive Locality Guidance (ALG)."""
+"""Train DeiT-Ti with researcher-synchronized Adaptive Locality Guidance."""
 
 from __future__ import annotations
 
@@ -64,7 +64,14 @@ STUDENT_IMAGE_SIZE = 224
 
 
 class AdaptiveGuidanceController:
-    """Implement ALG Eqs. (10)-(19) on epoch-level LG losses."""
+    """Researcher-supplied ALG controller on epoch-average LG loss.
+
+    This is the same three-case derivative implementation used by the
+    researcher-synchronized Ours run.  It waits for ``warm_up`` epochs and
+    permanently disables guidance when the smoothed derivative is strictly
+    greater than ``threshold``.  The supplied implementation has no extra
+    descent-first guard.
+    """
 
     def __init__(
         self,
@@ -72,19 +79,17 @@ class AdaptiveGuidanceController:
         beta: float,
         threshold: float,
         smoothing_window: int,
+        warm_up: int,
     ) -> None:
         self.beta = float(beta)
         self.threshold = float(threshold)
         self.smoothing_window = int(smoothing_window)
+        self.warm_up = int(warm_up)
         self.active = True
-        # Treat ALG's one-way switch as a convergence transition: the
-        # derivative must first enter the decreasing regime below tau before
-        # a later return to tau or above can disable guidance.
-        self.descent_observed = False
         self.stop_epoch: int | None = None
         self.guidance_loss_history: list[float] = []
-        self.derivative_history: list[float] = []
-        self.smoothed_derivative_history: list[float] = []
+        self.derivative_history: list[float | None] = []
+        self.smoothed_derivative_history: list[float | None] = []
         self.beta_history: list[float] = []
 
     def beta_for_epoch(self, epoch: int) -> float:
@@ -95,42 +100,76 @@ class AdaptiveGuidanceController:
         self.beta_history.append(value)
         return value
 
-    def _raw_derivative(self) -> float:
-        epoch = len(self.guidance_loss_history)
-        current = self.guidance_loss_history[-1]
-        if epoch == 1:
-            return 0.0
+    def _delta_at(self, epoch: int) -> float | None:
+        """Return the researcher code's one-based delta at ``epoch``."""
+
+        if epoch < 2 or len(self.guidance_loss_history) < epoch:
+            return None
         if epoch <= self.smoothing_window:
-            previous_mean = sum(self.guidance_loss_history[:-1]) / (epoch - 1)
-            return (current - previous_mean) / epoch
+            previous_mean = (
+                sum(self.guidance_loss_history[: epoch - 1]) / (epoch - 1)
+            )
+            return (
+                self.guidance_loss_history[epoch - 1] - previous_mean
+            ) / epoch
         return (
-            current
-            - self.guidance_loss_history[-1 - self.smoothing_window]
+            self.guidance_loss_history[epoch - 1]
+            - self.guidance_loss_history[epoch - self.smoothing_window - 1]
         ) / self.smoothing_window
+
+    def _compute_smoothed_derivative(self, epoch: int) -> float | None:
+        """Port the three cases shown in the researcher trainer verbatim."""
+
+        if epoch < 2 or len(self.guidance_loss_history) < 2:
+            return None
+
+        if epoch <= self.smoothing_window:
+            deltas = [self._delta_at(index) for index in range(2, epoch + 1)]
+            values = [float(value) for value in deltas if value is not None]
+            return sum(values) / len(values) if values else None
+
+        if epoch < 2 * self.smoothing_window:
+            first = epoch - self.smoothing_window + 1
+            deltas = [
+                self._delta_at(index) for index in range(first, epoch + 1)
+            ]
+            values = [float(value) for value in deltas if value is not None]
+            return sum(values) / len(values) if values else None
+
+        total = 0.0
+        first = epoch - self.smoothing_window + 1
+        for index in range(first, epoch + 1):
+            total += (
+                self.guidance_loss_history[index - 1]
+                - self.guidance_loss_history[
+                    index - self.smoothing_window - 1
+                ]
+            )
+        return total / (self.smoothing_window**2)
 
     def observe(self, epoch: int, guidance_loss: float) -> dict[str, Any]:
         expected = len(self.guidance_loss_history) + 1
         if epoch != expected:
             raise ValueError(f"Expected ALG observation for epoch {expected}, got {epoch}")
         if not self.active:
-            raise ValueError("ALG observations stop permanently after guidance is disabled")
+            raise ValueError(
+                "ALG observations stop permanently after guidance is disabled"
+            )
 
         self.guidance_loss_history.append(float(guidance_loss))
-        derivative = self._raw_derivative()
+        derivative = self._delta_at(epoch)
         self.derivative_history.append(derivative)
-        recent = self.derivative_history[-self.smoothing_window :]
-        smoothed_derivative = sum(recent) / len(recent)
+        smoothed_derivative = (
+            None
+            if epoch < self.warm_up
+            else self._compute_smoothed_derivative(epoch)
+        )
         self.smoothed_derivative_history.append(smoothed_derivative)
 
-        # Epoch one has no preceding LG history and is used only to initialize
-        # the published smoothing equations. A stop is allowed only after a
-        # genuine decreasing regime has first been observed.
-        if epoch > 1 and smoothed_derivative < self.threshold:
-            self.descent_observed = True
         if (
-            epoch > 1
-            and self.descent_observed
-            and smoothed_derivative >= self.threshold
+            self.active
+            and smoothed_derivative is not None
+            and smoothed_derivative > self.threshold
         ):
             self.active = False
             self.stop_epoch = epoch
@@ -139,10 +178,13 @@ class AdaptiveGuidanceController:
     def state_dict(self) -> dict[str, Any]:
         return {
             "beta": self.beta,
+            "implementation": "researcher_screenshot_2026-07-21",
+            "observed_signal": "complete_alg_lg_loss",
+            "epoch_numbering": "one_based_adapter",
             "threshold": self.threshold,
             "smoothing_window": self.smoothing_window,
+            "warm_up": self.warm_up,
             "active": self.active,
-            "descent_observed": self.descent_observed,
             "stop_epoch": self.stop_epoch,
             "guidance_loss_history": list(self.guidance_loss_history),
             "derivative_history": list(self.derivative_history),
@@ -197,6 +239,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--beta", type=float, default=2.5)
     parser.add_argument("--alg-threshold", type=float, default=-0.02)
     parser.add_argument("--alg-smoothing-window", type=int, default=50)
+    parser.add_argument(
+        "--alg-warmup-epochs",
+        type=int,
+        default=20,
+        help=(
+            "Epoch before which the researcher controller cannot stop "
+            "guidance (researcher implementation default: 20)."
+        ),
+    )
     parser.add_argument(
         "--base-protocol",
         choices=("lg_official", "draft_common"),
@@ -262,6 +313,8 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError("--min-lr must be non-negative")
     if args.warmup_epochs < 0:
         raise ValueError("--warmup-epochs must be non-negative")
+    if args.alg_warmup_epochs < 0:
+        raise ValueError("--alg-warmup-epochs must be non-negative")
     if args.min_lr > args.lr:
         raise ValueError("--min-lr must not exceed --lr")
     if args.alg_threshold >= 0:
@@ -651,7 +704,7 @@ def write_summary(
         "dataset": "chaoyang",
         "student": "deit_ti",
         "teacher": teacher_spec,
-        "objective": "CE + beta * LG * indicator(smoothed_derivative < tau)",
+        "objective": "CE + beta * LG while researcher ALG controller is active",
         "official_lg_commit": OFFICIAL_LG_COMMIT,
         "alg_paper_doi": ALG_PAPER_DOI,
         "controller": controller.state_dict(),
@@ -746,9 +799,12 @@ def main() -> None:
             "drop_last_train=False eval=Resize256+CenterCrop224"
         )
     log(
-        f"[ALG] loss=CE+beta*LG*indicator(smoothed_derivative<tau) "
+        f"[ALG] loss=CE+beta*LG_while_controller_active "
         f"beta={args.beta} tau={args.alg_threshold} "
-        f"smoothing_window={args.alg_smoothing_window}"
+        f"smoothing_window={args.alg_smoothing_window} "
+        f"controller_warm_up={args.alg_warmup_epochs} "
+        "stop_condition=smoothed_derivative>tau "
+        "descent_guard=False observed_signal=complete_alg_lg_loss"
     )
     log(
         "[LG] teacher_stages=(0,1,2) student_blocks=(0,6,11) "
@@ -903,6 +959,7 @@ def main() -> None:
         beta=args.beta,
         threshold=args.alg_threshold,
         smoothing_window=args.alg_smoothing_window,
+        warm_up=args.alg_warmup_epochs,
     )
     log(
         f"[STUDENT] epochs={args.student_epochs} planned={args.planned_epochs} "
@@ -992,7 +1049,6 @@ def main() -> None:
             f"[ALG][{epoch:03d}/{args.student_epochs:03d}] loss={loss:.4f} "
             f"ce={ce:.4f} lg={lg_loss:.4f} beta={beta:.4f} "
             f"guidance_active_next={controller.active} "
-            f"descent_observed={controller.descent_observed} "
             f"raw_derivative={raw_text} smoothed_derivative={smooth_text} "
             f"guidance_stop_epoch={controller.stop_epoch} "
             f"train_acc={train_accuracy:.2f}% val_acc={latest_accuracy:.2f}% "
@@ -1018,7 +1074,6 @@ def main() -> None:
     log(
         f"[BETA_FINAL] observed_stop_epoch={controller.stop_epoch} "
         f"paper_stop_epoch={ALG_PAPER_STOP_EPOCH} "
-        f"descent_observed={controller.descent_observed} "
         f"guided_epochs={sum(value > 0 for value in controller.beta_history)} "
         f"ce_only_epochs={sum(value == 0 for value in controller.beta_history)}"
     )

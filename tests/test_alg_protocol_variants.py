@@ -23,7 +23,6 @@ class AlgProtocolVariantsTest(unittest.TestCase):
         draft = as_map(DRAFT_COMMON_DEFAULTS)
         for option in (
             "--student-epochs",
-            "--batch-size",
             "--lr",
             "--weight-decay",
             "--warmup-epochs",
@@ -42,6 +41,13 @@ class AlgProtocolVariantsTest(unittest.TestCase):
         self.assertEqual(defaults["--drop-path-rate"], "0.1")
         self.assertEqual(defaults["--eval-resize-mode"], "direct")
         self.assertEqual(defaults["--seed"], "1")
+        self.assertEqual(defaults["--batch-size"], "64")
+        self.assertEqual(defaults["--eval-batch-size"], "200")
+        self.assertEqual(defaults["--alg-warmup-epochs"], "20")
+        self.assertEqual(
+            defaults["--protocol-name"],
+            "chaoyang_deit_ti_alg_researcher_sync_v1",
+        )
 
     def test_draft_common_family_matches_historical_ours_base(self) -> None:
         defaults = as_map(DRAFT_COMMON_DEFAULTS)
@@ -51,6 +57,7 @@ class AlgProtocolVariantsTest(unittest.TestCase):
         self.assertEqual(defaults["--drop-path-rate"], "0.0")
         self.assertEqual(defaults["--eval-resize-mode"], "center_crop")
         self.assertEqual(defaults["--seed"], "42")
+        self.assertEqual(defaults["--batch-size"], "128")
         self.assertEqual(DRAFT_COMMON_FLAGS, ("--amp",))
 
     def test_draft_common_lr_curve_is_identical_to_historical_ours(self) -> None:

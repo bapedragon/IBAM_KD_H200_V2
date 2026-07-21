@@ -400,10 +400,10 @@ matching path and ALG Eqs. (10)-(19). The paper comparison targets are
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG timing run` |
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG researcher-sync timing run` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --timing-run --num-workers 4` |
+| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --timing-run --num-workers 4 --run-name alg_chaoyang_researcher_sync_timing_2ep --output-dir /app/output` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
@@ -412,9 +412,9 @@ Require these markers before the full submission:
 
 ```text
 [MODE] ... timing_run=True ... planned_epochs=300
-[PROTOCOL] ... warmup=20 warmup_factor=0.001 ... batch=128 ...
+[PROTOCOL] ... warmup=20 warmup_factor=0.001 ... batch=64 ...
 [AUGMENT] ... auto_augment=rand-m9-mstd0.5-inc1 ...
-[ALG] ... beta=2.5 tau=-0.02 smoothing_window=50
+[ALG] ... beta=2.5 tau=-0.02 smoothing_window=50 controller_warm_up=20 stop_condition=smoothed_derivative>tau descent_guard=False ...
 [LG] ... student_blocks=(0,6,11) ... grid=larger_of_teacher_student ...
 [FEATURE_CHECK] ... aligned=[(2, 16, 32, 32), (2, 32, 16, 16), (2, 64, 14, 14)] ...
 [DONE] ALG training completed successfully; resources may be released.
@@ -427,10 +427,10 @@ approximately `76.72%`, and a passing native teacher audit.
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG 300-epoch training` |
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG researcher-sync 300-epoch training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --output-dir /app/output --run-name alg_chaoyang_deit_ti_300ep_seed1 --num-workers 4` |
+| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --output-dir /app/output --run-name alg_chaoyang_researcher_sync_300ep_seed1 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
