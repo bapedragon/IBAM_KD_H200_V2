@@ -50,12 +50,12 @@ pycls wrapper.
 
 There is one paper/source inconsistency. V3 says to resample the student to the
 teacher resolution, while the supplied source resizes both tensors to the
-larger grid. The current reproduction prioritizes the delivered code and uses
-`--grid-resize-mode larger` for all Ours wrappers. With teacher grids
-`32/16/8` and the DeiT grid `14`, the executed targets are `32/16/14`.
-`--grid-resize-mode teacher` remains available only for the earlier
-paper-wording diagnostic and must be labeled separately. The active grid mode
-and all three target shapes are printed and stored in every run.
+larger grid. CIFAR-100 and Flowers currently retain the supplied-source
+`--grid-resize-mode larger` path (`32/16/14`). The current Chaoyang rerun gives
+precedence to V3 and uses `--grid-resize-mode teacher` (`32/16/8`). This rerun
+keeps the audited ALG base fixed, so the last target grid is its only changed
+training variable. The active mode and all three target shapes are printed and
+stored in every run.
 
 ## Ours-specific reproduction choices not fixed by either paper
 
@@ -89,8 +89,8 @@ audited and must not be described as using this exact Chaoyang ALG base.
 
 1. Run the dataset wrapper with `--timing-run`.
 2. Confirm dataset/split, finite loss, exact ALG parameters, epoch timing,
-   `[TEACHER_NATIVE_AUDIT]`, the diagnostic `[TEACHER_SHARED_VIEW]`, and
-   source-grid targets `32/16/14`.
+   `[TEACHER_NATIVE_AUDIT]`, the diagnostic `[TEACHER_SHARED_VIEW]`, and the
+   wrapper-specific target grids. Chaoyang must print `32/16/8`.
 3. If the teacher audit passes, run the dataset-specific full command.
 4. Keep the generated `summary.json`, which records the complete loss,
    derivative, beta, stop-epoch, and aggregation-weight histories.

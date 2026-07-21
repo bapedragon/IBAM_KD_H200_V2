@@ -29,8 +29,8 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         self.assertEqual(args.grid_resize_mode, "larger")
         self.assertFalse(args.amp)
 
-    def test_all_table_wrappers_follow_supplied_source_larger_grid_policy(self) -> None:
-        for defaults in (CIFAR_DEFAULTS, FLOWERS_DEFAULTS, CHAOYANG_DEFAULTS):
+    def test_cifar_and_flowers_follow_supplied_source_larger_grid_policy(self) -> None:
+        for defaults in (CIFAR_DEFAULTS, FLOWERS_DEFAULTS):
             with self.subTest(protocol=defaults_map(defaults)["--protocol-name"]):
                 self.assertEqual(
                     defaults_map(defaults)["--grid-resize-mode"], "larger"
@@ -38,6 +38,11 @@ class OursSourceGridProtocolTest(unittest.TestCase):
                 self.assertEqual(
                     defaults_map(defaults)["--eval-resize-mode"], "direct"
                 )
+
+    def test_chaoyang_rerun_changes_only_to_draft_teacher_grid(self) -> None:
+        defaults = defaults_map(CHAOYANG_DEFAULTS)
+        self.assertEqual(defaults["--grid-resize-mode"], "teacher")
+        self.assertEqual(defaults["--eval-resize-mode"], "direct")
 
     def test_direct_eval_preserves_full_224px_field_of_view(self) -> None:
         transform = build_eval_transform("chaoyang", resize_mode="direct")
@@ -61,7 +66,7 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         defaults = defaults_map(CHAOYANG_DEFAULTS)
         self.assertEqual(
             defaults["--protocol-name"],
-            "chaoyang_deit_ti_ours_algbase_sourcegrid_v2",
+            "chaoyang_deit_ti_ours_draftgrid_algbase_v3",
         )
         self.assertEqual(defaults["--student-epochs"], "300")
         self.assertEqual(defaults["--batch-size"], "128")
@@ -78,7 +83,7 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         self.assertEqual(defaults["--beta-on"], "2.5")
         self.assertEqual(defaults["--alg-threshold"], "-0.02")
         self.assertEqual(defaults["--alg-smoothing-window"], "50")
-        self.assertEqual(defaults["--grid-resize-mode"], "larger")
+        self.assertEqual(defaults["--grid-resize-mode"], "teacher")
         self.assertEqual(defaults["--eval-resize-mode"], "direct")
 
 

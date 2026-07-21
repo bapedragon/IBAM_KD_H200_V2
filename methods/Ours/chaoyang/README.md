@@ -11,9 +11,9 @@
 - Evaluation geometry: direct full-image resize to `224 x 224` (no center
   crop), then shared-view bilinear downsampling to `32 x 32` for the teacher
 - Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
-- Grid: supplied-source larger-grid policy. Teacher/student tensors are
-  bilinearly resized to the larger grid, producing `32 x 32`, `16 x 16`, and
-  `14 x 14` targets.
+- Grid: working-paper teacher-grid policy. Student tensors are bilinearly
+  resized to the frozen teacher stages, producing `32 x 32`, `16 x 16`, and
+  `8 x 8` targets. This is the only change from the audited `32/16/14` run.
 - Adaptive beta: exact ALG equations with `beta=2.5`, `tau=-0.02`, two
   50-epoch smoothing stages; `L_align` is the recorded controller signal. The
   one-way stop is armed only after first observing a derivative below `tau`.
@@ -35,7 +35,7 @@ python methods/Ours/chaoyang/train.py --timing-run --num-workers 4
 Full run only after the timing log and teacher audit pass:
 
 ```bash
-python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_algbase_sourcegrid_300ep_seed1 --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_draftgrid_algbase_300ep_seed1 --output-dir /app/output
 ```
 
 Raw measured accuracy is retained; no teacher-gap correction is applied by
@@ -57,6 +57,7 @@ base protocol must not be substituted into the final comparison.
 | Earlier Ours, 300 epochs | common base, teacher grid `32/16/8` | 42 | 81.11% | historical diagnostic |
 | Audited ALG, 300 epochs | public LG/ALG base, ALG larger-grid path | 1 | 80.32% | current matched baseline |
 | Audited Ours, 300 epochs | public LG/ALG base, source larger grid `32/16/14` | 1 | 77.14% | current matched Ours result; requires investigation |
+| Current Ours rerun | same public LG/ALG base, draft teacher grid `32/16/8` | 1 | pending | changes grid only |
 
 The old common base used light `RandomResizedCrop+flip`, label smoothing
 `0.1`, drop path `0`, AMP, `Resize(256)+CenterCrop(224)` evaluation, minimum
@@ -71,3 +72,12 @@ working-paper ordering, so the Ours controller signal/feature-loss scale must
 be audited before treating 77.14% as a validated reproduction. Running ALG
 once under the old common base is permitted only as a controlled ablation to
 measure the base-protocol effect; it is not the final ALG number.
+
+## Precedence rule for this rerun
+
+When sources disagree, settings explicitly written in the Ours working draft
+take precedence. Missing training details are inherited from the audited ALG
+and public LG base. Only details absent from all supplied sources are labeled
+as reproduction choices. Therefore the current rerun keeps the audited ALG
+base unchanged and switches only `--grid-resize-mode` from `larger` to
+`teacher`.

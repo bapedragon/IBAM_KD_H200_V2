@@ -8,10 +8,10 @@ for the evidence matrix.
 
 `ours.py` is a standalone PyTorch port rather than a byte-for-byte copy of the
 original pycls wrapper. Its aggregation, projection, attention blocks, and MSE
-calculation preserve the supplied implementation. Grid sizing now follows the
-delivered source's larger-grid rule. The earlier teacher-grid interpretation
-remains available only as a diagnostic because the source and V3 wording are
-not identical.
+calculation preserve the supplied implementation. CIFAR-100 and Flowers keep
+the delivered source's larger-grid rule. The current Chaoyang table-targeted
+rerun follows V3's teacher-grid wording so that only the last target changes
+from `14 x 14` to `8 x 8` while its audited ALG base remains fixed.
 The unavailable pycls configuration is fixed to feature guidance enabled,
 linear feature projection, and optional logit KD disabled, which matches V3
 Eq. (4). The original source SHA-256 is recorded in every run.
@@ -47,12 +47,12 @@ The previous extra fixed multiplication
 - teacher and Ours module discarded at inference
 
 V3 describes resampling the student representation to the teacher grid, while
-the supplied source explicitly resizes both tensors to the larger grid. The
-current reproduction prioritizes the delivered executable behavior and uses
-`--grid-resize-mode larger`. With teacher stages `32/16/8` and a DeiT patch
-grid of `14`, the executed targets are `32/16/14`. The earlier
-`--grid-resize-mode teacher` (`32/16/8`) path remains only for controlled
-diagnostics; results from the two policies must not be mixed.
+the supplied source explicitly resizes both tensors to the larger grid.
+CIFAR-100 and Flowers currently prioritize the delivered executable behavior
+and use `--grid-resize-mode larger`, producing `32/16/14`. Chaoyang now
+prioritizes the working-paper wording and uses `--grid-resize-mode teacher`,
+producing `32/16/8`. Results from the two policies must remain explicitly
+labeled and must not be treated as repeated seeds of one protocol.
 
 ## Adaptive beta from ALG
 
@@ -128,7 +128,7 @@ Conditional full runs after the timing log and teacher audit are accepted:
 ```bash
 python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_sourcegrid_300ep --output-dir /app/output
 python methods/Ours/flowers102/train.py --student-epochs 200 --num-workers 4 --run-name ours_flowers102_deit_ti_sourcegrid_200ep --output-dir /app/output
-python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_algbase_sourcegrid_300ep_seed1 --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_draftgrid_algbase_300ep_seed1 --output-dir /app/output
 ```
 
 For a manual diagnostic stop epoch, use:

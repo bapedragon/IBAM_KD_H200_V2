@@ -351,7 +351,7 @@ features must be bilinearly resampled to those three teacher grids.
 | Title | `[Request]: 박철현 Chaoyang DeiT-Ti Ours draft-matched timing run` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/Ours/chaoyang/train.py --timing-run --grid-resize-mode teacher --num-workers 4` |
+| 코드 실행 명령어 | `python methods/Ours/chaoyang/train.py --timing-run --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
@@ -360,7 +360,7 @@ Before launching the full run, require all of the following in the log:
 
 ```text
 [MODE] ... timing_run=True ... planned_epochs=300
-[PROTOCOL] name=chaoyang_deit_ti_ours_draftmatched_v3 ... warmup=20 ... batch=128 ...
+[PROTOCOL] name=chaoyang_deit_ti_ours_draftgrid_algbase_v3 ... warmup=20 ... batch=128 ...
 [OURS] ... stage_grid=teacher ...
 [BETA] schedule=alg_exact beta_on=2.5 ... threshold=-0.02 smoothing_window=50
 [FEATURE_CHECK] ... stage_targets=[(2, 16, 32, 32), (2, 32, 16, 16), (2, 64, 8, 8)] ...
@@ -380,7 +380,7 @@ Submit only after the timing checklist passes.
 | Title | `[Request]: 박철현 Chaoyang DeiT-Ti Ours draft-matched full training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --grid-resize-mode teacher --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_300ep_seed42 --output-dir /app/output` |
+| 코드 실행 명령어 | `python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_draftgrid_algbase_300ep_seed1 --output-dir /app/output` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
