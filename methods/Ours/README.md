@@ -7,11 +7,10 @@ available in the supplied materials. See [`PAPER_AUDIT.md`](PAPER_AUDIT.md)
 for the evidence matrix.
 
 `ours.py` is a standalone PyTorch port rather than a byte-for-byte copy of the
-original pycls wrapper. Its aggregation, projection, attention blocks, and MSE
-calculation preserve the supplied implementation. CIFAR-100 and Flowers keep
-the delivered source's larger-grid rule. The current Chaoyang table-targeted
-rerun follows V3's teacher-grid wording so that only the last target changes
-from `14 x 14` to `8 x 8` while its audited ALG base remains fixed.
+original pycls wrapper. Its aggregation, projection, attention blocks, MSE
+calculation, and larger-grid resize preserve the supplied implementation.
+After the 2026-07-21 researcher-code audit, Chaoyang also follows the executable
+larger-grid rule and therefore uses `32 x 32`, `16 x 16`, and `14 x 14`.
 The unavailable pycls configuration is fixed to feature guidance enabled,
 linear feature projection, and optional logit KD disabled, which matches V3
 Eq. (4). The original source SHA-256 is recorded in every run.
@@ -47,31 +46,25 @@ The previous extra fixed multiplication
 - teacher and Ours module discarded at inference
 
 V3 describes resampling the student representation to the teacher grid, while
-the supplied source explicitly resizes both tensors to the larger grid.
-CIFAR-100 and Flowers currently prioritize the delivered executable behavior
-and use `--grid-resize-mode larger`, producing `32/16/14`. Chaoyang now
-prioritizes the working-paper wording and uses `--grid-resize-mode teacher`,
-producing `32/16/8`. Results from the two policies must remain explicitly
-labeled and must not be treated as repeated seeds of one protocol.
+the supplied source and researcher screenshot explicitly resize both tensors
+to the larger grid. The active researcher-synchronized path therefore uses
+`--grid-resize-mode larger`, producing `32/16/14`. Earlier `32/16/8` results
+remain historical diagnostics and are not repeated seeds of this protocol.
 
-## Adaptive beta from ALG
+## Researcher-synchronized adaptive beta
 
-The default controller now implements ALG Eqs. (10)-(19), not a plateau
-proxy. It uses `beta=2.5`, `tau=-0.02`, and a 50-epoch window in both
-smoothing steps. Guidance remains active while the twice-smoothed loss
-derivative is below `tau`; when it reaches `tau`, that epoch is the last
-guided epoch and all subsequent epochs use CE only.
+The active controller is a direct port of the code shown by the researcher. It
+uses `beta=2.5`, `tau=-0.02`, a 50-epoch window, and a controller warm-up of 20
+epochs. Crucially, it records the complete guidance loss returned by
+`guidance_loss()`—`0.5*L_align + 0.5*L_fuse`—rather than alignment loss alone.
+After the warm-up, guidance is permanently disabled when the computed smoothed
+derivative is strictly greater than `tau`. There is no extra descent-first
+guard. The three early/middle/late derivative cases in the researcher code are
+ported literally and covered by unit tests.
 
-V3 does not state which of its two feature losses should be observed by the
-ALG controller. This implementation observes `L_align`, because it is the
-direct CNN/ViT feature distance corresponding most closely to ALG's `L_LG`.
-At epoch 1, where ALG's published expression has no previous loss, the raw
-derivative is initialized to zero and cannot stop guidance. The one-way stop is
-armed only after the smoothed derivative first enters the decreasing regime
-below `tau`; a noisy early increase therefore cannot disable guidance before
-any descent has been observed. These boundary
-decisions are explicitly saved in logs/checkpoints. `manual_stop` remains
-available only for controlled diagnostics.
+The former controller and Chaoyang profile are retained under `legacy/`, with
+the full old executable available at Git commit `ee2dc55`. They must not be
+mixed with researcher-synchronized results.
 
 ## Student base protocols
 
@@ -86,7 +79,7 @@ strict reproduction of the draft's uniform protocol.
 |---|---:|---:|---|---:|---:|---:|---|
 | CIFAR-100 | 300 | 128 | AdamW | `5e-4` / `0` | `0.05` | 20 | Cosine |
 | Flowers-102 | 200 | 64 | AdamW | `5e-4` / `0` | `0.05` | 5 | Cosine |
-| Chaoyang | 300 | 128 | AdamW | `5e-4` / `5e-6` | `0.05` | 20 | Cosine |
+| Chaoyang researcher-sync | 300 | 64 | AdamW | `5e-4` / `5e-6` | `0.05` | 20 | Cosine |
 
 CIFAR-100 and Flowers-102 retain the earlier common profile. Chaoyang is now
 locked to the same audited LG/ALG base as the standalone ALG run: FP32, seed
@@ -128,7 +121,7 @@ Conditional full runs after the timing log and teacher audit are accepted:
 ```bash
 python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_sourcegrid_300ep --output-dir /app/output
 python methods/Ours/flowers102/train.py --student-epochs 200 --num-workers 4 --run-name ours_flowers102_deit_ti_sourcegrid_200ep --output-dir /app/output
-python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_draftgrid_algbase_300ep_seed1 --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 64 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_researcher_sync_300ep_seed1 --output-dir /app/output
 ```
 
 For a manual diagnostic stop epoch, use:

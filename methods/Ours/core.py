@@ -54,13 +54,12 @@ NUM_STUDENT_BLOCKS = 12
 
 
 class AdaptiveGuidanceController:
-    """Apply the ALG loss-derivative schedule from Eqs. (10)-(19).
+    """Researcher-supplied adaptive-locality controller.
 
-    ALG smooths the epoch-level LG loss over 50 epochs, differentiates that
-    smoothed loss, smooths the derivative over another 50 epochs, and disables
-    guidance when the final derivative is no longer below tau. Epoch one has
-    no previous loss; its derivative is defined as zero for initialization and
-    is never allowed to stop guidance by itself.
+    The controller records the epoch-average *complete* guidance loss, waits
+    for ``warm_up`` epochs, and permanently disables guidance when the
+    researcher implementation's smoothed derivative is strictly greater than
+    ``tau``.  This intentionally has no additional descent-first guard.
     """
 
     def __init__(self, args: argparse.Namespace) -> None:
@@ -68,20 +67,21 @@ class AdaptiveGuidanceController:
         self.beta_on = float(args.beta_on)
         self.threshold = float(args.alg_threshold)
         self.smoothing_window = int(args.alg_smoothing_window)
+        self.warm_up = int(args.alg_warmup_epochs)
         self.manual_stop_epoch = args.guidance_stop_epoch
         self.active = True
-        # Arm the convergence transition only after the guidance loss has
-        # actually entered ALG's decreasing regime. This prevents an early
-        # noisy increase from permanently disabling guidance before any
-        # descent has been observed.
-        self.descent_observed = False
         self.stop_epoch: int | None = None
         self.guidance_loss_history: list[float] = []
-        self.derivative_history: list[float] = []
+        self.derivative_history: list[float | None] = []
         self.smoothed_derivative_history: list[float | None] = []
         self.beta_history: list[float] = []
 
     def beta_for_epoch(self, epoch: int) -> float:
+        expected = len(self.beta_history) + 1
+        if epoch != expected:
+            raise ValueError(
+                f"Expected beta request for epoch {expected}, got {epoch}"
+            )
         if self.schedule == "manual_stop":
             assert self.manual_stop_epoch is not None
             active = epoch <= self.manual_stop_epoch
@@ -91,17 +91,50 @@ class AdaptiveGuidanceController:
         self.beta_history.append(beta)
         return beta
 
-    def _current_derivative(self) -> float:
-        epoch = len(self.guidance_loss_history)
-        current = self.guidance_loss_history[-1]
-        if epoch == 1:
-            return 0.0
+    def _delta_at(self, epoch: int) -> float | None:
+        """Return the researcher code's one-based delta at ``epoch``."""
+
+        if epoch < 2 or len(self.guidance_loss_history) < epoch:
+            return None
         if epoch <= self.smoothing_window:
-            previous_mean = sum(self.guidance_loss_history[:-1]) / (epoch - 1)
-            return (current - previous_mean) / epoch
+            previous_mean = (
+                sum(self.guidance_loss_history[: epoch - 1]) / (epoch - 1)
+            )
+            return (
+                self.guidance_loss_history[epoch - 1] - previous_mean
+            ) / epoch
         return (
-            current - self.guidance_loss_history[-1 - self.smoothing_window]
+            self.guidance_loss_history[epoch - 1]
+            - self.guidance_loss_history[epoch - self.smoothing_window - 1]
         ) / self.smoothing_window
+
+    def _compute_smoothed_derivative(self, epoch: int) -> float | None:
+        """Port the three cases shown in the researcher trainer verbatim."""
+
+        if epoch < 2 or len(self.guidance_loss_history) < 2:
+            return None
+
+        if epoch <= self.smoothing_window:
+            deltas = [self._delta_at(index) for index in range(2, epoch + 1)]
+            values = [float(value) for value in deltas if value is not None]
+            return sum(values) / len(values) if values else None
+
+        if epoch < 2 * self.smoothing_window:
+            first = epoch - self.smoothing_window + 1
+            deltas = [
+                self._delta_at(index) for index in range(first, epoch + 1)
+            ]
+            values = [float(value) for value in deltas if value is not None]
+            return sum(values) / len(values) if values else None
+
+        total = 0.0
+        first = epoch - self.smoothing_window + 1
+        for index in range(first, epoch + 1):
+            total += (
+                self.guidance_loss_history[index - 1]
+                - self.guidance_loss_history[index - self.smoothing_window - 1]
+            )
+        return total / (self.smoothing_window**2)
 
     def observe(self, epoch: int, guidance_loss: float) -> dict[str, Any]:
         if epoch != len(self.guidance_loss_history) + 1:
@@ -116,22 +149,22 @@ class AdaptiveGuidanceController:
             if epoch >= self.manual_stop_epoch and self.stop_epoch is None:
                 self.stop_epoch = self.manual_stop_epoch
             self.active = epoch < self.manual_stop_epoch
-            self.derivative_history.append(0.0)
+            self.derivative_history.append(None)
             self.smoothed_derivative_history.append(None)
             return self.state_dict()
 
-        derivative = self._current_derivative()
+        derivative = self._delta_at(epoch)
         self.derivative_history.append(derivative)
-        window = self.derivative_history[-self.smoothing_window :]
-        smoothed_derivative = sum(window) / len(window)
+        smoothed_derivative = (
+            None
+            if epoch < self.warm_up
+            else self._compute_smoothed_derivative(epoch)
+        )
         self.smoothed_derivative_history.append(smoothed_derivative)
-        if epoch > 1 and smoothed_derivative < self.threshold:
-            self.descent_observed = True
         if (
-            epoch > 1
-            and self.active
-            and self.descent_observed
-            and smoothed_derivative >= self.threshold
+            self.active
+            and smoothed_derivative is not None
+            and smoothed_derivative > self.threshold
         ):
             self.active = False
             self.stop_epoch = epoch
@@ -140,12 +173,15 @@ class AdaptiveGuidanceController:
     def state_dict(self) -> dict[str, Any]:
         return {
             "schedule": self.schedule,
+            "implementation": "researcher_screenshot_2026-07-21",
+            "observed_signal": "combined_feature_loss",
+            "epoch_numbering": "one_based_adapter",
             "beta_on": self.beta_on,
             "active": self.active,
-            "descent_observed": self.descent_observed,
             "stop_epoch": self.stop_epoch,
             "threshold": self.threshold,
             "smoothing_window": self.smoothing_window,
+            "warm_up": self.warm_up,
             "manual_stop_epoch": self.manual_stop_epoch,
             "guidance_loss_history": list(self.guidance_loss_history),
             "derivative_history": list(self.derivative_history),
@@ -243,6 +279,15 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=50,
         help="Window used in both ALG smoothing stages (paper default: 50).",
+    )
+    parser.add_argument(
+        "--alg-warmup-epochs",
+        type=int,
+        default=20,
+        help=(
+            "Epoch before which the researcher controller cannot stop guidance "
+            "(researcher implementation default: 20)."
+        ),
     )
     parser.add_argument(
         "--guidance-stop-epoch",
@@ -346,6 +391,8 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError("--min-lr must be non-negative")
     if args.warmup_epochs < 0:
         raise ValueError("--warmup-epochs must be non-negative")
+    if args.alg_warmup_epochs < 0:
+        raise ValueError("--alg-warmup-epochs must be non-negative")
     if args.alg_threshold >= 0:
         raise ValueError("--alg-threshold must be negative for a decreasing loss")
     if args.max_teacher_runtime_gap_pp < 0:
@@ -832,16 +879,17 @@ def main() -> None:
     )
     if args.beta_schedule == "alg":
         log(
-            f"[BETA] schedule=alg_exact beta_on={args.beta_on} "
-            f"metric=L_align threshold={args.alg_threshold} "
+            f"[BETA] schedule=researcher_exact beta_on={args.beta_on} "
+            f"metric=L_feature_combined threshold={args.alg_threshold} "
             f"smoothing_window={args.alg_smoothing_window} "
-            "active_condition=smoothed_derivative<threshold"
+            f"controller_warm_up={args.alg_warmup_epochs} "
+            "stop_condition=smoothed_derivative>threshold "
+            "epoch_numbering=one_based_adapter"
         )
         log(
-            "[BETA] ALG Eqs.(10)-(19): smooth the epoch loss over 50 epochs, "
-            "differentiate it, smooth that derivative over 50 epochs, and switch "
-            "permanently to CE-only when the derivative returns to tau=-0.02 "
-            "after first entering the decreasing regime below tau."
+            "[BETA] Researcher implementation: record epoch-average complete "
+            "guidance loss, do not stop before warm-up, then permanently switch "
+            "to CE-only when the smoothed derivative is strictly above tau."
         )
     else:
         log(
@@ -861,10 +909,10 @@ def main() -> None:
         f"and frozen teacher. Active grid policy={grid_evidence}."
     )
     log(
-        "[REPRO_STATUS] Ours-specific documented choices: L_align drives the "
-        "ALG controller; epoch-1 derivative is initialized to zero and the "
-        "stop is armed after first observing descent; attention "
-        "heads/reduction/loss reduction follow the supplied source."
+        "[REPRO_STATUS] Researcher-synchronized choices: the complete "
+        "0.5*L_align+0.5*L_fuse guidance loss drives the controller; the "
+        "controller has a 20-epoch stop warm-up and no descent-first guard. "
+        "Attention heads/reduction/loss reduction follow the supplied source."
     )
 
     if args.base_protocol == "lg_official":
@@ -1074,7 +1122,7 @@ def main() -> None:
             beta,
         )
         controller_state = (
-            controller.observe(epoch, alignment_loss)
+            controller.observe(epoch, feature_loss)
             if beta > 0.0
             else controller.state_dict()
         )
@@ -1101,7 +1149,7 @@ def main() -> None:
         if beta > 0.0 and not controller.active:
             log(
                 f"[BETA_TRANSITION] guidance disabled after epoch={epoch} "
-                f"L_align={alignment_loss:.6f} "
+                f"L_feature={feature_loss:.6f} "
                 f"raw_derivative={raw_derivative_text} "
                 f"smoothed_derivative={smoothed_derivative_text} "
                 f"threshold={args.alg_threshold}; subsequent epochs are CE-only."
@@ -1148,7 +1196,6 @@ def main() -> None:
             f"ce={ce:.4f} align={alignment_loss:.4f} "
             f"fuse={fusion_loss:.4f} feature={feature_loss:.4f} "
             f"beta={beta:.4f} guidance_active_next={controller.active} "
-            f"descent_observed={controller.descent_observed} "
             f"alg_raw_derivative={raw_derivative_text} "
             f"alg_smoothed_derivative={smoothed_derivative_text} "
             f"guidance_stop_epoch={controller.stop_epoch} "
@@ -1182,7 +1229,6 @@ def main() -> None:
     log(
         f"[BETA_FINAL] schedule={controller.schedule} "
         f"stop_epoch={controller.stop_epoch} "
-        f"descent_observed={controller.descent_observed} "
         f"guided_epochs={sum(beta > 0.0 for beta in controller.beta_history)} "
         f"ce_only_epochs={sum(beta == 0.0 for beta in controller.beta_history)} "
         "full_history_saved_in=summary.json"

@@ -11,9 +11,9 @@
   `1x1` projection/QKV, `5x5` deformable attention, four heads
 - Grid: supplied-source larger-grid policy, producing targets `32/16/14`
 - Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
-- Adaptive beta: exact ALG equations with `beta=2.5`, `tau=-0.02`, two
-  50-epoch smoothing stages; `L_align` is the recorded controller signal. The
-  one-way stop is armed only after first observing a derivative below `tau`.
+- Adaptive beta: researcher controller with `beta=2.5`, `tau=-0.02`, window
+  50 and controller warm-up 20. The complete combined feature loss is observed;
+  afterward strict `smoothed_derivative > tau` disables guidance permanently.
 - Working-paper comparison target: `82.42%` Top-1
 
 The teacher is already trained at 32 x 32. It receives the same crop/flip view
@@ -33,6 +33,5 @@ Full run only after the timing log and teacher audit pass:
 python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_sourcegrid_300ep --output-dir /app/output
 ```
 
-The ALG equations/values are paper-confirmed; selecting `L_align` as the
-controller signal and the epoch-1 initialization are documented reproduction
-choices. See [`../PAPER_AUDIT.md`](../PAPER_AUDIT.md).
+See [`../PAPER_AUDIT.md`](../PAPER_AUDIT.md) for the paper/source/researcher
+evidence split.

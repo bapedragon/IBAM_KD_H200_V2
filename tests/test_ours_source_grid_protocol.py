@@ -26,6 +26,7 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         self.assertEqual(args.beta_on, 2.5)
         self.assertEqual(args.alg_threshold, -0.02)
         self.assertEqual(args.alg_smoothing_window, 50)
+        self.assertEqual(args.alg_warmup_epochs, 20)
         self.assertEqual(args.grid_resize_mode, "larger")
         self.assertFalse(args.amp)
 
@@ -39,9 +40,9 @@ class OursSourceGridProtocolTest(unittest.TestCase):
                     defaults_map(defaults)["--eval-resize-mode"], "direct"
                 )
 
-    def test_chaoyang_rerun_changes_only_to_draft_teacher_grid(self) -> None:
+    def test_chaoyang_researcher_sync_uses_larger_grid(self) -> None:
         defaults = defaults_map(CHAOYANG_DEFAULTS)
-        self.assertEqual(defaults["--grid-resize-mode"], "teacher")
+        self.assertEqual(defaults["--grid-resize-mode"], "larger")
         self.assertEqual(defaults["--eval-resize-mode"], "direct")
 
     def test_direct_eval_preserves_full_224px_field_of_view(self) -> None:
@@ -66,10 +67,10 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         defaults = defaults_map(CHAOYANG_DEFAULTS)
         self.assertEqual(
             defaults["--protocol-name"],
-            "chaoyang_deit_ti_ours_draftgrid_algbase_v3",
+            "chaoyang_deit_ti_ours_researcher_sync_v1",
         )
         self.assertEqual(defaults["--student-epochs"], "300")
-        self.assertEqual(defaults["--batch-size"], "128")
+        self.assertEqual(defaults["--batch-size"], "64")
         self.assertEqual(defaults["--warmup-epochs"], "20")
         self.assertEqual(defaults["--warmup-factor"], "0.001")
         self.assertEqual(defaults["--min-lr"], "0.000005")
@@ -83,7 +84,8 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         self.assertEqual(defaults["--beta-on"], "2.5")
         self.assertEqual(defaults["--alg-threshold"], "-0.02")
         self.assertEqual(defaults["--alg-smoothing-window"], "50")
-        self.assertEqual(defaults["--grid-resize-mode"], "teacher")
+        self.assertEqual(defaults["--alg-warmup-epochs"], "20")
+        self.assertEqual(defaults["--grid-resize-mode"], "larger")
         self.assertEqual(defaults["--eval-resize-mode"], "direct")
 
 

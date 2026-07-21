@@ -1,83 +1,63 @@
-# Ours: Chaoyang / DeiT-Ti
+# Ours: Chaoyang / DeiT-Ti — researcher-synchronized run
 
-- Data: official mounted dataset under `/app/data/chaoyang`
-- Teacher: fixed V2 32 x 32 ResNet56 checkpoint selected by the manifest
-- Student: DeiT-Ti from scratch
-- ALG-matched base protocol: 300 epochs, batch 128, AdamW `5e-4`, minimum LR
-  `5e-6`, weight decay `0.05`, 20-epoch warm-up from `5e-7`, cosine decay
-- Public LG/ALG regularization: FP32, seed `1`, label smoothing `0`, drop path
-  `0.1`, ImageNet normalization, color jitter `0.4`, RandAugment
-  `rand-m9-mstd0.5-inc1`, random erasing `0.25`/pixel, bicubic interpolation
-- Evaluation geometry: direct full-image resize to `224 x 224` (no center
-  crop), then shared-view bilinear downsampling to `32 x 32` for the teacher
-- Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
-- Grid: working-paper teacher-grid policy. Student tensors are bilinearly
-  resized to the frozen teacher stages, producing `32 x 32`, `16 x 16`, and
-  `8 x 8` targets. This is the only change from the audited `32/16/14` run.
-- Adaptive beta: exact ALG equations with `beta=2.5`, `tau=-0.02`, two
-  50-epoch smoothing stages; `L_align` is the recorded controller signal. The
-  one-way stop is armed only after first observing a derivative below `tau`.
-- Working-paper comparison target: `86.35%` Top-1
+This wrapper adapts the Ours code and configuration shown by the researcher to
+the official mounted Chaoyang split. Dataset paths and the number of classes
+are changed for Chaoyang; the transferable Ours/ALG behavior is kept intact.
 
-The fixed Chaoyang teacher was trained and evaluated by directly resizing the
-original image to 32 x 32. `[TEACHER_NATIVE_AUDIT]` reproduces that comparable
-path and must stay within the default 5 pp threshold. The source-faithful Ours
-feature path instead resizes the shared student view from 224 to 32; its
-`[TEACHER_SHARED_VIEW]` classification Top-1 is recorded as a diagnostic and
-is not compared as if it were the native checkpoint recipe.
+## Locked protocol
 
-Timing run:
+| Item | Value | Source |
+|---|---:|---|
+| Teacher | ResNet56, frozen, `32 x 32` | repository checkpoint + researcher config |
+| Student | DeiT-Ti from scratch, `224 x 224` | researcher config |
+| Epochs | 300 | researcher config |
+| Train / eval batch | 64 / 200 | researcher config |
+| Optimizer | AdamW | researcher config |
+| LR / minimum LR | `5e-4` / `5e-6` | researcher config |
+| Weight decay | `0.05` | researcher config |
+| LR warm-up | 20 epochs from factor `0.001` | researcher config |
+| Schedule | cosine | researcher config |
+| Label smoothing | `0` | public config default |
+| Drop path | `0.1` | researcher config |
+| Seed / precision | `1` / FP32 | public config defaults |
+| Evaluation | direct resize to `224 x 224` | locality-guidance loader |
+
+Public LG strong augmentation remains enabled: ImageNet normalization, color
+jitter `0.4`, RandAugment `rand-m9-mstd0.5-inc1`, bicubic interpolation, and
+random erasing `0.25` in pixel mode. Mixup and CutMix are zero by default.
+EMA update period is also zero in the public config, so no EMA result is used.
+
+## Ours feature path and loss
+
+- all 12 DeiT block grids are aggregated into three learned stage mixtures;
+- each stage is projected with a `1 x 1` convolution;
+- teacher and student are both bilinearly resized to the larger grid, producing
+  `32 x 32`, `16 x 16`, and `14 x 14`;
+- the supplied CCC attention module produces the fused representation;
+- `L_feature = 0.5*L_align + 0.5*L_fuse`;
+- while guidance is active, `L_total = CE + 2.5*L_feature`;
+- logit distillation is disabled.
+
+The adaptive controller records the epoch mean of the complete `L_feature`,
+not `L_align` alone. It uses `tau=-0.02`, a 50-epoch smoothing window, and a
+20-epoch controller warm-up. It then stops permanently when the researcher
+formula returns `smoothed_derivative > tau`; no descent-first guard is added.
+
+## Run commands
+
+Timing run (full data, two epochs, no persistent result required):
 
 ```bash
 python methods/Ours/chaoyang/train.py --timing-run --num-workers 4
 ```
 
-Full run only after the timing log and teacher audit pass:
+Full run after the timing log passes:
 
 ```bash
-python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_draftgrid_algbase_300ep_seed1 --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 64 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_researcher_sync_300ep_seed1 --output-dir /app/output
 ```
 
-Raw measured accuracy is retained; no teacher-gap correction is applied by
-code. This wrapper uses the standalone ALG run's complete base configuration,
-then replaces the ALG-only feature objective with the delivered Ours module
-and the paper/researcher-confirmed 0.5/0.5 objective. See
-[`../PAPER_AUDIT.md`](../PAPER_AUDIT.md).
-
-## Protocol decision and run lineage
-
-The final comparison protocol is the audited public LG/ALG base implemented by
-this wrapper. ALG and Ours must share this base; Ours changes only the feature
-module/objective described above. A higher result from an older, different
-base protocol must not be substituted into the final comparison.
-
-| Run | Base / grid | Seed | Best Top-1 | Status |
-|---|---|---:|---:|---|
-| Earlier Ours, 100 epochs | common base, teacher grid `32/16/8` | 42 | 81.21% | historical diagnostic |
-| Earlier Ours, 300 epochs | common base, teacher grid `32/16/8` | 42 | 81.11% | historical diagnostic |
-| Audited ALG, 300 epochs | public LG/ALG base, ALG larger-grid path | 1 | 80.32% | current matched baseline |
-| Audited Ours, 300 epochs | public LG/ALG base, source larger grid `32/16/14` | 1 | 77.14% | current matched Ours result; requires investigation |
-| Current Ours rerun | same public LG/ALG base, draft teacher grid `32/16/8` | 1 | pending | changes grid only |
-
-The old common base used light `RandomResizedCrop+flip`, label smoothing
-`0.1`, drop path `0`, AMP, `Resize(256)+CenterCrop(224)` evaluation, minimum
-LR `0`, and seed `42`. The audited public LG/ALG base instead uses the strong
-LG augmentation listed above, label smoothing `0`, drop path `0.1`, FP32,
-direct-resize evaluation, minimum LR `5e-6`, and seed `1`. The two result
-families are therefore not repeated runs of one protocol.
-
-In the matched public-LG/ALG pair, ALG stops guidance at epoch 217 and reaches
-80.32%, while Ours stops at epoch 234 and reaches 77.14%. This reverses the
-working-paper ordering, so the Ours controller signal/feature-loss scale must
-be audited before treating 77.14% as a validated reproduction. Running ALG
-once under the old common base is permitted only as a controlled ablation to
-measure the base-protocol effect; it is not the final ALG number.
-
-## Precedence rule for this rerun
-
-When sources disagree, settings explicitly written in the Ours working draft
-take precedence. Missing training details are inherited from the audited ALG
-and public LG base. Only details absent from all supplied sources are labeled
-as reproduction choices. Therefore the current rerun keeps the audited ALG
-base unchanged and switches only `--grid-resize-mode` from `larger` to
-`teacher`.
+Every checkpoint and `summary.json` records the complete arguments, teacher
+hash, controller history, stop epoch, and feature aggregation weights. Older
+Ours runs remain traceable under [`../legacy`](../legacy/README.md) and Git
+commit `ee2dc55`; they are not repeated seeds of this protocol.

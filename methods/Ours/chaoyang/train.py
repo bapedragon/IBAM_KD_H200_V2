@@ -15,9 +15,9 @@ from methods.Ours.core import cli_main
 
 
 PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "chaoyang_deit_ti_ours_draftgrid_algbase_v3"),
+    ("--protocol-name", "chaoyang_deit_ti_ours_researcher_sync_v1"),
     ("--student-epochs", "300"),
-    ("--batch-size", "128"),
+    ("--batch-size", "64"),
     ("--lr", "0.0005"),
     ("--min-lr", "0.000005"),
     ("--weight-decay", "0.05"),
@@ -33,7 +33,8 @@ PROTOCOL_DEFAULTS = (
     ("--beta-on", "2.5"),
     ("--alg-threshold", "-0.02"),
     ("--alg-smoothing-window", "50"),
-    ("--grid-resize-mode", "teacher"),
+    ("--alg-warmup-epochs", "20"),
+    ("--grid-resize-mode", "larger"),
     ("--eval-resize-mode", "direct"),
 )
 

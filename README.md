@@ -80,14 +80,13 @@ tables are recorded in [`results/README.md`](results/README.md).
 The V2 student pipeline supports all five generic methods in the draft table:
 `KD -> CRD -> ReviewKD -> MGD -> OFA`. Every method reuses the selected fixed
 teacher hash for its dataset while training a scratch DeiT-Ti at 224 x 224.
-The original `ALG` baseline is now independently integrated from the
-published ALG equations and the public LG feature path. The provided `Ours`
-model is also integrated with the exact documented ALG
-on/off beta controller. New table-targeted Ours runs follow V3's
-teacher-resolution rule: the DeiT grids are bilinearly resampled to the fixed
-ResNet56 stage grids `32 x 32`, `16 x 16`, and `8 x 8`. The supplied source's
-larger-grid behavior remains available only as an explicitly labeled
-compatibility mode; its results are not mixed with paper-grid results.
+The original `ALG` baseline is independently integrated from the published
+ALG equations and public LG feature path. Ours is synchronized to the later
+researcher code: all 12 student blocks are aggregated, both teacher/student
+features are resized to the larger stage grid (`32/16/14`), and the complete
+`0.5*alignment + 0.5*fusion` loss drives the researcher's adaptive controller.
+The earlier `32/16/8` and alignment-only-controller runs remain archived
+diagnostics and are not mixed with the synchronized results.
 
 The teacher input is derived from the same augmented student tensor using
 bilinear resize to 32 x 32, so crop and flip geometry cannot drift between the

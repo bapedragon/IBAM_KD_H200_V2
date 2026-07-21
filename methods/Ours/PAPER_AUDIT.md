@@ -16,16 +16,14 @@ The dataset-specific base protocols are intentionally documented elsewhere.
 | Fusion | channel attention, deformable spatial attention, and grid-preserving convolutional cross-attention |
 | Kernels | deformable spatial kernel `5x5`; Q/K/V projections `1x1` |
 | Adaptive beta | ALG `beta=2.5`, `tau=-0.02`, 50-epoch loss smoothing/differentiation and 50-epoch derivative smoothing |
-| Stop rule | guide while the twice-smoothed derivative is `< tau`; the crossing epoch is the last guided epoch, then CE only |
+| Stop rule in researcher code | after a 20-epoch controller warm-up, stop when the computed smoothed derivative is strictly `> tau`; the crossing epoch is the last guided epoch, then CE only |
 | Teacher/inference | teacher frozen during training; teacher and Ours modules removed at inference |
 
-The ALG derivative controller follows Eqs. (10)-(19). For epoch `e<=50`, it
-uses the current LG loss versus the mean of previous available losses. For
-`e>50`, it uses the current loss versus the loss 50 epochs earlier. Those raw
-derivatives are averaged over up to 50 epochs before applying `tau`. Because
-the published expression is undefined at epoch 1, the implementation starts
-active and arms its permanent stop only after the smoothed derivative first
-falls below `tau`; the next return to `tau` or above is the last guided epoch.
+The active controller ports the three branches shown in the researcher code:
+`e<=50`, `50<e<100`, and `e>=100`. It records the complete combined feature
+loss per epoch, does not evaluate the stop rule before epoch 20, and adds no
+descent-first guard. These implementation details are stronger evidence than
+the earlier boundary assumptions made from the equations alone.
 
 ## Fixed by the supplied Ours model source, not stated numerically in V3
 
@@ -49,20 +47,18 @@ source-faithful, but the repository file is not a byte-for-byte copy of the
 pycls wrapper.
 
 There is one paper/source inconsistency. V3 says to resample the student to the
-teacher resolution, while the supplied source resizes both tensors to the
-larger grid. CIFAR-100 and Flowers currently retain the supplied-source
-`--grid-resize-mode larger` path (`32/16/14`). The current Chaoyang rerun gives
-precedence to V3 and uses `--grid-resize-mode teacher` (`32/16/8`). This rerun
-keeps the audited ALG base fixed, so the last target grid is its only changed
-training variable. The active mode and all three target shapes are printed and
-stored in every run.
+teacher resolution, while both the originally supplied source and the later
+researcher screenshot resize both tensors to the larger grid. The active
+researcher-synchronized implementation therefore uses `--grid-resize-mode
+larger` (`32/16/14`) for Chaoyang. The former paper-wording `32/16/8` run is
+retained only as a historical diagnostic.
 
 ## Ours-specific reproduction choices not fixed by either paper
 
 | Choice | Repository decision | Reason |
 |---|---|---|
-| Signal observed by ALG | epoch-average `L_align` | It is the direct CNN/ViT distance most closely corresponding to ALG's `L_LG`; V3 does not say whether to observe align, fuse, or the combined loss. |
-| Initial derivative boundary | initialize epoch 1 to `0`; arm the one-way stop only after the smoothed derivative first falls below `tau` | ALG's published early-epoch expression has no previous value at epoch 1. The descent-first guard prevents a noisy initial increase from being misclassified as convergence; it does not impose a fixed stop epoch. |
+| Signal observed by ALG | epoch-average `0.5*L_align + 0.5*L_fuse` | Confirmed by the researcher trainer: the complete `loss_inter` returned by `guidance_loss()` is passed to the controller. |
+| Initial derivative boundary | no stop before controller warm-up 20; afterward use the researcher's strict `smoothed_derivative > tau` test with no descent guard | Confirmed by the researcher controller screenshots. |
 | Missing pycls config | feature guidance on, linear projection, logit KD off | The config file was not delivered; V3 Eq. (4) contains CE plus the two feature losses and no logit-KL term. |
 | Teacher input size | fixed V2 32 x 32 teachers for all datasets | ALG confirms the low-resolution CNN path; the same fixed teacher is reused across compared methods. |
 | Evaluation geometry | direct resize of the full image to `224 x 224`, then shared-view bilinear downsampling to `32 x 32` for the teacher | This follows the supplied/public locality-guidance loader. |
@@ -79,9 +75,11 @@ result compatibility.
 ## Shared experiment choices (not Ours-specific)
 
 Epochs and best-checkpoint selection belong to the shared comparison protocol.
-Chaoyang Ours is locked to the audited standalone ALG base (300 epochs, batch
-128, 20-epoch warm-up, FP32, seed 1, public LG augmentation/regularization),
-so the paired ALG/Ours comparison changes only the feature module/objective.
+The researcher-synchronized Chaoyang Ours profile uses 300 epochs, train batch
+64, eval batch 200, a 20-epoch LR warm-up, FP32, seed 1, and public LG
+augmentation/regularization. Batch 64 comes from the supplied researcher
+configuration; changing it to 128 is a separate protocol rather than a repeat
+seed.
 CIFAR-100 and Flowers-102 retain their earlier profiles until separately
 audited and must not be described as using this exact Chaoyang ALG base.
 
@@ -90,7 +88,8 @@ audited and must not be described as using this exact Chaoyang ALG base.
 1. Run the dataset wrapper with `--timing-run`.
 2. Confirm dataset/split, finite loss, exact ALG parameters, epoch timing,
    `[TEACHER_NATIVE_AUDIT]`, the diagnostic `[TEACHER_SHARED_VIEW]`, and the
-   wrapper-specific target grids. Chaoyang must print `32/16/8`.
+   wrapper-specific target grids. Chaoyang must print `32/16/14` and
+   `metric=L_feature_combined`.
 3. If the teacher audit passes, run the dataset-specific full command.
 4. Keep the generated `summary.json`, which records the complete loss,
    derivative, beta, stop-epoch, and aggregation-weight histories.

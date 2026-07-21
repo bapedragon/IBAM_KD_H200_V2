@@ -10,9 +10,9 @@
 - Input/recorded choices: 224 pixels, label smoothing `0.1`, seed `42`
 - Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
 - Grid: supplied-source larger-grid policy, producing targets `32/16/14`
-- Adaptive beta: exact ALG equations with `beta=2.5`, `tau=-0.02`, two
-  50-epoch smoothing stages; `L_align` is the recorded controller signal. The
-  one-way stop is armed only after first observing a derivative below `tau`.
+- Adaptive beta: researcher controller with `beta=2.5`, `tau=-0.02`, window
+  50 and controller warm-up 20. The complete combined feature loss is observed;
+  afterward strict `smoothed_derivative > tau` disables guidance permanently.
 - Working-paper comparison target: `70.31%` Top-1
 
 The fixed Flowers teacher was trained at 32 x 32. The runtime audit verifies
