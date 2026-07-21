@@ -75,12 +75,12 @@ result compatibility.
 
 ## Shared experiment choices (not Ours-specific)
 
-Epochs, batch size/warm-up, common augmentation, normalization, label
-smoothing `0.1`, seed `42`, AMP, and best-checkpoint selection belong to the
-shared comparison protocol. For the explicit comparison with V3, CIFAR-100
-and Chaoyang Ours follow V3's stated 300 epochs, batch 128, and 20-epoch
-warm-up. Flowers-102 still uses the earlier dataset-specific profile and its
-result must not be labeled as a strict reproduction of V3's uniform schedule.
+Epochs and best-checkpoint selection belong to the shared comparison protocol.
+Chaoyang Ours is locked to the audited standalone ALG base (300 epochs, batch
+128, 20-epoch warm-up, FP32, seed 1, public LG augmentation/regularization),
+so the paired ALG/Ours comparison changes only the feature module/objective.
+CIFAR-100 and Flowers-102 retain their earlier profiles until separately
+audited and must not be described as using this exact Chaoyang ALG base.
 
 ## Full-run gate
 

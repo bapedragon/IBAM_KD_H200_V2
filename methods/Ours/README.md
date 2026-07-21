@@ -83,14 +83,16 @@ strict reproduction of the draft's uniform protocol.
 |---|---:|---:|---|---:|---:|---:|---|
 | CIFAR-100 | 300 | 128 | AdamW | `5e-4` / `0` | `0.05` | 20 | Cosine |
 | Flowers-102 | 200 | 64 | AdamW | `5e-4` / `0` | `0.05` | 5 | Cosine |
-| Chaoyang | 300 | 128 | AdamW | `5e-4` / `0` | `0.05` | 20 | Cosine |
+| Chaoyang | 300 | 128 | AdamW | `5e-4` / `5e-6` | `0.05` | 20 | Cosine |
 
-All use 224-pixel student inputs, label smoothing `0.1`, AMP, seed `42`, no
-external student pretraining, the established dataset splits, and best Top-1
-checkpoint reporting. Augmentation is the repository's common
-`RandomResizedCrop(scale=0.8..1.0) + RandomHorizontalFlip` pipeline. These
-regularization/checkpoint choices are recorded experiment settings, not
-claimed as working-paper Ours specifications.
+CIFAR-100 and Flowers-102 retain the earlier common profile. Chaoyang is now
+locked to the same audited LG/ALG base as the standalone ALG run: FP32, seed
+`1`, label smoothing `0`, drop path `0.1`, warm-up factor `0.001`, ImageNet
+normalization, RandAugment `rand-m9-mstd0.5-inc1`, color jitter `0.4`, random
+erasing `0.25` in pixel mode, bicubic interpolation, and drop-last training.
+This makes the Chaoyang ALG/Ours comparison differ only in the Ours feature
+module and objective. All students start without external pretraining and use
+best Top-1 checkpoint reporting.
 
 ## Fixed V2 teacher and shared image geometry
 
@@ -123,7 +125,7 @@ Conditional full runs after the timing log and teacher audit are accepted:
 ```bash
 python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_sourcegrid_300ep --output-dir /app/output
 python methods/Ours/flowers102/train.py --student-epochs 200 --num-workers 4 --run-name ours_flowers102_deit_ti_sourcegrid_200ep --output-dir /app/output
-python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_sourcegrid_300ep --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_algbase_sourcegrid_300ep_seed1 --output-dir /app/output
 ```
 
 For a manual diagnostic stop epoch, use:

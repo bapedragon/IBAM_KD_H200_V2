@@ -27,6 +27,7 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         self.assertEqual(args.alg_threshold, -0.02)
         self.assertEqual(args.alg_smoothing_window, 50)
         self.assertEqual(args.grid_resize_mode, "larger")
+        self.assertFalse(args.amp)
 
     def test_all_table_wrappers_follow_supplied_source_larger_grid_policy(self) -> None:
         for defaults in (CIFAR_DEFAULTS, FLOWERS_DEFAULTS, CHAOYANG_DEFAULTS):
@@ -60,11 +61,18 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         defaults = defaults_map(CHAOYANG_DEFAULTS)
         self.assertEqual(
             defaults["--protocol-name"],
-            "chaoyang_deit_ti_ours_sourcegrid_v2",
+            "chaoyang_deit_ti_ours_algbase_sourcegrid_v2",
         )
         self.assertEqual(defaults["--student-epochs"], "300")
         self.assertEqual(defaults["--batch-size"], "128")
         self.assertEqual(defaults["--warmup-epochs"], "20")
+        self.assertEqual(defaults["--warmup-factor"], "0.001")
+        self.assertEqual(defaults["--min-lr"], "0.000005")
+        self.assertEqual(defaults["--label-smoothing"], "0.0")
+        self.assertEqual(defaults["--drop-path-rate"], "0.1")
+        self.assertEqual(defaults["--eval-batch-size"], "200")
+        self.assertEqual(defaults["--seed"], "1")
+        self.assertEqual(defaults["--base-protocol"], "lg_official")
         self.assertEqual(defaults["--teacher-image-size"], "32")
         self.assertEqual(defaults["--beta-schedule"], "alg")
         self.assertEqual(defaults["--beta-on"], "2.5")

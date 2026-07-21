@@ -170,6 +170,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timing-run", action="store_true")
     parser.add_argument("--student-epochs", type=int, default=300)
     parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--eval-batch-size", type=int, default=200)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--image-size", type=int, default=224)
     parser.add_argument(
@@ -189,6 +190,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-lr", type=float, default=0.0)
     parser.add_argument("--weight-decay", type=float, default=0.05)
     parser.add_argument("--warmup-epochs", type=int, default=20)
+    parser.add_argument("--warmup-factor", type=float, default=0.001)
     parser.add_argument("--label-smoothing", type=float, default=0.1)
     parser.add_argument(
         "--drop-path-rate",
@@ -255,6 +257,15 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--base-protocol",
+        choices=("common", "lg_official"),
+        default="common",
+        help=(
+            "lg_official reuses the exact public LG/ALG Chaoyang data and LR "
+            "pipeline so Ours differs from ALG only by its feature module/loss."
+        ),
+    )
+    parser.add_argument(
         "--max-teacher-runtime-gap-pp",
         type=float,
         default=5.0,
@@ -273,8 +284,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--deform-kernel-size", type=int, default=5)
     parser.add_argument(
         "--amp",
-        default=True,
+        default=False,
         action=argparse.BooleanOptionalAction,
+        help="LG/ALG public configuration uses FP32; enable only as a deviation.",
     )
     return parser.parse_args()
 
@@ -300,6 +312,7 @@ def finalize_args(args: argparse.Namespace) -> None:
     for field in (
         "student_epochs",
         "batch_size",
+        "eval_batch_size",
         "image_size",
         "smoke_train_samples",
         "smoke_test_samples",
@@ -310,6 +323,7 @@ def finalize_args(args: argparse.Namespace) -> None:
         "deform_kernel_size",
         "beta_on",
         "alg_smoothing_window",
+        "warmup_factor",
     ):
         if getattr(args, field) <= 0:
             raise ValueError(f"--{field.replace('_', '-')} must be positive")
@@ -340,6 +354,10 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError("--drop-path-rate must be in [0, 1)")
     if args.min_lr > args.lr:
         raise ValueError("--min-lr must not exceed --lr")
+    if args.base_protocol == "lg_official" and args.dataset != "chaoyang":
+        raise ValueError(
+            "The audited lg_official loader is currently locked to Chaoyang"
+        )
     if args.image_size != 224:
         raise ValueError("The fixed dataset protocols require --image-size 224")
     if args.teacher_image_size != 32:
@@ -731,6 +749,8 @@ def main() -> None:
     args = parse_args()
     finalize_args(args)
     seed_everything(args.seed)
+    if args.base_protocol == "lg_official":
+        torch.backends.cudnn.benchmark = False
     timm = ensure_timm()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -770,8 +790,16 @@ def main() -> None:
         f"warmup={args.warmup_epochs} "
         f"cosine batch={args.batch_size} image={args.image_size} "
         f"label_smoothing={args.label_smoothing} "
-        f"drop_path={args.drop_path_rate}"
+        f"drop_path={args.drop_path_rate} base={args.base_protocol}"
     )
+    if args.base_protocol == "lg_official":
+        log(
+            f"[ALG_BASE] eval_batch={args.eval_batch_size} "
+            f"warmup_factor={args.warmup_factor} fp32={not amp_enabled} "
+            "color_jitter=0.4 auto_augment=rand-m9-mstd0.5-inc1 "
+            "random_erasing=0.25/pixel/1 interpolation=bicubic "
+            "normalization=ImageNet drop_last_train=True"
+        )
     log(
         f"[INPUT] shared_geometry=True student=224x224({args.dataset} norm) "
         "teacher=bilinear_downsample_to_32x32(ImageNet norm) "
@@ -824,7 +852,12 @@ def main() -> None:
         "heads/reduction/loss reduction follow the supplied source."
     )
 
-    train_loader, test_loader = build_loaders(args, device)
+    if args.base_protocol == "lg_official":
+        from methods.ALG.core import build_alg_loaders
+
+        train_loader, test_loader = build_alg_loaders(args, device, timm)
+    else:
+        train_loader, test_loader = build_loaders(args, device)
     native_teacher_audit_loader = build_native_teacher_audit_loader(args, device)
     teacher, teacher_payload, teacher_spec = load_teacher(
         args.dataset,
@@ -969,13 +1002,26 @@ def main() -> None:
         weight_decay=args.weight_decay,
     )
     scheduler_horizon = args.planned_epochs if args.timing_run else args.student_epochs
-    scheduler, effective_warmup = create_ours_scheduler(
-        optimizer,
-        scheduler_horizon,
-        args.warmup_epochs,
-        args.min_lr,
-        args.lr,
-    )
+    if args.base_protocol == "lg_official":
+        from methods.ALG.core import create_scheduler as create_alg_scheduler
+
+        scheduler = create_alg_scheduler(
+            optimizer,
+            planned_epochs=scheduler_horizon,
+            lr=args.lr,
+            min_lr=args.min_lr,
+            warmup_epochs=args.warmup_epochs,
+            warmup_factor=args.warmup_factor,
+        )
+        effective_warmup = args.warmup_epochs
+    else:
+        scheduler, effective_warmup = create_ours_scheduler(
+            optimizer,
+            scheduler_horizon,
+            args.warmup_epochs,
+            args.min_lr,
+            args.lr,
+        )
     scaler = create_grad_scaler(amp_enabled)
     log(
         f"[STUDENT] optimizer=adamw lr={args.lr} "
@@ -1096,7 +1142,10 @@ def main() -> None:
             f"est_planned={format_duration(average_epoch * args.planned_epochs)} "
             f"elapsed={format_duration(elapsed)}{suffix}"
         )
-        scheduler.step()
+        if args.base_protocol == "lg_official":
+            scheduler.step(epoch)
+        else:
+            scheduler.step()
 
     elapsed = time.time() - training_start
     average_epoch = sum(epoch_times) / len(epoch_times)

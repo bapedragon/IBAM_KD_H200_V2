@@ -15,15 +15,19 @@ from methods.Ours.core import cli_main
 
 
 PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "chaoyang_deit_ti_ours_sourcegrid_v2"),
+    ("--protocol-name", "chaoyang_deit_ti_ours_algbase_sourcegrid_v2"),
     ("--student-epochs", "300"),
     ("--batch-size", "128"),
     ("--lr", "0.0005"),
-    ("--min-lr", "0.0"),
+    ("--min-lr", "0.000005"),
     ("--weight-decay", "0.05"),
     ("--warmup-epochs", "20"),
-    ("--label-smoothing", "0.1"),
-    ("--drop-path-rate", "0.0"),
+    ("--warmup-factor", "0.001"),
+    ("--label-smoothing", "0.0"),
+    ("--drop-path-rate", "0.1"),
+    ("--eval-batch-size", "200"),
+    ("--seed", "1"),
+    ("--base-protocol", "lg_official"),
     ("--teacher-image-size", "32"),
     ("--beta-schedule", "alg"),
     ("--beta-on", "2.5"),

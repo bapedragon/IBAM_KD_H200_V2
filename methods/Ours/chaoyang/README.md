@@ -3,9 +3,11 @@
 - Data: official mounted dataset under `/app/data/chaoyang`
 - Teacher: fixed V2 32 x 32 ResNet56 checkpoint selected by the manifest
 - Student: DeiT-Ti from scratch
-- Working-draft comparison protocol: 300 epochs, batch 128, AdamW `5e-4`,
-  minimum LR `0`, weight decay `0.05`, 20-epoch warm-up, cosine decay
-- Input/recorded choices: 224 pixels, label smoothing `0.1`, seed `42`
+- ALG-matched base protocol: 300 epochs, batch 128, AdamW `5e-4`, minimum LR
+  `5e-6`, weight decay `0.05`, 20-epoch warm-up from `5e-7`, cosine decay
+- Public LG/ALG regularization: FP32, seed `1`, label smoothing `0`, drop path
+  `0.1`, ImageNet normalization, color jitter `0.4`, RandAugment
+  `rand-m9-mstd0.5-inc1`, random erasing `0.25`/pixel, bicubic interpolation
 - Evaluation geometry: direct full-image resize to `224 x 224` (no center
   crop), then shared-view bilinear downsampling to `32 x 32` for the teacher
 - Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
@@ -32,11 +34,11 @@ python methods/Ours/chaoyang/train.py --timing-run --num-workers 4
 Full run only after the timing log and teacher audit pass:
 
 ```bash
-python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_sourcegrid_300ep_seed42 --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_algbase_sourcegrid_300ep_seed1 --output-dir /app/output
 ```
 
 Raw measured accuracy is retained; no teacher-gap correction is applied by
-code. This wrapper intentionally follows the current working draft's uniform
-student statement (`300` epochs, batch `128`, 20-epoch warm-up) so its result
-can be compared with the draft's `86.35%` Chaoyang cell. See
+code. This wrapper uses the standalone ALG run's complete base configuration,
+then replaces the ALG-only feature objective with the delivered Ours module
+and the paper/researcher-confirmed 0.5/0.5 objective. See
 [`../PAPER_AUDIT.md`](../PAPER_AUDIT.md).
