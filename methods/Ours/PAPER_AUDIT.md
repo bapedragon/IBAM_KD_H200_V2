@@ -47,17 +47,12 @@ pycls wrapper.
 
 There is one paper/source inconsistency. V3 says to resample the student to the
 teacher resolution, while the supplied source resizes both tensors to the
-larger grid. The reporting policy now treats V3 as authoritative:
-`--grid-resize-mode teacher` is the default for all table-targeted runs. With
-the committed 32-pixel ResNet56, its three raw stages are `32 x 32`,
-`16 x 16`, and `8 x 8`. V3 does not print those three numbers directly; they
-follow from applying its teacher-resolution sentence to the verified teacher
-architecture. `--grid-resize-mode larger` remains only for reproducing the
-delivered source behavior and must be labeled separately.
-
-The earlier CIFAR-100 checkpoint with targets `32/16/14` is retained as a
-historical source-grid run. It is not interchangeable with, and must not fill,
-a paper-grid table cell.
+larger grid. The current reproduction prioritizes the delivered code and uses
+`--grid-resize-mode larger` for all Ours wrappers. With teacher grids
+`32/16/8` and the DeiT grid `14`, the executed targets are `32/16/14`.
+`--grid-resize-mode teacher` remains available only for the earlier
+paper-wording diagnostic and must be labeled separately. The active grid mode
+and all three target shapes are printed and stored in every run.
 
 ## Ours-specific reproduction choices not fixed by either paper
 
@@ -92,7 +87,7 @@ result must not be labeled as a strict reproduction of V3's uniform schedule.
 1. Run the dataset wrapper with `--timing-run`.
 2. Confirm dataset/split, finite loss, exact ALG parameters, epoch timing,
    `[TEACHER_NATIVE_AUDIT]`, the diagnostic `[TEACHER_SHARED_VIEW]`, and
-   paper-grid targets `32/16/8`.
+   source-grid targets `32/16/14`.
 3. If the teacher audit passes, run the dataset-specific full command.
 4. Keep the generated `summary.json`, which records the complete loss,
    derivative, beta, stop-epoch, and aggregation-weight histories.

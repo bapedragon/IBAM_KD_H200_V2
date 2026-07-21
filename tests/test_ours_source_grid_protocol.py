@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from torchvision import transforms
 
 from methods.KD.core import STUDENT_IMAGE_SIZE, build_eval_transform
 from methods.Ours.chaoyang.train import PROTOCOL_DEFAULTS as CHAOYANG_DEFAULTS
 from methods.Ours.cifar100.train import PROTOCOL_DEFAULTS as CIFAR_DEFAULTS
+from methods.Ours.core import parse_args
 from methods.Ours.flowers102.train import PROTOCOL_DEFAULTS as FLOWERS_DEFAULTS
 
 
@@ -14,12 +16,23 @@ def defaults_map(defaults: tuple[tuple[str, str], ...]) -> dict[str, str]:
     return dict(defaults)
 
 
-class OursPaperGridProtocolTest(unittest.TestCase):
-    def test_all_table_wrappers_follow_v3_teacher_grid_policy(self) -> None:
+class OursSourceGridProtocolTest(unittest.TestCase):
+    def test_shared_ours_defaults_match_loss_and_grid_contract(self) -> None:
+        with patch("sys.argv", ["ours"]):
+            args = parse_args()
+        self.assertEqual(args.student_epochs, 300)
+        self.assertEqual(args.fusion_ratio, 0.5)
+        self.assertEqual(args.beta_schedule, "alg")
+        self.assertEqual(args.beta_on, 2.5)
+        self.assertEqual(args.alg_threshold, -0.02)
+        self.assertEqual(args.alg_smoothing_window, 50)
+        self.assertEqual(args.grid_resize_mode, "larger")
+
+    def test_all_table_wrappers_follow_supplied_source_larger_grid_policy(self) -> None:
         for defaults in (CIFAR_DEFAULTS, FLOWERS_DEFAULTS, CHAOYANG_DEFAULTS):
             with self.subTest(protocol=defaults_map(defaults)["--protocol-name"]):
                 self.assertEqual(
-                    defaults_map(defaults)["--grid-resize-mode"], "teacher"
+                    defaults_map(defaults)["--grid-resize-mode"], "larger"
                 )
                 self.assertEqual(
                     defaults_map(defaults)["--eval-resize-mode"], "direct"
@@ -47,7 +60,7 @@ class OursPaperGridProtocolTest(unittest.TestCase):
         defaults = defaults_map(CHAOYANG_DEFAULTS)
         self.assertEqual(
             defaults["--protocol-name"],
-            "chaoyang_deit_ti_ours_draftmatched_v3",
+            "chaoyang_deit_ti_ours_sourcegrid_v2",
         )
         self.assertEqual(defaults["--student-epochs"], "300")
         self.assertEqual(defaults["--batch-size"], "128")
@@ -57,7 +70,7 @@ class OursPaperGridProtocolTest(unittest.TestCase):
         self.assertEqual(defaults["--beta-on"], "2.5")
         self.assertEqual(defaults["--alg-threshold"], "-0.02")
         self.assertEqual(defaults["--alg-smoothing-window"], "50")
-        self.assertEqual(defaults["--grid-resize-mode"], "teacher")
+        self.assertEqual(defaults["--grid-resize-mode"], "larger")
         self.assertEqual(defaults["--eval-resize-mode"], "direct")
 
 

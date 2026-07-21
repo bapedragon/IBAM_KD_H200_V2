@@ -247,11 +247,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--grid-resize-mode",
         choices=("teacher", "larger"),
-        default="teacher",
+        default="larger",
         help=(
-            "teacher follows V3 by resampling the student to each teacher-stage "
-            "grid; larger preserves the supplied model snippet's "
-            "max(student, teacher) compatibility rule."
+            "larger preserves the supplied model snippet's max(student, teacher) "
+            "rule; teacher is retained only for the earlier paper-wording "
+            "diagnostic."
         ),
     )
     parser.add_argument(
@@ -808,9 +808,9 @@ def main() -> None:
         )
     log(f"[SOURCE] provided_snippet_sha256={SOURCE_SNIPPET_SHA256}")
     grid_evidence = (
-        "V3 teacher-resolution policy"
+        "earlier V3 teacher-resolution diagnostic"
         if args.grid_resize_mode == "teacher"
-        else "supplied-source larger-grid compatibility policy"
+        else "supplied-source larger-grid policy"
     )
     log(
         "[REPRO_STATUS] Paper-confirmed: Eq.(4), lambda=0.5, ALG beta=2.5, "

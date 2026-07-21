@@ -9,9 +9,9 @@
 - Evaluation geometry: direct full-image resize to `224 x 224` (no center
   crop), then shared-view bilinear downsampling to `32 x 32` for the teacher
 - Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
-- Grid: V3 teacher-resolution policy. The student feature is bilinearly
-  resampled onto the verified teacher stages `32 x 32`, `16 x 16`, and
-  `8 x 8`; the supplied-source `14 x 14` final-stage rule is not used.
+- Grid: supplied-source larger-grid policy. Teacher/student tensors are
+  bilinearly resized to the larger grid, producing `32 x 32`, `16 x 16`, and
+  `14 x 14` targets.
 - Adaptive beta: exact ALG equations with `beta=2.5`, `tau=-0.02`, two
   50-epoch smoothing stages; `L_align` is the recorded controller signal
 - Working-paper comparison target: `86.35%` Top-1
@@ -26,13 +26,13 @@ is not compared as if it were the native checkpoint recipe.
 Timing run:
 
 ```bash
-python methods/Ours/chaoyang/train.py --timing-run --grid-resize-mode teacher --num-workers 4
+python methods/Ours/chaoyang/train.py --timing-run --num-workers 4
 ```
 
 Full run only after the timing log and teacher audit pass:
 
 ```bash
-python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --grid-resize-mode teacher --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_300ep_seed42 --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_sourcegrid_300ep_seed42 --output-dir /app/output
 ```
 
 Raw measured accuracy is retained; no teacher-gap correction is applied by

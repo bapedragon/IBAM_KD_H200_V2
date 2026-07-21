@@ -8,8 +8,10 @@ for the evidence matrix.
 
 `ours.py` is a standalone PyTorch port rather than a byte-for-byte copy of the
 original pycls wrapper. Its aggregation, projection, attention blocks, and MSE
-calculation preserve the supplied implementation. Grid sizing is an explicit
-runtime policy because the supplied source and V3 disagree.
+calculation preserve the supplied implementation. Grid sizing now follows the
+delivered source's larger-grid rule. The earlier teacher-grid interpretation
+remains available only as a diagnostic because the source and V3 wording are
+not identical.
 The unavailable pycls configuration is fixed to feature guidance enabled,
 linear feature projection, and optional logit KD disabled, which matches V3
 Eq. (4). The original source SHA-256 is recorded in every run.
@@ -32,25 +34,25 @@ The previous extra fixed multiplication
 `CE + 1.0 * 2.5 * (...)` has been removed. `beta=2.5` is represented once as
 `beta(e)`, following the ALG paper cited by V3.
 
-## Feature path and paper-grid decision
+## Feature path and source-grid decision
 
 - frozen ResNet56 teacher stages 1/2/3
 - patch-grid outputs from all 12 DeiT-Ti blocks
 - one learned convex 12-block mixture per CNN stage
 - stage-specific `1 x 1` channel projection
-- bilinear resizing of the student representation to the teacher-stage grid,
-  following V3
+- bilinear resizing of both representations to the larger teacher/student
+  grid at each stage, following the supplied Ours source
 - channel attention and `5 x 5` deformable spatial attention
 - four-head convolutional cross-attention with `1 x 1` Q/K/V
 - teacher and Ours module discarded at inference
 
-V3 explicitly says that the student representation reaches the teacher grid
-after bilinear resampling. The fixed ResNet56 stages are verified as
-`32 x 32`, `16 x 16`, and `8 x 8`; therefore table-targeted runs use
-`--grid-resize-mode teacher`. The supplied source instead takes the larger of
-the student and teacher grids, producing `32/16/14`. That behavior is retained
-as `--grid-resize-mode larger` only for compatibility checks. Results from the
-two modes must not be mixed.
+V3 describes resampling the student representation to the teacher grid, while
+the supplied source explicitly resizes both tensors to the larger grid. The
+current reproduction prioritizes the delivered executable behavior and uses
+`--grid-resize-mode larger`. With teacher stages `32/16/8` and a DeiT patch
+grid of `14`, the executed targets are `32/16/14`. The earlier
+`--grid-resize-mode teacher` (`32/16/8`) path remains only for controlled
+diagnostics; results from the two policies must not be mixed.
 
 ## Adaptive beta from ALG
 
@@ -119,9 +121,9 @@ python methods/Ours/chaoyang/train.py --timing-run --num-workers 4
 Conditional full runs after the timing log and teacher audit are accepted:
 
 ```bash
-python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_papergrid_300ep --output-dir /app/output
-python methods/Ours/flowers102/train.py --student-epochs 200 --num-workers 4 --run-name ours_flowers102_deit_ti_papergrid_200ep --output-dir /app/output
-python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_papergrid_300ep --output-dir /app/output
+python methods/Ours/cifar100/train.py --student-epochs 300 --num-workers 4 --run-name ours_cifar100_deit_ti_sourcegrid_300ep --output-dir /app/output
+python methods/Ours/flowers102/train.py --student-epochs 200 --num-workers 4 --run-name ours_flowers102_deit_ti_sourcegrid_200ep --output-dir /app/output
+python methods/Ours/chaoyang/train.py --student-epochs 300 --batch-size 128 --warmup-epochs 20 --num-workers 4 --run-name ours_chaoyang_deit_ti_sourcegrid_300ep --output-dir /app/output
 ```
 
 For a manual diagnostic stop epoch, use:
