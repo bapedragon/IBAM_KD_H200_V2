@@ -4,7 +4,9 @@ This directory contains the V2 ResNet56-to-DeiT-Ti student pipelines for the
 five generic KD baselines in the draft table: KD, CRD, ReviewKD, MGD, and OFA.
 The paper's `Ours` implementation is maintained separately under
 [`Ours`](Ours) because its ALG-controlled grid-preserving feature objective is
-not a generic KD baseline.
+not a generic KD baseline. The original [`ALG`](ALG) baseline is also kept in
+its own directory: it uses public LG feature matching and the published ALG
+on/off controller, rather than the repository's Ours fusion module.
 Every method uses the same fixed teacher checkpoint and the same base student
 protocol for a given dataset. Only the documented transfer operator and its
 method-specific coefficients may differ.
@@ -46,6 +48,7 @@ teacher. Crop and flip geometry therefore remains shared across both branches.
 | ReviewKD | multi-level features | ResNet 32/16/8 grids bilinearly resized to DeiT 14x14 grid |
 | MGD | masked reconstruction | ResNet stage-3 8x8 bilinearly resized to 14x14; DeiT block-11 tokens; `192 -> 64` alignment |
 | OFA | projected class logits | DeiT blocks 1/3/9/11 and official-behavior transformer projectors |
+| ALG | adaptive LG features | public LG blocks 0/6/11, stages 0/1/2, larger-grid matching, ALG stop rule |
 | Ours | adaptive grid-preserving features | all 12 DeiT blocks, ResNet stages 1/2/3, V3 teacher grids `32/16/8`, ALG beta schedule |
 
 ## Historical CIFAR-100 Ours + CRD + MGD timing

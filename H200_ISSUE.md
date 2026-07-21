@@ -389,3 +389,52 @@ The comparison reference is `86.35%` Top-1. Report the raw measured best
 Top-1; the code does not apply a teacher-gap correction. This request follows
 the current draft's explicit uniform student schedule rather than the earlier
 Chaoyang `100/64/5` dataset-specific profile.
+
+## 15. Chaoyang ALG paper-matched run
+
+This is the original ALG baseline, not Ours. It uses the public LG feature
+matching path and ALG Eqs. (10)-(19). The paper comparison targets are
+`83.50%` Top-1 and guidance stop epoch `108`.
+
+### 15.1 Full-data two-epoch timing run (submit first)
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG timing run` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --timing-run --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+Require these markers before the full submission:
+
+```text
+[MODE] ... timing_run=True ... planned_epochs=300
+[PROTOCOL] ... warmup=20 warmup_factor=0.001 ... batch=128 ...
+[AUGMENT] ... auto_augment=rand-m9-mstd0.5-inc1 ...
+[ALG] ... beta=2.5 tau=-0.02 smoothing_window=50
+[LG] ... student_blocks=(0,6,11) ... grid=larger_of_teacher_student ...
+[FEATURE_CHECK] ... aligned=[(2, 16, 32, 32), (2, 32, 16, 16), (2, 64, 14, 14)] ...
+[DONE] ALG training completed successfully; resources may be released.
+```
+
+Also verify the official split counts `4,021/2,139`, fixed teacher Top-1
+approximately `76.72%`, and a passing native teacher audit.
+
+### 15.2 Full 300-epoch run
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG 300-epoch training` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --output-dir /app/output --run-name alg_chaoyang_deit_ti_300ep_seed1 --num-workers 4` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+The full run saves independent `student_best.pt`, `student_latest.pt`, and
+`summary.json` files. The final log prints measured Top-1 versus `83.50%` and
+the observed guidance stop epoch versus `108`; no correction ratio is applied.

@@ -41,6 +41,7 @@ IBAM_KD_H200_V2/
 │   ├── CRD/
 │   ├── ReviewKD/
 │   ├── MGD/
+│   ├── ALG/
 │   ├── Ours/
 │   └── OFA/
 ├── results/
@@ -79,7 +80,9 @@ tables are recorded in [`results/README.md`](results/README.md).
 The V2 student pipeline supports all five generic methods in the draft table:
 `KD -> CRD -> ReviewKD -> MGD -> OFA`. Every method reuses the selected fixed
 teacher hash for its dataset while training a scratch DeiT-Ti at 224 x 224.
-The provided `Ours` model is also integrated with the exact documented ALG
+The original `ALG` baseline is now independently integrated from the
+published ALG equations and the public LG feature path. The provided `Ours`
+model is also integrated with the exact documented ALG
 on/off beta controller. New table-targeted Ours runs follow V3's
 teacher-resolution rule: the DeiT grids are bilinearly resampled to the fixed
 ResNet56 stage grids `32 x 32`, `16 x 16`, and `8 x 8`. The supplied source's
@@ -91,6 +94,12 @@ bilinear resize to 32 x 32, so crop and flip geometry cannot drift between the
 two branches. The teacher and student normalizations are applied separately.
 Spatial feature methods bilinearly match the CNN feature grid to the DeiT
 14x14 patch grid where required.
+
+The Chaoyang ALG reproduction is deliberately source-specific rather than
+sharing the generic-KD data recipe: 300 epochs, batch 128, 20-epoch warm-up
+from factor 0.001, cosine `5e-4 -> 5e-6`, drop path 0.1, official LG strong
+augmentation, FP32, and seed 1. See [`methods/ALG`](methods/ALG) for the full
+audit and the paper targets `83.50%` Top-1 / stop epoch `108`.
 
 Run the full-data two-epoch timing sequence first. Flowers and Chaoyang can be
 submitted as separate Issues in parallel:

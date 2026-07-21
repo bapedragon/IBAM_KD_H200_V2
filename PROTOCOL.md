@@ -230,3 +230,37 @@ The H200 script resolves one nested extraction directory when present and
 requires the exact official per-class counts before any optimizer step. It
 writes atomic best/latest/closest checkpoints, metrics, config, summary, and
 SHA-256 hashes.
+
+## Chaoyang Adaptive Locality Guidance (ALG)
+
+ALG is recorded separately from both generic KD and Ours. It retains the
+public LG feature objective and uses the adaptive stop rule in ALG
+Eqs. (10)-(19).
+
+| Item | Value | Source |
+|---|---:|---|
+| Student / initialization | DeiT-Ti / scratch | ALG paper, LG config |
+| Student / teacher input | 224 / 32 | ALG paper, LG config |
+| Epochs / train batch | 300 / 128 | ALG paper, LG config |
+| Optimizer | AdamW | ALG paper |
+| LR / minimum LR | `5e-4` / `5e-6` | ALG paper, LG config |
+| Weight decay | `0.05` | ALG paper |
+| Warm-up | 20 epochs, factor `0.001` | ALG paper, LG config |
+| Drop path | `0.1` | LG DeiT-Ti config |
+| Label smoothing / Mixup / CutMix | `0` / off / off | LG defaults |
+| FP mode / seed | FP32 / `1` | LG defaults |
+| Teacher stages | `[0,1,2]` | LG config |
+| Student blocks | `[0,6,11]` | LG config |
+| Feature operator | 1x1 projection, larger-grid bilinear resize, summed MSE | LG code |
+| Beta / threshold / windows | `2.5` / `-0.02` / `50,50` | ALG paper |
+| Paper target / stop epoch | `83.50%` / `108` | ALG Table II |
+
+Strong augmentation is the public LG path: color-jitter argument `0.4`,
+RandAugment `rand-m9-mstd0.5-inc1`, random erasing `0.25` pixel mode,
+bicubic interpolation, and ImageNet normalization. Evaluation directly
+resizes the complete image to 224 x 224.
+
+The remaining reproduction boundaries are the newer timm/PyTorch environment,
+the local fixed teacher (`76.72%` versus the original LG teacher's `78.12%`),
+the epoch-1 derivative initialization, and best-checkpoint reporting. They are
+saved in every ALG checkpoint and summary.
