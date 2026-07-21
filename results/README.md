@@ -6,13 +6,20 @@ student runs. Raw Pod output folders contained repeated batch wrappers and both
 
 ```text
 results/
-├── <dataset>/
-│   └── <method>/
-│       ├── run_summary.json
-│       └── student_deit_ti_best_top1-XX.XX.pt
-├── logs/
+├── KD/{cifar100,flowers102,chaoyang}/
+├── CRD/{cifar100,flowers102,chaoyang}/
+├── ReviewKD/{flowers102,chaoyang}/
+├── MGD/{flowers102,chaoyang}/
+├── OFA/{flowers102,chaoyang}/
+├── Ours/cifar100/
+├── run_logs/
 └── CHECKSUMS.sha256
 ```
+
+Each completed method/dataset folder contains `run_summary.json` and the
+selected `student_deit_ti_best_top1-XX.XX.pt` checkpoint. Account names and
+H200 build numbers are kept only under `run_logs`; they do not determine
+checkpoint placement.
 
 Only the selected best checkpoint is committed. The original downloaded
 outputs retain `student_latest.pt`; its exact final-epoch accuracy is also
@@ -74,9 +81,9 @@ Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
 
 ## Source runs
 
-- `logs/h200_build-450_combined-generic-kd.log`: Chaoyang five methods,
+- `run_logs/h200_build-450_combined-generic-kd.log`: Chaoyang five methods,
   Flowers-102 five methods, then CIFAR-100 KD.
-- `logs/h200_build-452_cifar100-ours-crd.log`: CIFAR-100 Ours and CRD.
+- `run_logs/h200_build-452_cifar100-ours-crd.log`: CIFAR-100 Ours and CRD.
 
 Generic methods use the CNN-to-ViT adapters documented in each method
 directory. They should not be described as unmodified original CNN-to-CNN

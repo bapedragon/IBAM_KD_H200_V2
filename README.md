@@ -46,10 +46,13 @@ IBAM_KD_H200_V2/
 ├── results/
 │   ├── README.md
 │   ├── CHECKSUMS.sha256
-│   ├── cifar100/
-│   ├── flowers102/
-│   ├── chaoyang/
-│   └── logs/
+│   ├── KD/
+│   ├── CRD/
+│   ├── ReviewKD/
+│   ├── MGD/
+│   ├── OFA/
+│   ├── Ours/
+│   └── run_logs/
 └── teachers/
     ├── checkpoints/
     │   ├── cifar100/
