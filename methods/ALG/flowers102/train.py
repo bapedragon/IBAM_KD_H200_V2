@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Ours on Flowers-102."""
+"""Run researcher-synchronized ALG on Flowers-102."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from methods.Ours.core import cli_main
+from methods.ALG.core import cli_main
 
 
 PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "flowers102_deit_ti_ours_researcher_sync_v1"),
+    ("--protocol-name", "flowers102_deit_ti_alg_researcher_sync_v1"),
     ("--student-epochs", "300"),
     ("--batch-size", "64"),
     ("--eval-batch-size", "200"),
@@ -26,16 +26,14 @@ PROTOCOL_DEFAULTS = (
     ("--warmup-factor", "0.001"),
     ("--label-smoothing", "0.0"),
     ("--drop-path-rate", "0.1"),
-    ("--seed", "1"),
-    ("--base-protocol", "lg_official"),
     ("--teacher-image-size", "32"),
-    ("--beta-schedule", "alg"),
-    ("--beta-on", "2.5"),
+    ("--beta", "2.5"),
     ("--alg-threshold", "-0.02"),
     ("--alg-smoothing-window", "50"),
     ("--alg-warmup-epochs", "20"),
-    ("--grid-resize-mode", "larger"),
+    ("--base-protocol", "lg_official"),
     ("--eval-resize-mode", "direct"),
+    ("--seed", "1"),
 )
 
 

@@ -6,7 +6,7 @@ matching objective and turns that objective off automatically when the
 researcher-supplied controller's smoothed LG-loss derivative crosses its
 threshold.
 
-## Chaoyang target
+## Dataset targets
 
 The ALG paper's Table II reports the following DeiT results on Chaoyang:
 
@@ -20,6 +20,11 @@ The local run reports both its Top-1 gap to `83.50%` and its observed stop-epoch
 gap to `108`. The repository's fixed Chaoyang ResNet56 reaches `76.72%`, while
 the original LG paper reports `78.12%` for its guidance model. Therefore this
 is a carefully matched reproduction check, not a guaranteed bit-exact result.
+
+Flowers-102 uses the same researcher-sync base and controller, the official
+`train+val` / `test` split, and the working-paper references Vanilla `50.06%`,
+LG `67.02%`, and ALG `68.54%`. Its dedicated entry point is
+[`flowers102/train.py`](flowers102/train.py).
 
 ## Exact method path
 

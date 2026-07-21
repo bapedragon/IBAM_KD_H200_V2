@@ -113,6 +113,36 @@ class OursSourceGridProtocolTest(unittest.TestCase):
         self.assertEqual(defaults["--grid-resize-mode"], "larger")
         self.assertEqual(defaults["--eval-resize-mode"], "direct")
 
+    def test_flowers102_researcher_sync_protocol_is_locked(self) -> None:
+        defaults = defaults_map(FLOWERS_DEFAULTS)
+        self.assertEqual(
+            defaults["--protocol-name"],
+            "flowers102_deit_ti_ours_researcher_sync_v1",
+        )
+        for option, value in (
+            ("--student-epochs", "300"),
+            ("--batch-size", "64"),
+            ("--eval-batch-size", "200"),
+            ("--lr", "0.0005"),
+            ("--min-lr", "0.000005"),
+            ("--weight-decay", "0.05"),
+            ("--warmup-epochs", "20"),
+            ("--warmup-factor", "0.001"),
+            ("--label-smoothing", "0.0"),
+            ("--drop-path-rate", "0.1"),
+            ("--seed", "1"),
+            ("--base-protocol", "lg_official"),
+            ("--teacher-image-size", "32"),
+            ("--beta-schedule", "alg"),
+            ("--beta-on", "2.5"),
+            ("--alg-threshold", "-0.02"),
+            ("--alg-smoothing-window", "50"),
+            ("--alg-warmup-epochs", "20"),
+            ("--grid-resize-mode", "larger"),
+            ("--eval-resize-mode", "direct"),
+        ):
+            self.assertEqual(defaults[option], value, option)
+
 
 if __name__ == "__main__":
     unittest.main()

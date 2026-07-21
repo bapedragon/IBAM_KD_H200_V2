@@ -214,6 +214,46 @@ in saved configs as `*_300ep_epoch_only_v1`.
 Measured H200 averages predict `3h 41m 30s` for all five Chaoyang runs and
 `4h 36m 48s` for all five Flowers runs, totaling `8h 18m 18s`.
 
+## Researcher-synchronized Ours and ALG reruns
+
+The locality-guidance reruns are a separate protocol family from the generic
+KD epoch-only override above. They reproduce the configuration and controller
+shared by the researcher: the public LG data path and model defaults, plus the
+supplied ALG controller. The three currently scheduled runs are Ours on
+CIFAR-100, Ours on Flowers-102, and ALG on Flowers-102.
+
+| Item | Researcher-sync value |
+|---|---:|
+| Student / initialization | DeiT-Ti / scratch |
+| Student / teacher input | 224 / 32 |
+| Epochs | 300 |
+| Train / evaluation batch | 64 / 200 |
+| Optimizer | AdamW |
+| Initial / minimum LR | `5e-4` / `5e-6` |
+| LR schedule | cosine |
+| Warm-up | 20 epochs, factor `0.001` |
+| Weight decay | `0.05` |
+| Label smoothing | `0` |
+| Drop path | `0.1` |
+| Mixed precision | disabled (FP32) |
+| Seed | `1` |
+| Teacher / student feature indexes | `[0,1,2]` / `[0,6,11]` |
+| Feature resize | both tensors to the larger spatial grid, bilinear |
+| ALG controller | beta `2.5`, threshold `-0.02`, smoothing window `50`, warm-up `20` |
+| Evaluation | direct resize to 224 |
+
+The common items above are identical for Ours and ALG. Their objectives remain
+different: ALG applies the public LG intermediate loss while guidance is
+active; Ours applies the supplied cross-attention/fusion objective with its
+documented `0.5` direct-alignment plus `0.5` fused-feature combination under
+the same controller. Consequently these runs are protocol-matched comparisons,
+not identical methods.
+
+Historical Flowers generic results (200 epochs, seed 42) and Chaoyang generic
+results (100 epochs, seed 42) remain under provenance-rich `_historical`
+filenames in `results/`. Neither this researcher-sync run nor the generic
+300-epoch reruns overwrite those files.
+
 ## Chaoyang locked protocol
 
 ALG explicitly identifies the guidance teacher as ResNet56 trained from

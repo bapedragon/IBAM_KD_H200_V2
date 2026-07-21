@@ -416,11 +416,12 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError("--min-lr must not exceed --lr")
     if args.base_protocol == "lg_official" and args.dataset not in {
         "cifar100",
+        "flowers102",
         "chaoyang",
     }:
         raise ValueError(
-            "The audited lg_official loader currently supports CIFAR-100 and "
-            "Chaoyang only"
+            "The audited lg_official loader currently supports CIFAR-100, "
+            "Flowers-102, and Chaoyang only"
         )
     if args.image_size != 224:
         raise ValueError("The fixed dataset protocols require --image-size 224")

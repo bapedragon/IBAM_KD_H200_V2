@@ -38,6 +38,7 @@ IBAM_KD_H200_V2/
 │   ├── run_five_methods.py
 │   ├── run_flowers_chaoyang_timing.py
 │   ├── run_flowers_chaoyang_300ep.py
+│   ├── run_researcher_sync_ours_alg.py
 │   ├── KD/
 │   ├── CRD/
 │   ├── ReviewKD/
@@ -141,6 +142,21 @@ teachers, adapters, and every method-specific loss remain unchanged. The older
 100/200-epoch results remain historical records rather than being silently
 overwritten.
 
+The researcher-sync Ours/ALG batch is separate from the generic rerun. It
+executes Ours CIFAR-100, Ours Flowers-102, then ALG Flowers-102, with every
+task fixed to 300 epochs, seed 1, FP32, train/eval batch 64/200, 20-epoch
+warm-up, public LG augmentation, and independent output directories:
+
+```bash
+python methods/run_researcher_sync_ours_alg.py --timing-run --num-workers 4
+
+python methods/run_researcher_sync_ours_alg.py --full-run --num-workers 4 \
+  --output-dir /app/output/researcher_sync_ours_alg_300ep_seed1
+```
+
+Run the timing command first to confirm the combined estimate remains below
+the current 600-minute Pod limit.
+
 The earlier measured Flowers and Chaoyang total was 4h 39m 31s. One measured
 CIFAR-100 method could therefore be appended safely in the same 600-minute
 Pod. That historical full batch ran Chaoyang five methods, Flowers five
@@ -164,10 +180,9 @@ Pod limit. See [`methods/README.md`](methods/README.md) for the locked base
 protocols and each method directory for exact losses, official-code provenance,
 and heterogeneous adapters.
 
-H200 build 451 measured CIFAR-100 Ours with the historical supplied-source
-`32/16/14` grid. That Ours timing/result is not reused for the new V3
-paper-grid protocol. CRD/MGD timings remain valid, while Ours must be timed
-again with `stage_grid=teacher` before a new multi-method packing decision;
+Historical Ours runs remain labeled by their exact grid/controller family.
+Current researcher-sync Ours uses the supplied-source larger-grid rule
+`32/16/14` and must be timed separately from older paper-grid diagnostics;
 see [`H200_ISSUE.md`](H200_ISSUE.md).
 
 ## Fixed teachers for downstream KD

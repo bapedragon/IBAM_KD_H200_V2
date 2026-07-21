@@ -5,6 +5,7 @@ import unittest
 import torch
 
 from methods.ALG.chaoyang.train import PROTOCOL_DEFAULTS as PUBLIC_DEFAULTS
+from methods.ALG.flowers102.train import PROTOCOL_DEFAULTS as FLOWERS_DEFAULTS
 from methods.ALG.chaoyang.train_draft_common import (
     PROTOCOL_DEFAULTS as DRAFT_COMMON_DEFAULTS,
     PROTOCOL_FLAGS as DRAFT_COMMON_FLAGS,
@@ -78,6 +79,35 @@ class AlgProtocolVariantsTest(unittest.TestCase):
                 ours_scheduler.lr_lambdas[0](epoch_index),
                 places=12,
             )
+
+    def test_flowers_uses_researcher_sync_base(self) -> None:
+        defaults = as_map(FLOWERS_DEFAULTS)
+        public = as_map(PUBLIC_DEFAULTS)
+        self.assertEqual(
+            defaults["--protocol-name"],
+            "flowers102_deit_ti_alg_researcher_sync_v1",
+        )
+        for option in (
+            "--student-epochs",
+            "--batch-size",
+            "--eval-batch-size",
+            "--lr",
+            "--min-lr",
+            "--weight-decay",
+            "--warmup-epochs",
+            "--warmup-factor",
+            "--label-smoothing",
+            "--drop-path-rate",
+            "--teacher-image-size",
+            "--beta",
+            "--alg-threshold",
+            "--alg-smoothing-window",
+            "--alg-warmup-epochs",
+            "--base-protocol",
+            "--eval-resize-mode",
+            "--seed",
+        ):
+            self.assertEqual(defaults[option], public[option], option)
 
 
 if __name__ == "__main__":

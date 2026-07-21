@@ -17,9 +17,9 @@ from typing import Any
 
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset, Subset
+from torch.utils.data import ConcatDataset, DataLoader, Dataset, Subset
 from torchvision import transforms
-from torchvision.datasets import CIFAR100
+from torchvision.datasets import CIFAR100, Flowers102
 from torchvision.transforms import InterpolationMode
 
 
@@ -56,10 +56,11 @@ from teachers.verify_checkpoints import DEFAULT_CHECKPOINT_ROOT, load_teacher
 
 
 ALG_PAPER_DOI = "10.1109/TNNLS.2024.3515076"
-ALG_PAPER_REFERENCE_TOP1 = 83.50
-ALG_PAPER_LG_TOP1 = 83.26
-ALG_PAPER_BASELINE_TOP1 = 80.65
-ALG_PAPER_STOP_EPOCH = 108
+REFERENCE_TOP1 = {
+    "flowers102": {"alg": 68.54, "lg": 67.02, "baseline": 50.06},
+    "chaoyang": {"alg": 83.50, "lg": 83.26, "baseline": 80.65},
+}
+PAPER_GUIDANCE_STOP_EPOCH = {"flowers102": None, "chaoyang": 108}
 TEACHER_IMAGE_SIZE = 32
 STUDENT_IMAGE_SIZE = 224
 
@@ -212,7 +213,11 @@ def install_signal_handlers() -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dataset", choices=("chaoyang",), default="chaoyang")
+    parser.add_argument(
+        "--dataset",
+        choices=("flowers102", "chaoyang"),
+        default="chaoyang",
+    )
     parser.add_argument("--student", choices=("deit_ti",), default="deit_ti")
     parser.add_argument("--protocol-name", type=str, default="manual")
     parser.add_argument("--data-dir", type=Path, default=None)
@@ -283,14 +288,18 @@ def finalize_args(args: argparse.Namespace) -> None:
     if args.timing_run:
         args.student_epochs = 2
     if args.data_dir is None:
-        args.data_dir = Path("/app/data/chaoyang")
+        args.data_dir = (
+            Path("/app/data/chaoyang")
+            if args.dataset == "chaoyang"
+            else Path("./data")
+        )
     if args.run_name is None:
         suffix = (
             "timing_2ep"
             if args.timing_run
             else ("smoke" if args.smoke else f"{args.student_epochs}ep")
         )
-        args.run_name = f"alg_chaoyang_deit_ti_{suffix}"
+        args.run_name = f"alg_{args.dataset}_deit_ti_{suffix}"
 
     positive = (
         "student_epochs",
@@ -379,6 +388,31 @@ def build_alg_loaders(
             download=False,
         )
         split_description = "train:official_train eval:official_test"
+    elif args.dataset == "flowers102":
+        from teachers.train_teacher_flowers import ensure_flowers, ensure_scipy
+
+        log(f"[DATA] Oxford Flowers root={args.data_dir.expanduser().resolve()}")
+        log("[DATA] Preparing Oxford Flowers from official files with MD5 checks")
+        ensure_scipy()
+        ensure_flowers(args.data_dir)
+        train_dataset = ConcatDataset(
+            [
+                Flowers102(
+                    root=args.data_dir,
+                    split=split,
+                    transform=train_transform,
+                    download=False,
+                )
+                for split in ("train", "val")
+            ]
+        )
+        test_dataset = Flowers102(
+            root=args.data_dir,
+            split="test",
+            transform=test_transform,
+            download=False,
+        )
+        split_description = "train:official_train+val eval:official_test"
     elif args.dataset == "chaoyang":
         from teachers.train_teacher_chaoyang import (
             ChaoyangDataset,
@@ -402,8 +436,8 @@ def build_alg_loaders(
         split_description = "train:official_train eval:official_test"
     else:
         raise ValueError(
-            "The audited public LG loader currently supports CIFAR-100 and "
-            "Chaoyang only"
+            "The audited public LG loader supports CIFAR-100, Flowers-102, "
+            "and Chaoyang only"
         )
     if args.smoke:
         generator = torch.Generator().manual_seed(args.seed)
@@ -484,17 +518,25 @@ def build_native_teacher_audit_loader(
     args: argparse.Namespace,
     device: torch.device,
 ) -> Any:
-    from teachers.train_teacher_chaoyang import (
-        ChaoyangDataset,
-        resolve_dataset_root,
-    )
+    if args.dataset == "flowers102":
+        dataset: Dataset[Any] = Flowers102(
+            root=args.data_dir,
+            split="test",
+            transform=official_test_transform(),
+            download=False,
+        )
+    else:
+        from teachers.train_teacher_chaoyang import (
+            ChaoyangDataset,
+            resolve_dataset_root,
+        )
 
-    dataset_root = resolve_dataset_root(args.data_dir)
-    dataset: Dataset[Any] = ChaoyangDataset(
-        dataset_root,
-        "test",
-        official_test_transform(),
-    )
+        dataset_root = resolve_dataset_root(args.data_dir)
+        dataset = ChaoyangDataset(
+            dataset_root,
+            "test",
+            official_test_transform(),
+        )
     if args.smoke:
         generator = torch.Generator().manual_seed(args.seed + 1)
         indexes = torch.randperm(len(dataset), generator=generator)[
@@ -698,10 +740,10 @@ def checkpoint_payload(
         "accuracy": accuracy,
         "best_accuracy": best_accuracy,
         "method": "ALG",
-        "dataset": "chaoyang",
+        "dataset": args.dataset,
         "student": "deit_ti",
         "timm_model": STUDENT_MODELS["deit_ti"],
-        "num_classes": NUM_CLASSES["chaoyang"],
+        "num_classes": NUM_CLASSES[args.dataset],
         "teacher": teacher_spec,
         "controller": controller.state_dict(),
         "official_lg_commit": OFFICIAL_LG_COMMIT,
@@ -725,10 +767,11 @@ def write_summary(
     teacher_shared_top1: float,
 ) -> None:
     average_epoch = sum(epoch_times) / max(1, len(epoch_times))
+    reference = REFERENCE_TOP1[args.dataset]
     summary = {
         "status": "complete" if latest_epoch == args.student_epochs else "running",
         "method": "ALG",
-        "dataset": "chaoyang",
+        "dataset": args.dataset,
         "student": "deit_ti",
         "teacher": teacher_spec,
         "objective": "CE + beta * LG while researcher ALG controller is active",
@@ -741,11 +784,11 @@ def write_summary(
         "latest_epoch": latest_epoch,
         "best_top1": best_accuracy,
         "latest_top1": latest_accuracy,
-        "paper_alg_top1": ALG_PAPER_REFERENCE_TOP1,
-        "gap_to_paper_alg_pp": best_accuracy - ALG_PAPER_REFERENCE_TOP1,
-        "paper_lg_top1": ALG_PAPER_LG_TOP1,
-        "paper_baseline_top1": ALG_PAPER_BASELINE_TOP1,
-        "paper_guidance_stop_epoch": ALG_PAPER_STOP_EPOCH,
+        "paper_alg_top1": reference["alg"],
+        "gap_to_paper_alg_pp": best_accuracy - reference["alg"],
+        "paper_lg_top1": reference["lg"],
+        "paper_baseline_top1": reference["baseline"],
+        "paper_guidance_stop_epoch": PAPER_GUIDANCE_STOP_EPOCH[args.dataset],
         "epoch_times": epoch_times,
         "avg_epoch_seconds": average_epoch,
         "planned_epochs": args.planned_epochs,
@@ -838,10 +881,11 @@ def main() -> None:
         "projection=1x1 grid=larger_of_teacher_student interpolation=bilinear "
         "stage_loss=elementwise_MSE sum_stages=True"
     )
+    reference = REFERENCE_TOP1[args.dataset]
     log(
-        f"[REFERENCE] ALG_paper_Chaoyang_DeiT={ALG_PAPER_REFERENCE_TOP1:.2f}% "
-        f"LG={ALG_PAPER_LG_TOP1:.2f}% baseline={ALG_PAPER_BASELINE_TOP1:.2f}% "
-        f"paper_guidance_stop_epoch={ALG_PAPER_STOP_EPOCH}"
+        f"[REFERENCE] dataset={args.dataset} ALG={reference['alg']:.2f}% "
+        f"LG={reference['lg']:.2f}% baseline={reference['baseline']:.2f}% "
+        f"paper_guidance_stop_epoch={PAPER_GUIDANCE_STOP_EPOCH[args.dataset]}"
     )
     log(
         f"[SOURCE] ALG_DOI={ALG_PAPER_DOI} LG_repo_commit={OFFICIAL_LG_COMMIT}"
@@ -855,7 +899,7 @@ def main() -> None:
         train_loader, test_loader = build_loaders(args, device)
     native_loader = build_native_teacher_audit_loader(args, device)
     teacher, teacher_payload, teacher_spec = load_teacher(
-        "chaoyang",
+        args.dataset,
         device=device,
         checkpoint_root=args.teacher_root,
     )
@@ -873,7 +917,7 @@ def main() -> None:
     )
     student = create_student(
         timm,
-        NUM_CLASSES["chaoyang"],
+        NUM_CLASSES[args.dataset],
         args.drop_path_rate,
     ).to(device)
     guidance = LocalityGuidance().to(device)
@@ -909,7 +953,7 @@ def main() -> None:
         raise RuntimeError("Unexpected aligned student feature shapes")
     if [tuple(value.shape) for value in aligned_teacher] != expected_aligned:
         raise RuntimeError("Unexpected aligned teacher feature shapes")
-    if tuple(logits_probe.shape) != (2, NUM_CLASSES["chaoyang"]):
+    if tuple(logits_probe.shape) != (2, NUM_CLASSES[args.dataset]):
         raise RuntimeError(f"Unexpected logits: {tuple(logits_probe.shape)}")
     if not bool(torch.isfinite(lg_probe)):
         raise RuntimeError("Non-finite ALG probe loss")
@@ -1091,16 +1135,16 @@ def main() -> None:
     log("=" * 72)
     log(
         f"[FINAL_RESULT] alg_best_top1={best_accuracy:.2f}% "
-        f"paper_alg_top1={ALG_PAPER_REFERENCE_TOP1:.2f}% "
-        f"gap_to_paper={best_accuracy - ALG_PAPER_REFERENCE_TOP1:+.2f}pp"
+        f"paper_alg_top1={reference['alg']:.2f}% "
+        f"gap_to_paper={best_accuracy - reference['alg']:+.2f}pp"
     )
     log(
-        f"[FINAL_RESULT] paper_lg_top1={ALG_PAPER_LG_TOP1:.2f}% "
-        f"gain_over_paper_lg={best_accuracy - ALG_PAPER_LG_TOP1:+.2f}pp"
+        f"[FINAL_RESULT] paper_lg_top1={reference['lg']:.2f}% "
+        f"gain_over_paper_lg={best_accuracy - reference['lg']:+.2f}pp"
     )
     log(
         f"[BETA_FINAL] observed_stop_epoch={controller.stop_epoch} "
-        f"paper_stop_epoch={ALG_PAPER_STOP_EPOCH} "
+        f"paper_stop_epoch={PAPER_GUIDANCE_STOP_EPOCH[args.dataset]} "
         f"guided_epochs={sum(value > 0 for value in controller.beta_history)} "
         f"ce_only_epochs={sum(value == 0 for value in controller.beta_history)}"
     )

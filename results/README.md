@@ -17,10 +17,12 @@ results/
 └── CHECKSUMS.sha256
 ```
 
-Each completed method/dataset folder contains `run_summary.json` and the
-selected `student_deit_ti_best_top1-XX.XX.pt` checkpoint. Account names and
-H200 build numbers are kept only under `run_logs`; they do not determine
-checkpoint placement.
+Each completed method/dataset folder contains a summary and the selected best
+checkpoint. Historical Flowers and Chaoyang generic runs are deliberately
+named with `_200ep_seed42_historical` and `_100ep_seed42_historical`; their
+files cannot be mistaken for or overwritten by the pending 300-epoch reruns.
+Account names and H200 build numbers are kept only under `run_logs`; they do
+not determine checkpoint placement.
 
 Only the selected best checkpoint is committed. The original downloaded
 outputs retain `student_latest.pt`; its exact final-epoch accuracy is also
@@ -54,7 +56,7 @@ now fixed to V3's teacher-resolution rule, which produces `32 x 32`,
 checkpoint remains reproducible but must not be reported as the final
 paper-grid result; CIFAR-100 requires a separately labeled rerun.
 
-## Flowers-102
+## Flowers-102 — historical 200-epoch results
 
 Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
 224 x 224, 200 epochs, seed 42.
@@ -68,7 +70,7 @@ Fixed protocol: ResNet56 teacher at 32 x 32, scratch DeiT-Ti student at
 | MGD | 172 | **53.42%** | 53.21% | +3.36 pp |
 | OFA | 159 | **46.09%** | 45.55% | -3.97 pp |
 
-## Chaoyang
+## Chaoyang — historical 100-epoch generic results
 
 All rows use the fixed ResNet56 teacher at 32 x 32 and a scratch DeiT-Ti
 student at 224 x 224. The five generic methods and the historical Ours run use
@@ -92,6 +94,20 @@ The stored Ours result is the earlier 100-epoch, seed-42 run with teacher-grid
 targets `32 x 32`, `16 x 16`, and `8 x 8`. Its checkpoint and summary are
 explicitly named `historical` so they cannot be confused with the pending
 300-epoch matched ALG-base reruns.
+
+## Current 300-epoch reruns
+
+The old checkpoints above remain immutable historical records. New runs use
+separate collection roots and provenance-rich names:
+
+| Run family | Output collection root | Seed / base |
+|---|---|---|
+| Generic Flowers + Chaoyang | `/app/output/generic_kd_flowers_chaoyang_300ep_seed42` | 42 / previous generic protocol with epoch horizon 300 |
+| Ours CIFAR + Ours Flowers + ALG Flowers | `/app/output/researcher_sync_ours_alg_300ep_seed1` | 1 / researcher sync |
+
+No current 300-epoch result should replace a historical file in place. After
+collection and verification, it must be added with its epoch, seed, and
+protocol family in both the file name and summary.
 
 ## Source runs
 
