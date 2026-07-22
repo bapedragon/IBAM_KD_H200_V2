@@ -31,7 +31,7 @@ class ResultProtocolLayoutTest(unittest.TestCase):
 
     def test_each_committed_protocol_directory_is_self_contained(self) -> None:
         summaries = sorted(RESULTS.glob("*/*/*/run_summary.json"))
-        self.assertEqual(len(summaries), 18)
+        self.assertEqual(len(summaries), 33)
         for summary_path in summaries:
             run_dir = summary_path.parent
             checkpoint_path = run_dir / "student_best.pt"
@@ -45,11 +45,15 @@ class ResultProtocolLayoutTest(unittest.TestCase):
             self.assertIn(str(args["student_epochs"]), protocol_id)
             self.assertIn(f"seed{args['seed']}", protocol_id)
 
-    def test_researcher_sync_pending_destinations_are_explicit(self) -> None:
-        pending = (RESULTS / "PENDING_IMPORTS.md").read_text(encoding="utf-8")
-        self.assertIn("results/Ours/cifar100/researcher_sync_v1_300ep_seed1/", pending)
-        self.assertIn("results/Ours/flowers102/researcher_sync_v1_300ep_seed1/", pending)
-        self.assertIn("results/ALG/flowers102/researcher_sync_v1_300ep_seed1/", pending)
+    def test_researcher_sync_import_destinations_are_explicit(self) -> None:
+        expected = (
+            RESULTS / "Ours/cifar100/researcher_sync_v1_300ep_seed1",
+            RESULTS / "Ours/flowers102/researcher_sync_v1_300ep_seed1",
+            RESULTS / "ALG/flowers102/researcher_sync_v1_300ep_seed1",
+        )
+        for run_dir in expected:
+            self.assertTrue((run_dir / "run_summary.json").is_file(), run_dir)
+            self.assertTrue((run_dir / "student_best.pt").is_file(), run_dir)
 
 
 if __name__ == "__main__":

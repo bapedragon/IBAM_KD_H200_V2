@@ -1,0 +1,68 @@
+{
+  "status": "complete",
+  "protocol": "researcher_sync_v2_official_split_300ep_seed1",
+  "split": {
+    "train": 1020,
+    "val": 1020,
+    "test": 6149
+  },
+  "checkpoint_selection": "official_val",
+  "final_report": "official_test_once",
+  "elapsed_seconds": 2128.381116628647,
+  "elapsed_human": "35m 28s",
+  "estimated_full_seconds": 1985.0746157169342,
+  "estimated_full_human": "33m 05s",
+  "pod_limit_passed": true,
+  "records": [
+    {
+      "order": 1,
+      "method": "Ours",
+      "dataset": "flowers102",
+      "status": "complete",
+      "run_dir": "/app/output/flowers102_official_split_ours_alg_300ep_seed1/Ours/flowers102/ours_flowers102_deit_ti_official_split_300ep_seed1",
+      "command": [
+        "/usr/bin/python",
+        "/app/scratch/input/bapedragon_477/methods/Ours/flowers102/train_official_split.py",
+        "--data-dir",
+        "data",
+        "--teacher-root",
+        "/app/scratch/input/bapedragon_477/teachers/checkpoints",
+        "--output-dir",
+        "/app/output/flowers102_official_split_ours_alg_300ep_seed1/Ours/flowers102",
+        "--run-name",
+        "ours_flowers102_deit_ti_official_split_300ep_seed1",
+        "--num-workers",
+        "4"
+      ],
+      "summary": "/app/output/flowers102_official_split_ours_alg_300ep_seed1/Ours/flowers102/ours_flowers102_deit_ti_official_split_300ep_seed1/summary.json",
+      "best_validation_top1": 70.09803921568627,
+      "final_test_top1": 61.09936575052854,
+      "estimated_planned_seconds": 1018.0760028362274
+    },
+    {
+      "order": 2,
+      "method": "ALG",
+      "dataset": "flowers102",
+      "status": "complete",
+      "run_dir": "/app/output/flowers102_official_split_ours_alg_300ep_seed1/ALG/flowers102/alg_flowers102_deit_ti_official_split_300ep_seed1",
+      "command": [
+        "/usr/bin/python",
+        "/app/scratch/input/bapedragon_477/methods/ALG/flowers102/train_official_split.py",
+        "--data-dir",
+        "data",
+        "--teacher-root",
+        "/app/scratch/input/bapedragon_477/teachers/checkpoints",
+        "--output-dir",
+        "/app/output/flowers102_official_split_ours_alg_300ep_seed1/ALG/flowers102",
+        "--run-name",
+        "alg_flowers102_deit_ti_official_split_300ep_seed1",
+        "--num-workers",
+        "4"
+      ],
+      "summary": "/app/output/flowers102_official_split_ours_alg_300ep_seed1/ALG/flowers102/alg_flowers102_deit_ti_official_split_300ep_seed1/summary.json",
+      "best_validation_top1": 71.56862745098039,
+      "final_test_top1": 63.57131240852171,
+      "estimated_planned_seconds": 966.9986128807068
+    }
+  ]
+}

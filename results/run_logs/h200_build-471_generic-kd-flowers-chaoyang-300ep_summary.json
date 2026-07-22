@@ -1,0 +1,95 @@
+{
+  "status": "complete",
+  "datasets": [
+    "chaoyang",
+    "flowers102"
+  ],
+  "methods": [
+    "KD",
+    "CRD",
+    "ReviewKD",
+    "MGD",
+    "OFA"
+  ],
+  "planned_epochs": 300,
+  "epoch_only_change": true,
+  "estimated_total_seconds": 29898.485295653343,
+  "estimated_total_human": "8h 18m 18s",
+  "pod_limit_seconds": 36000,
+  "safety_margin_seconds": 6101.514704346657,
+  "safety_margin_human": "1h 41m 42s",
+  "elapsed_seconds": 30154.62904024124,
+  "elapsed_human": "8h 22m 35s",
+  "records": [
+    {
+      "order": 1,
+      "dataset": "chaoyang",
+      "methods": [
+        "KD",
+        "CRD",
+        "ReviewKD",
+        "MGD",
+        "OFA"
+      ],
+      "planned_epochs": 300,
+      "estimated_seconds": 13290.49194931984,
+      "estimated_human": "3h 41m 30s",
+      "output_dir": "/app/output/generic_kd_flowers_chaoyang_300ep_seed42/chaoyang",
+      "command": [
+        "/usr/bin/python",
+        "/app/scratch/input/bapedragon_471/methods/run_five_methods.py",
+        "--dataset",
+        "chaoyang",
+        "--full-run",
+        "--planned-epochs",
+        "300",
+        "--teacher-root",
+        "/app/scratch/input/bapedragon_471/teachers/checkpoints",
+        "--output-dir",
+        "/app/output/generic_kd_flowers_chaoyang_300ep_seed42/chaoyang",
+        "--num-workers",
+        "4",
+        "--seed",
+        "42"
+      ],
+      "status": "complete",
+      "elapsed_seconds": 13384.292830228806,
+      "summary": "/app/output/generic_kd_flowers_chaoyang_300ep_seed42/chaoyang/five_method_summary.json"
+    },
+    {
+      "order": 2,
+      "dataset": "flowers102",
+      "methods": [
+        "KD",
+        "CRD",
+        "ReviewKD",
+        "MGD",
+        "OFA"
+      ],
+      "planned_epochs": 300,
+      "estimated_seconds": 16607.993346333504,
+      "estimated_human": "4h 36m 48s",
+      "output_dir": "/app/output/generic_kd_flowers_chaoyang_300ep_seed42/flowers102",
+      "command": [
+        "/usr/bin/python",
+        "/app/scratch/input/bapedragon_471/methods/run_five_methods.py",
+        "--dataset",
+        "flowers102",
+        "--full-run",
+        "--planned-epochs",
+        "300",
+        "--teacher-root",
+        "/app/scratch/input/bapedragon_471/teachers/checkpoints",
+        "--output-dir",
+        "/app/output/generic_kd_flowers_chaoyang_300ep_seed42/flowers102",
+        "--num-workers",
+        "4",
+        "--seed",
+        "42"
+      ],
+      "status": "complete",
+      "elapsed_seconds": 16770.334657907486,
+      "summary": "/app/output/generic_kd_flowers_chaoyang_300ep_seed42/flowers102/five_method_summary.json"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "status": "complete",
+  "mode": "full",
+  "protocol": "researcher_sync_v1",
+  "planned_epochs_each": 300,
+  "tasks": [
+    "Ours:cifar100",
+    "Ours:flowers102",
+    "ALG:flowers102"
+  ],
+  "elapsed_seconds": 23394.29652118683,
+  "elapsed_human": "6h 29m 54s",
+  "estimated_full_seconds": 23161.816945552826,
+  "estimated_full_human": "6h 26m 02s",
+  "pod_limit_seconds": 36000,
+  "pod_limit_passed": true,
+  "pod_limit_delta_seconds": 12838.183054447174,
+  "pod_limit_delta_human": "3h 33m 58s",
+  "records": [
+    {
+      "order": 1,
+      "method": "Ours",
+      "dataset": "cifar100",
+      "status": "complete",
+      "run_dir": "/app/output/researcher_sync_ours_alg_300ep_seed1/Ours/cifar100/ours_cifar100_deit_ti_researcher_sync_300ep_seed1",
+      "command": [
+        "/usr/bin/python",
+        "/app/scratch/input/kau-aimslab_475/methods/Ours/cifar100/train.py",
+        "--data-dir",
+        "data",
+        "--teacher-root",
+        "/app/scratch/input/kau-aimslab_475/teachers/checkpoints",
+        "--output-dir",
+        "/app/output/researcher_sync_ours_alg_300ep_seed1/Ours/cifar100",
+        "--run-name",
+        "ours_cifar100_deit_ti_researcher_sync_300ep_seed1",
+        "--num-workers",
+        "4"
+      ],
+      "elapsed_seconds": 17196.634253263474,
+      "summary": "/app/output/researcher_sync_ours_alg_300ep_seed1/Ours/cifar100/ours_cifar100_deit_ti_researcher_sync_300ep_seed1/summary.json",
+      "best_top1": 82.9,
+      "avg_epoch_seconds": 56.95875291903814,
+      "estimated_planned_seconds": 17087.62587571144,
+      "estimated_planned_human": "4h 44m 48s"
+    },
+    {
+      "order": 2,
+      "method": "Ours",
+      "dataset": "flowers102",
+      "status": "complete",
+      "run_dir": "/app/output/researcher_sync_ours_alg_300ep_seed1/Ours/flowers102/ours_flowers102_deit_ti_researcher_sync_300ep_seed1",
+      "command": [
+        "/usr/bin/python",
+        "/app/scratch/input/kau-aimslab_475/methods/Ours/flowers102/train.py",
+        "--data-dir",
+        "data",
+        "--teacher-root",
+        "/app/scratch/input/kau-aimslab_475/teachers/checkpoints",
+        "--output-dir",
+        "/app/output/researcher_sync_ours_alg_300ep_seed1/Ours/flowers102",
+        "--run-name",
+        "ours_flowers102_deit_ti_researcher_sync_300ep_seed1",
+        "--num-workers",
+        "4"
+      ],
+      "elapsed_seconds": 3144.9505972862244,
+      "summary": "/app/output/researcher_sync_ours_alg_300ep_seed1/Ours/flowers102/ours_flowers102_deit_ti_researcher_sync_300ep_seed1/summary.json",
+      "best_top1": 74.80891201821434,
+      "avg_epoch_seconds": 10.205557956695557,
+      "estimated_planned_seconds": 3061.667387008667,
+      "estimated_planned_human": "51m 02s"
+    },
+    {
+      "order": 3,
+      "method": "ALG",
+      "dataset": "flowers102",
+      "status": "complete",
+      "run_dir": "/app/output/researcher_sync_ours_alg_300ep_seed1/ALG/flowers102/alg_flowers102_deit_ti_researcher_sync_300ep_seed1",
+      "command": [
+        "/usr/bin/python",
+        "/app/scratch/input/kau-aimslab_475/methods/ALG/flowers102/train.py",
+        "--data-dir",
+        "data",
+        "--teacher-root",
+        "/app/scratch/input/kau-aimslab_475/teachers/checkpoints",
+        "--output-dir",
+        "/app/output/researcher_sync_ours_alg_300ep_seed1/ALG/flowers102",
+        "--run-name",
+        "alg_flowers102_deit_ti_researcher_sync_300ep_seed1",
+        "--num-workers",
+        "4"
+      ],
+      "elapsed_seconds": 3052.7072446346283,
+      "summary": "/app/output/researcher_sync_ours_alg_300ep_seed1/ALG/flowers102/alg_flowers102_deit_ti_researcher_sync_300ep_seed1/summary.json",
+      "best_top1": 75.0203285087006,
+      "avg_epoch_seconds": 10.041745609442392,
+      "estimated_planned_seconds": 3012.523682832718,
+      "estimated_planned_human": "50m 13s"
+    }
+  ]
+}
