@@ -164,6 +164,21 @@ Run the timing command first. Its final `[POD_LIMIT_CHECK]` reports `PASS` or
 current 600-minute Pod limit. Do not submit the combined full run on `FAIL`;
 split the three independent jobs across Issues instead.
 
+For the corrected Flowers official three-way evaluation, use the dedicated
+runner below. It trains on the official train split (`1,020`), selects the best
+checkpoint on official val (`1,020`), and evaluates that checkpoint once on
+official test (`6,149`). This is a new `researcher_sync_v2_official_split`
+family; it does not overwrite the earlier train+val/test-best runs.
+
+```bash
+python methods/run_flowers_official_split_ours_alg.py --timing-run \
+  --num-workers 4
+
+python methods/run_flowers_official_split_ours_alg.py --full-run \
+  --num-workers 4 \
+  --output-dir /app/output/flowers102_official_split_ours_alg_300ep_seed1
+```
+
 The earlier measured Flowers and Chaoyang total was 4h 39m 31s. One measured
 CIFAR-100 method could therefore be appended safely in the same 600-minute
 Pod. That historical full batch ran Chaoyang five methods, Flowers five

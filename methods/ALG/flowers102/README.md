@@ -1,4 +1,4 @@
-# ALG: Flowers-102 / DeiT-Ti (researcher sync)
+# ALG: Flowers-102 / DeiT-Ti
 
 This entry point applies the researcher-supplied ALG configuration and
 controller to Flowers-102 without changing the method-specific logic.
@@ -7,7 +7,9 @@ controller to Flowers-102 without changing the method-specific logic.
 |---|---:|
 | Teacher | fixed ResNet56, native `32 x 32` |
 | Student | DeiT-Ti from scratch, `224 x 224` |
-| Split | official train+val / official test |
+| Current split | official train `1,020` / val `1,020` / test `6,149` |
+| Checkpoint selection | highest official-val Top-1 |
+| Reported result | selected best checkpoint on official test, once |
 | Epochs | 300 |
 | Train / eval batch | 64 / 200 |
 | Optimizer | AdamW |
@@ -24,14 +26,18 @@ controller to Flowers-102 without changing the method-specific logic.
 Timing run:
 
 ```bash
-python methods/ALG/flowers102/train.py --timing-run --num-workers 4
+python methods/ALG/flowers102/train_official_split.py --timing-run --num-workers 4
 ```
 
 Full run:
 
 ```bash
-python methods/ALG/flowers102/train.py --num-workers 4 --run-name alg_flowers102_deit_ti_researcher_sync_300ep_seed1 --output-dir /app/output
+python methods/ALG/flowers102/train_official_split.py --num-workers 4 \
+  --run-name alg_flowers102_deit_ti_official_split_300ep_seed1 \
+  --output-dir /app/output
 ```
 
-The older generic Flowers runs remain separately labeled as 200-epoch,
-seed-42 historical results under `results/`; they are not overwritten.
+The older `train.py` entry point intentionally preserves the earlier
+`train+val -> test-best` researcher-sync-v1 behavior for provenance only.
+Do not use it for the new official-three-way result. Historical runs remain
+separately labeled under `results/` and are never overwritten.

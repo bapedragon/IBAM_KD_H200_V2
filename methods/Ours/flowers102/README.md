@@ -4,7 +4,9 @@
 - Student: DeiT-Ti from scratch
 - Evaluation: direct full-image resize to `224 x 224`, matching the supplied
   locality-guidance loader
-- Split: official `train + val` for training; official `test` for evaluation
+- Current split: official train `1,020` for training, official val `1,020`
+  for best-checkpoint selection, and official test `6,149` for one final
+  evaluation of the selected checkpoint
 - Researcher-sync protocol: 300 epochs, train/eval batch `64/200`, AdamW
   `5e-4`, minimum LR `5e-6`, weight decay `0.05`, 20-epoch warm-up
   from factor `0.001`, cosine decay
@@ -23,15 +25,20 @@ its manifest hash and preprocessing integration before student training.
 Timing run:
 
 ```bash
-python methods/Ours/flowers102/train.py --timing-run --num-workers 4
+python methods/Ours/flowers102/train_official_split.py --timing-run --num-workers 4
 ```
 
 Full run only after the timing log and teacher audit pass:
 
 ```bash
-python methods/Ours/flowers102/train.py --num-workers 4 --run-name ours_flowers102_deit_ti_researcher_sync_300ep_seed1 --output-dir /app/output
+python methods/Ours/flowers102/train_official_split.py --num-workers 4 \
+  --run-name ours_flowers102_deit_ti_official_split_300ep_seed1 \
+  --output-dir /app/output
 ```
 
-The earlier 200-epoch, seed-42 run remains a historical result and is never
-overwritten by this entry point. See [`../RESEARCHER_SYNC.md`](../RESEARCHER_SYNC.md)
-for the synchronized controller and base protocol.
+The older `train.py` entry point preserves the earlier researcher-sync-v1
+`train+val -> test-best` behavior for provenance only. It is not the current
+official-three-way entry point. The earlier 200-epoch seed-42 result and the
+v1 300-epoch result are never overwritten. See
+[`../RESEARCHER_SYNC.md`](../RESEARCHER_SYNC.md) for the synchronized
+controller and base protocol.

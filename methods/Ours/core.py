@@ -232,6 +232,16 @@ def parse_args() -> argparse.Namespace:
             "is retained only for explicitly labeled compatibility checks."
         ),
     )
+    parser.add_argument(
+        "--flowers-split-policy",
+        choices=("trainval_test_best", "official_three_way"),
+        default="trainval_test_best",
+        help=(
+            "Flowers-102 split policy. official_three_way trains on the "
+            "official train split, selects best on official val, and evaluates "
+            "the selected checkpoint once on official test."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--smoke-train-samples", type=int, default=1024)
     parser.add_argument("--smoke-test-samples", type=int, default=512)
@@ -422,6 +432,13 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError(
             "The audited lg_official loader currently supports CIFAR-100, "
             "Flowers-102, and Chaoyang only"
+        )
+    if (
+        args.flowers_split_policy == "official_three_way"
+        and args.dataset != "flowers102"
+    ):
+        raise ValueError(
+            "--flowers-split-policy official_three_way is valid only for Flowers-102"
         )
     if args.image_size != 224:
         raise ValueError("The fixed dataset protocols require --image-size 224")
@@ -755,8 +772,16 @@ def write_summary(
     controller: AdaptiveGuidanceController,
     teacher_native_top1: float,
     teacher_shared_view_top1: float,
+    final_test_accuracy: float | None = None,
 ) -> None:
     average_epoch = sum(epoch_times) / max(1, len(epoch_times))
+    official_three_way = (
+        args.dataset == "flowers102"
+        and args.flowers_split_policy == "official_three_way"
+    )
+    reported_accuracy = (
+        final_test_accuracy if final_test_accuracy is not None else best_accuracy
+    )
     summary = {
         "status": "complete" if latest_epoch == args.student_epochs else "running",
         "method": "Ours",
@@ -791,11 +816,18 @@ def write_summary(
         "teacher_shared_view_is_diagnostic_only": True,
         "student_epochs": args.student_epochs,
         "latest_epoch": latest_epoch,
-        "best_top1": best_accuracy,
+        "flowers_split_policy": args.flowers_split_policy,
+        "checkpoint_selection_split": "val" if official_three_way else "test",
+        "best_top1": reported_accuracy,
         "latest_top1": latest_accuracy,
+        "selection_best_top1": best_accuracy,
+        "latest_selection_top1": latest_accuracy,
+        "best_validation_top1": best_accuracy if official_three_way else None,
+        "final_test_top1": final_test_accuracy,
+        "final_test_evaluations": 1 if final_test_accuracy is not None else 0,
         "vanilla_top1": VANILLA_TOP1[args.dataset][args.student],
         "gain_over_vanilla_pp": (
-            best_accuracy - VANILLA_TOP1[args.dataset][args.student]
+            reported_accuracy - VANILLA_TOP1[args.dataset][args.student]
         ),
         "aggregation_weights": aggregation_weights,
         "epoch_times": epoch_times,
@@ -943,11 +975,16 @@ def main() -> None:
     )
 
     if args.base_protocol == "lg_official":
-        from methods.ALG.core import build_alg_loaders
+        from methods.ALG.core import build_alg_loaders_with_final_test
 
-        train_loader, test_loader = build_alg_loaders(args, device, timm)
+        (
+            train_loader,
+            test_loader,
+            final_test_loader,
+        ) = build_alg_loaders_with_final_test(args, device, timm)
     else:
         train_loader, test_loader = build_loaders(args, device)
+        final_test_loader = None
     native_teacher_audit_loader = build_native_teacher_audit_loader(args, device)
     teacher, teacher_payload, teacher_spec = load_teacher(
         args.dataset,
@@ -1245,12 +1282,58 @@ def main() -> None:
     elapsed = time.time() - training_start
     average_epoch = sum(epoch_times) / len(epoch_times)
     vanilla = VANILLA_TOP1[args.dataset][args.student]
+    final_test_accuracy: float | None = None
+    if final_test_loader is not None:
+        best_payload = torch.load(
+            best_checkpoint,
+            map_location=device,
+            weights_only=False,
+        )
+        student.load_state_dict(best_payload["model"])
+        final_test_accuracy = evaluate(
+            student, final_test_loader, device, amp_enabled
+        )
+        elapsed = time.time() - training_start
+        best_payload["selection_split"] = "val"
+        best_payload["selection_best_accuracy"] = best_accuracy
+        best_payload["final_test_accuracy"] = final_test_accuracy
+        atomic_torch_save(best_payload, best_checkpoint)
+        write_summary(
+            summary_path,
+            args,
+            teacher_spec,
+            latest_epoch=args.student_epochs,
+            best_accuracy=best_accuracy,
+            latest_accuracy=latest_accuracy,
+            epoch_times=epoch_times,
+            elapsed_seconds=elapsed,
+            aggregation_weights=aggregation_weights_list(ours),
+            controller=controller,
+            teacher_native_top1=teacher_native_top1,
+            teacher_shared_view_top1=teacher_shared_view_top1,
+            final_test_accuracy=final_test_accuracy,
+        )
     log("=" * 72)
-    log(
-        f"[FINAL_RESULT] ours_best_top1={best_accuracy:.2f}% "
-        f"vanilla_top1={vanilla:.2f}% "
-        f"gain_over_vanilla={best_accuracy - vanilla:+.2f}pp"
-    )
+    if final_test_accuracy is None:
+        reported_accuracy = best_accuracy
+        log(
+            f"[FINAL_RESULT] ours_best_top1={best_accuracy:.2f}% "
+            f"vanilla_top1={vanilla:.2f}% "
+            f"gain_over_vanilla={best_accuracy - vanilla:+.2f}pp"
+        )
+    else:
+        reported_accuracy = final_test_accuracy
+        log(
+            f"[FINAL_RESULT] ours_best_val_top1={best_accuracy:.2f}% "
+            f"ours_final_test_top1={final_test_accuracy:.2f}% "
+            f"vanilla_top1={vanilla:.2f}% "
+            f"test_gain_over_vanilla={final_test_accuracy - vanilla:+.2f}pp"
+        )
+        log(
+            "[FINAL_TEST] selected_checkpoint=student_best.pt "
+            "selection_split=official_val evaluation_split=official_test "
+            "evaluation_count=1"
+        )
     log(
         f"[TIMING] avg_epoch={average_epoch:.1f}s "
         f"planned_epochs={args.planned_epochs} "

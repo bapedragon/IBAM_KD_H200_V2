@@ -28,6 +28,7 @@ dataset. The canonical IDs currently used are:
 | `pre_researcher_papergrid_100ep_seed42_historical` | pre-sync Ours Chaoyang run |
 | `pre_researcher_batch128_300ep_seed1_historical` | pre-sync ALG Chaoyang run |
 | `researcher_sync_v1_300ep_seed1` | current researcher-synchronized Ours/ALG family |
+| `researcher_sync_v2_official_split_300ep_seed1` | Flowers Ours/ALG: train 1,020, val-best 1,020, final test 6,149 once |
 | `generic_kd_300ep_epoch_only_v1_seed42` | pending 300-epoch Flowers/Chaoyang generic reruns |
 
 Account names and H200 build numbers are kept only under `run_logs`; they do

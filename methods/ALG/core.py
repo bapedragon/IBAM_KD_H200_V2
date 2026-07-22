@@ -274,6 +274,17 @@ def parse_args() -> argparse.Namespace:
         default="direct",
     )
     parser.add_argument(
+        "--flowers-split-policy",
+        choices=("trainval_test_best", "official_three_way"),
+        default="trainval_test_best",
+        help=(
+            "Flowers-102 split policy. official_three_way trains on the "
+            "official 1,020-image train split, selects the checkpoint on the "
+            "1,020-image val split, and evaluates the selected checkpoint once "
+            "on the 6,149-image test split."
+        ),
+    )
+    parser.add_argument(
         "--max-teacher-runtime-gap-pp",
         type=float,
         default=5.0,
@@ -342,13 +353,20 @@ def finalize_args(args: argparse.Namespace) -> None:
         raise ValueError("ALG paper protocol requires --image-size 224")
     if args.teacher_image_size != TEACHER_IMAGE_SIZE:
         raise ValueError("LG/ALG ResNet56 guidance requires --teacher-image-size 32")
+    if (
+        args.flowers_split_policy == "official_three_way"
+        and args.dataset != "flowers102"
+    ):
+        raise ValueError(
+            "--flowers-split-policy official_three_way is valid only for Flowers-102"
+        )
 
 
-def build_alg_loaders(
+def build_alg_loaders_with_final_test(
     args: argparse.Namespace,
     device: torch.device,
     timm: Any,
-) -> tuple[Any, Any]:
+) -> tuple[Any, Any, Any | None]:
     # Exact public LG strong-augmentation arguments from
     # pycls/datasets/transforms.py at OFFICIAL_LG_COMMIT.
     train_transform = timm.data.create_transform(
@@ -400,24 +418,49 @@ def build_alg_loaders(
         log("[DATA] Preparing Oxford Flowers from official files with MD5 checks")
         ensure_scipy()
         ensure_flowers(args.data_dir)
-        train_dataset = ConcatDataset(
-            [
-                Flowers102(
-                    root=args.data_dir,
-                    split=split,
-                    transform=train_transform,
-                    download=False,
-                )
-                for split in ("train", "val")
-            ]
-        )
-        test_dataset = Flowers102(
-            root=args.data_dir,
-            split="test",
-            transform=test_transform,
-            download=False,
-        )
-        split_description = "train:official_train+val eval:official_test"
+        if args.flowers_split_policy == "official_three_way":
+            train_dataset = Flowers102(
+                root=args.data_dir,
+                split="train",
+                transform=train_transform,
+                download=False,
+            )
+            test_dataset = Flowers102(
+                root=args.data_dir,
+                split="val",
+                transform=test_transform,
+                download=False,
+            )
+            final_test_dataset: Dataset[Any] | None = Flowers102(
+                root=args.data_dir,
+                split="test",
+                transform=test_transform,
+                download=False,
+            )
+            split_description = (
+                "train:official_train selection:official_val "
+                "final:official_test_once"
+            )
+        else:
+            train_dataset = ConcatDataset(
+                [
+                    Flowers102(
+                        root=args.data_dir,
+                        split=split,
+                        transform=train_transform,
+                        download=False,
+                    )
+                    for split in ("train", "val")
+                ]
+            )
+            test_dataset = Flowers102(
+                root=args.data_dir,
+                split="test",
+                transform=test_transform,
+                download=False,
+            )
+            final_test_dataset = None
+            split_description = "train:official_train+val eval:official_test"
     elif args.dataset == "chaoyang":
         from teachers.train_teacher_chaoyang import (
             ChaoyangDataset,
@@ -444,6 +487,8 @@ def build_alg_loaders(
             "The audited public LG loader supports CIFAR-100, Flowers-102, "
             "and Chaoyang only"
         )
+    if args.dataset != "flowers102":
+        final_test_dataset = None
     if args.smoke:
         generator = torch.Generator().manual_seed(args.seed)
         train_indexes = torch.randperm(len(train_dataset), generator=generator)[
@@ -455,6 +500,14 @@ def build_alg_loaders(
         ]
         train_dataset = Subset(train_dataset, train_indexes.tolist())
         test_dataset = Subset(test_dataset, test_indexes.tolist())
+        if final_test_dataset is not None:
+            final_test_generator = torch.Generator().manual_seed(args.seed + 2)
+            final_test_indexes = torch.randperm(
+                len(final_test_dataset), generator=final_test_generator
+            )[: min(args.smoke_test_samples, len(final_test_dataset))]
+            final_test_dataset = Subset(
+                final_test_dataset, final_test_indexes.tolist()
+            )
 
     def seed_worker(worker_id: int) -> None:
         del worker_id
@@ -483,14 +536,52 @@ def build_alg_loaders(
         drop_last=False,
         **common,
     )
-    log(f"[DATA] train_samples={len(train_dataset)} test_samples={len(test_dataset)}")
+    final_test_loader = (
+        DataLoader(
+            final_test_dataset,
+            batch_size=args.eval_batch_size,
+            shuffle=False,
+            drop_last=False,
+            **common,
+        )
+        if final_test_dataset is not None
+        else None
+    )
+    if final_test_dataset is None:
+        log(
+            f"[DATA] train_samples={len(train_dataset)} "
+            f"test_samples={len(test_dataset)}"
+        )
+    else:
+        log(
+            f"[DATA] train_samples={len(train_dataset)} "
+            f"val_samples={len(test_dataset)} "
+            f"test_samples={len(final_test_dataset)}"
+        )
+        log(
+            "[SELECTION] best_checkpoint_split=official_val "
+            "final_report_split=official_test test_evaluations=1"
+        )
     log(
         f"[DATA] student_image=224 teacher_image=32 train_batch={args.batch_size} "
         f"eval_batch={args.eval_batch_size} num_workers={args.num_workers} "
         f"drop_last_train=True smoke={args.smoke} "
         f"split={split_description}"
     )
-    return train_loader, test_loader
+    return train_loader, test_loader, final_test_loader
+
+
+def build_alg_loaders(
+    args: argparse.Namespace,
+    device: torch.device,
+    timm: Any,
+) -> tuple[Any, Any]:
+    """Backward-compatible two-loader interface for historical protocols."""
+
+    train_loader, selection_loader, _ = build_alg_loaders_with_final_test(
+        args, device, timm
+    )
+    return train_loader, selection_loader
 
 
 def create_draft_common_scheduler(
@@ -777,9 +868,17 @@ def write_summary(
     controller: AdaptiveGuidanceController,
     teacher_native_top1: float,
     teacher_shared_top1: float,
+    final_test_accuracy: float | None = None,
 ) -> None:
     average_epoch = sum(epoch_times) / max(1, len(epoch_times))
     reference = REFERENCE_TOP1[args.dataset]
+    official_three_way = (
+        args.dataset == "flowers102"
+        and args.flowers_split_policy == "official_three_way"
+    )
+    reported_accuracy = (
+        final_test_accuracy if final_test_accuracy is not None else best_accuracy
+    )
     summary = {
         "status": "complete" if latest_epoch == args.student_epochs else "running",
         "method": "ALG",
@@ -794,10 +893,17 @@ def write_summary(
         "teacher_shared_view_top1": teacher_shared_top1,
         "student_epochs": args.student_epochs,
         "latest_epoch": latest_epoch,
-        "best_top1": best_accuracy,
+        "flowers_split_policy": args.flowers_split_policy,
+        "checkpoint_selection_split": "val" if official_three_way else "test",
+        "best_top1": reported_accuracy,
         "latest_top1": latest_accuracy,
+        "selection_best_top1": best_accuracy,
+        "latest_selection_top1": latest_accuracy,
+        "best_validation_top1": best_accuracy if official_three_way else None,
+        "final_test_top1": final_test_accuracy,
+        "final_test_evaluations": 1 if final_test_accuracy is not None else 0,
         "paper_alg_top1": reference["alg"],
-        "gap_to_paper_alg_pp": best_accuracy - reference["alg"],
+        "gap_to_paper_alg_pp": reported_accuracy - reference["alg"],
         "paper_lg_top1": reference["lg"],
         "paper_baseline_top1": reference["baseline"],
         "paper_guidance_stop_epoch": PAPER_GUIDANCE_STOP_EPOCH[args.dataset],
@@ -904,11 +1010,16 @@ def main() -> None:
     )
 
     if args.base_protocol == "lg_official":
-        train_loader, test_loader = build_alg_loaders(args, device, timm)
+        (
+            train_loader,
+            test_loader,
+            final_test_loader,
+        ) = build_alg_loaders_with_final_test(args, device, timm)
     else:
         from methods.KD.core import build_loaders
 
         train_loader, test_loader = build_loaders(args, device)
+        final_test_loader = None
     native_loader = build_native_teacher_audit_loader(args, device)
     teacher, teacher_payload, teacher_spec = load_teacher(
         args.dataset,
@@ -1144,15 +1255,60 @@ def main() -> None:
 
     elapsed = time.time() - training_start
     average_epoch = sum(epoch_times) / len(epoch_times)
+    final_test_accuracy: float | None = None
+    if final_test_loader is not None:
+        best_payload = torch.load(
+            best_checkpoint,
+            map_location=device,
+            weights_only=False,
+        )
+        student.load_state_dict(best_payload["model"])
+        final_test_accuracy = evaluate(
+            student, final_test_loader, device, amp_enabled
+        )
+        elapsed = time.time() - training_start
+        best_payload["selection_split"] = "val"
+        best_payload["selection_best_accuracy"] = best_accuracy
+        best_payload["final_test_accuracy"] = final_test_accuracy
+        atomic_torch_save(best_payload, best_checkpoint)
+        write_summary(
+            summary_path,
+            args=args,
+            teacher_spec=teacher_spec,
+            latest_epoch=args.student_epochs,
+            best_accuracy=best_accuracy,
+            latest_accuracy=latest_accuracy,
+            epoch_times=epoch_times,
+            elapsed=elapsed,
+            controller=controller,
+            teacher_native_top1=teacher_native_top1,
+            teacher_shared_top1=teacher_shared_top1,
+            final_test_accuracy=final_test_accuracy,
+        )
     log("=" * 72)
-    log(
-        f"[FINAL_RESULT] alg_best_top1={best_accuracy:.2f}% "
-        f"paper_alg_top1={reference['alg']:.2f}% "
-        f"gap_to_paper={best_accuracy - reference['alg']:+.2f}pp"
-    )
+    if final_test_accuracy is None:
+        reported_accuracy = best_accuracy
+        log(
+            f"[FINAL_RESULT] alg_best_top1={best_accuracy:.2f}% "
+            f"paper_alg_top1={reference['alg']:.2f}% "
+            f"gap_to_paper={best_accuracy - reference['alg']:+.2f}pp"
+        )
+    else:
+        reported_accuracy = final_test_accuracy
+        log(
+            f"[FINAL_RESULT] alg_best_val_top1={best_accuracy:.2f}% "
+            f"alg_final_test_top1={final_test_accuracy:.2f}% "
+            f"paper_alg_top1={reference['alg']:.2f}% "
+            f"test_gap_to_paper={final_test_accuracy - reference['alg']:+.2f}pp"
+        )
+        log(
+            "[FINAL_TEST] selected_checkpoint=student_best.pt "
+            "selection_split=official_val evaluation_split=official_test "
+            "evaluation_count=1"
+        )
     log(
         f"[FINAL_RESULT] paper_lg_top1={reference['lg']:.2f}% "
-        f"gain_over_paper_lg={best_accuracy - reference['lg']:+.2f}pp"
+        f"gain_over_paper_lg={reported_accuracy - reference['lg']:+.2f}pp"
     )
     log(
         f"[BETA_FINAL] observed_stop_epoch={controller.stop_epoch} "

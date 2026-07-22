@@ -16,6 +16,13 @@ Every method/dataset directory owns an executable `train.py` and a local
 they launch those independent entry points as subprocesses and keep every run
 in a separate output directory.
 
+Flowers Ours and ALG additionally provide `train_official_split.py`. These
+entry points are the strict official-three-way variants: train `1,020`, val
+`1,020` for checkpoint selection, then test `6,149` exactly once for the final
+reported Top-1. The historical `train.py` files keep the earlier
+train+val/test-best behavior reproducible and must not be mixed with the new
+result family.
+
 ## Locked common student protocols
 
 | Dataset | Epochs | Batch | Warm-up | Student input | Teacher input |
