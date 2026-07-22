@@ -26,10 +26,9 @@ Flowers-102 now has two deliberately separate historical paths. The older
 and must not be used for the method-isolated comparison. The active comparison
 entry point is
 [`flowers102/train_official_split.py`](flowers102/train_official_split.py): it
-uses the locked official `train` / `val` / `test` comparison split and locks
-the method/optimizer to the ALG-paper and public-LG-code protocol without
-importing any Ours-only setting. The split is an explicit deviation from the
-paper's aggregated `2,040`-train / `6,149`-test description.
+uses the paper's aggregated official `2,040` train+val / `6,149` test split and
+locks the method/optimizer to the ALG-paper and public-LG-code protocol without
+importing any Ours-only setting.
 
 CIFAR-100 uses the same researcher-sync base and controller, the official
 train/test split, and the working-paper ALG reference `81.98%`. Its dedicated
@@ -108,7 +107,7 @@ this is the original code path rather than a newly invented augmentation.
 
 ## H200 commands
 
-Method-isolated Flowers official-split comparison (ALG followed by Ours) is
+Method-isolated Flowers train+val/test comparison (ALG followed by Ours) is
 launched through the repository-level sequential runner documented in the
 root README. This ALG branch uses train/eval batch `128/200`, not the older
 researcher-sync batch `64/200` shown in the general table below.

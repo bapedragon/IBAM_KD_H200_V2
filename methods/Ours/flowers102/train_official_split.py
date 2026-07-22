@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Ours with paper-first/source-first settings on Flowers-102."""
+"""Run Ours paper/source settings on Flowers train+val/test."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ if str(REPOSITORY_ROOT) not in sys.path:
 
 from methods.Ours.core import cli_main
 PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "flowers102_deit_ti_ours_paper_source_v1_official_split"),
+    ("--protocol-name", "flowers102_deit_ti_ours_paper_source_v2_trainval_test"),
     ("--student-epochs", "300"),
     ("--batch-size", "128"),
     ("--eval-batch-size", "200"),
@@ -34,7 +34,7 @@ PROTOCOL_DEFAULTS = (
     ("--alg-warmup-epochs", "20"),
     ("--grid-resize-mode", "larger"),
     ("--eval-resize-mode", "direct"),
-    ("--flowers-split-policy", "official_three_way"),
+    ("--flowers-split-policy", "trainval_test_best"),
 )
 
 

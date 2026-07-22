@@ -4,9 +4,8 @@
 - Student: DeiT-Ti from scratch
 - Evaluation: direct full-image resize to `224 x 224`, matching the supplied
   locality-guidance loader
-- Current split: official train `1,020` for training, official val `1,020`
-  for best-checkpoint selection, and official test `6,149` for one final
-  evaluation of the selected checkpoint
+- Current split: official train+val `2,040` for training and official test
+  `6,149` for evaluation and best-checkpoint selection
 - Paper-first training protocol: 300 epochs, train/eval batch `128/200`, AdamW
   `5e-4`, minimum LR `5e-6`, weight decay `0.05`, 20-epoch warm-up
   from factor `0.001`, cosine decay
@@ -32,7 +31,7 @@ Full run only after the timing log and teacher audit pass:
 
 ```bash
 python methods/Ours/flowers102/train_official_split.py --num-workers 4 \
-  --run-name ours_flowers102_deit_ti_official_split_300ep_seed1 \
+  --run-name ours_flowers102_deit_ti_trainval_test_300ep_seed1 \
   --output-dir /app/output
 ```
 
@@ -42,6 +41,6 @@ Therefore batch 128 comes from the Ours paper, while larger-grid resizing,
 all-block aggregation, and the combined guidance signal come from the supplied
 Ours implementation. The older `train.py` entry point preserves the earlier
 researcher-sync-v1 behavior for provenance only. It is not the current
-official-three-way entry point. Earlier results are never overwritten. See
+active train+val/test entry point. Earlier results are never overwritten. See
 [`../RESEARCHER_SYNC.md`](../RESEARCHER_SYNC.md) for the synchronized
 controller and base protocol.

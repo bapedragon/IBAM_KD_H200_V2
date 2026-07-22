@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run ALG-paper/LG-code settings under the locked official Flowers split."""
+"""Run ALG-paper/LG-code settings on Flowers train+val/test."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ if str(REPOSITORY_ROOT) not in sys.path:
 
 from methods.ALG.core import cli_main
 PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "flowers102_deit_ti_alg_paper_lg_v1_official_split"),
+    ("--protocol-name", "flowers102_deit_ti_alg_paper_lg_v2_trainval_test"),
     ("--student-epochs", "300"),
     ("--batch-size", "128"),
     ("--eval-batch-size", "200"),
@@ -34,7 +34,7 @@ PROTOCOL_DEFAULTS = (
     ("--base-protocol", "lg_official"),
     ("--eval-resize-mode", "direct"),
     ("--seed", "1"),
-    ("--flowers-split-policy", "official_three_way"),
+    ("--flowers-split-policy", "trainval_test_best"),
 )
 
 

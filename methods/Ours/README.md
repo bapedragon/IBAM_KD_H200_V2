@@ -100,10 +100,11 @@ training configuration. Precedence is fixed as follows:
    loss, larger-grid resizing, and 20-epoch controller gate;
 3. ALG/public LG only for an item absent from both Ours sources.
 
-It uses official Flowers `train=1,020`, `val=1,020`, and `test=6,149`; model
-selection is validation Top-1 and test is evaluated once from that selected
-checkpoint. This path is intentionally distinct from the older batch-64
-researcher-sync diagnostic described in the table above.
+It concatenates official Flowers train+val into `2,040` training images and
+uses the official `6,149`-image test split for evaluation and best-checkpoint
+selection, matching the ALG paper's dataset accounting. This path is
+intentionally distinct from the older batch-64 researcher-sync diagnostic
+described in the table above.
 
 ## Fixed V2 teacher and shared image geometry
 

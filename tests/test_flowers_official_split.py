@@ -38,17 +38,17 @@ class FakeFlowers(Dataset[tuple[torch.Tensor, int]]):
         return torch.zeros(3, 224, 224), index % 102
 
 
-class FlowersOfficialSplitTest(unittest.TestCase):
-    def test_wrappers_lock_official_three_way_policy(self) -> None:
+class FlowersTrainValTestTest(unittest.TestCase):
+    def test_wrappers_lock_trainval_test_policy(self) -> None:
         alg = dict(ALG_DEFAULTS)
         ours = dict(OURS_DEFAULTS)
         for values in (alg, ours):
-            self.assertEqual(values["--flowers-split-policy"], "official_three_way")
+            self.assertEqual(values["--flowers-split-policy"], "trainval_test_best")
             self.assertEqual(values["--student-epochs"], "300")
             self.assertEqual(values["--batch-size"], "128")
             self.assertEqual(values["--warmup-epochs"], "20")
             self.assertEqual(values["--seed"], "1")
-            self.assertIn("official_split", values["--protocol-name"])
+            self.assertIn("trainval_test", values["--protocol-name"])
         self.assertEqual(alg["--alg-warmup-epochs"], "0")
         self.assertEqual(alg["--alg-stop-comparison"], "paper_ge")
         self.assertEqual(alg["--alg-derivative-mode"], "paper_equations")
@@ -57,7 +57,7 @@ class FlowersOfficialSplitTest(unittest.TestCase):
 
     def test_runner_executes_alg_then_ours(self) -> None:
         self.assertEqual([method for method, _ in TASKS], ["ALG", "Ours"])
-        self.assertTrue(all("official_split" in str(path) for _, path in TASKS))
+        self.assertTrue(all("flowers102" in str(path) for _, path in TASKS))
 
     def test_runner_prints_both_final_best_results(self) -> None:
         source = inspect.getsource(sequence_main)
@@ -77,12 +77,11 @@ class FlowersOfficialSplitTest(unittest.TestCase):
             method = "ours" if run_name.startswith("ours_") else "alg"
             run_dir = output_dir / run_name
             run_dir.mkdir(parents=True, exist_ok=True)
-            best_val, final_test = results[method]
+            best_test, _ = results[method]
             (run_dir / "summary.json").write_text(
                 json.dumps(
                     {
-                        "best_validation_top1": best_val,
-                        "final_test_top1": final_test,
+                        "selection_best_top1": best_test,
                         "estimated_planned_seconds": 60.0,
                     }
                 ),
@@ -107,23 +106,21 @@ class FlowersOfficialSplitTest(unittest.TestCase):
 
         output = stdout.getvalue()
         self.assertIn(
-            "[FINAL_BEST][ALG] best_val_top1=68.0% "
-            "selected_checkpoint_test_top1=67.5%",
+            "[FINAL_BEST][ALG] best_test_top1=68.00%",
             output,
         )
         self.assertIn(
-            "[FINAL_BEST][Ours] best_val_top1=70.0% "
-            "selected_checkpoint_test_top1=69.25%",
+            "[FINAL_BEST][Ours] best_test_top1=70.00%",
             output,
         )
         self.assertLess(output.index("[FINAL_BEST][ALG]"), output.index("[DONE]"))
         self.assertLess(output.index("[FINAL_BEST][Ours]"), output.index("[DONE]"))
 
-    def test_loader_keeps_train_val_and_test_disjoint(self) -> None:
+    def test_loader_combines_train_val_and_evaluates_test(self) -> None:
         args = SimpleNamespace(
             dataset="flowers102",
             data_dir=Path("data"),
-            flowers_split_policy="official_three_way",
+            flowers_split_policy="trainval_test_best",
             smoke=False,
             seed=1,
             smoke_train_samples=16,
@@ -147,14 +144,10 @@ class FlowersOfficialSplitTest(unittest.TestCase):
                     args, torch.device("cpu"), fake_timm
                 )
             )
-        self.assertEqual(len(train_loader.dataset), 1020)
-        self.assertEqual(len(val_loader.dataset), 1020)
-        self.assertIsNotNone(test_loader)
-        assert test_loader is not None
-        self.assertEqual(len(test_loader.dataset), 6149)
-        self.assertEqual(train_loader.dataset.split, "train")
-        self.assertEqual(val_loader.dataset.split, "val")
-        self.assertEqual(test_loader.dataset.split, "test")
+        self.assertEqual(len(train_loader.dataset), 2040)
+        self.assertEqual(len(val_loader.dataset), 6149)
+        self.assertIsNone(test_loader)
+        self.assertEqual(val_loader.dataset.split, "test")
 
 
 if __name__ == "__main__":

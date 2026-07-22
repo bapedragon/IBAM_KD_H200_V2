@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run method-separated ALG then Ours under one official Flowers split."""
+"""Run method-separated ALG then Ours on Flowers train+val/test."""
 
 from __future__ import annotations
 
@@ -62,9 +62,9 @@ def main() -> None:
     if args.num_workers < 0:
         raise ValueError("--num-workers must be non-negative")
     default_output = (
-        Path("/tmp/flowers102_official_split_ours_alg_timing")
+        Path("/tmp/flowers102_trainval_test_alg_ours_timing")
         if args.timing_run
-        else Path("/app/output/flowers102_method_separated_alg_ours_300ep_seed1")
+        else Path("/app/output/flowers102_trainval_test_alg_ours_300ep_seed1")
     )
     output_root = (args.output_dir or default_output).resolve()
     output_root.mkdir(parents=True, exist_ok=True)
@@ -74,14 +74,14 @@ def main() -> None:
     sequence_start = time.time()
 
     log("=" * 80)
-    log("FLOWERS-102 METHOD-SEPARATED PROTOCOLS: ALG -> OURS")
+    log("FLOWERS-102 TRAIN+VAL/TEST, METHOD-SEPARATED: ALG -> OURS")
     log("=" * 80)
     log(f"[MODE] timing_run={args.timing_run} full_run={args.full_run}")
-    log("[SPLIT_LOCK] train=1020 val=1020 test=6149")
-    log("[SELECTION_LOCK] best=official_val final_report=official_test_once")
+    log("[SPLIT_LOCK] train=official_train+val=2040 eval=official_test=6149")
+    log("[SELECTION_LOCK] best=official_test_top1")
     log("[ALG_PROTOCOL] ALG paper + public LG code; no Ours settings")
     log("[ALG_PROTOCOL] epochs=300 train/eval_batch=128/200 controller_warmup=0")
-    log("[ALG_SPLIT_NOTE] paper reports train=2040/test=6149; this comparison locks official train/val/test")
+    log("[ALG_SPLIT] matches paper dataset accounting: train=2040 test=6149")
     log("[OURS_PROTOCOL] Ours paper + supplied Ours source; ALG only fills gaps")
     log("[OURS_PROTOCOL] epochs=300 train/eval_batch=128/200 controller_warmup=20")
     log(f"[PATH] output_root={output_root}")
@@ -90,7 +90,7 @@ def main() -> None:
         for order, (method, relative_script) in enumerate(TASKS, start=1):
             mode_name = "timing_2ep" if args.timing_run else "300ep"
             run_name = (
-                f"{method.lower()}_flowers102_deit_ti_method_separated_"
+                f"{method.lower()}_flowers102_deit_ti_trainval_test_"
                 f"{mode_name}_seed1"
             )
             task_output = output_root / method / "flowers102"
@@ -128,12 +128,16 @@ def main() -> None:
             if not task_summary_path.is_file():
                 raise FileNotFoundError(f"Missing task summary: {task_summary_path}")
             task_summary = json.loads(task_summary_path.read_text(encoding="utf-8"))
+            best_test_top1 = task_summary.get("selection_best_top1")
+            if best_test_top1 is None:
+                raise KeyError(
+                    f"Missing selection_best_top1 in {task_summary_path}"
+                )
             record.update(
                 {
                     "status": "complete",
                     "summary": str(task_summary_path),
-                    "best_validation_top1": task_summary.get("best_validation_top1"),
-                    "final_test_top1": task_summary.get("final_test_top1"),
+                    "best_test_top1": float(best_test_top1),
                     "estimated_planned_seconds": task_summary.get(
                         "estimated_planned_seconds"
                     ),
@@ -145,8 +149,7 @@ def main() -> None:
             )
             log(
                 f"[SEQUENCE][{order}/2] DONE method={method} "
-                f"best_val={record['best_validation_top1']} "
-                f"final_test={record['final_test_top1']}"
+                f"best_test_top1={float(record['best_test_top1']):.2f}%"
             )
     except Exception as error:
         if records and records[-1]["status"] == "running":
@@ -162,10 +165,10 @@ def main() -> None:
     elapsed = time.time() - sequence_start
     payload = {
         "status": "complete",
-        "protocol": "method_separated_v1_official_split_300ep_seed1",
-        "split": {"train": 1020, "val": 1020, "test": 6149},
-        "checkpoint_selection": "official_val",
-        "final_report": "official_test_once",
+        "protocol": "method_separated_v2_trainval_test_300ep_seed1",
+        "split": {"train_plus_val": 2040, "test": 6149},
+        "checkpoint_selection": "official_test_top1",
+        "final_report": "best_official_test_top1",
         "elapsed_seconds": elapsed,
         "elapsed_human": format_duration(elapsed),
         "estimated_full_seconds": estimated_full_seconds,
@@ -184,11 +187,10 @@ def main() -> None:
         record = by_method[method]
         log(
             f"[FINAL_BEST][{method}] "
-            f"best_val_top1={record['best_validation_top1']}% "
-            f"selected_checkpoint_test_top1={record['final_test_top1']}%"
+            f"best_test_top1={float(record['best_test_top1']):.2f}%"
         )
-    alg_test = by_method["ALG"].get("final_test_top1")
-    ours_test = by_method["Ours"].get("final_test_top1")
+    alg_test = by_method["ALG"].get("best_test_top1")
+    ours_test = by_method["Ours"].get("best_test_top1")
     if alg_test is not None and ours_test is not None:
         log(
             f"[FINAL_COMPARISON] ours_minus_alg_test="
@@ -199,7 +201,7 @@ def main() -> None:
         f"{'PASS' if payload['pod_limit_passed'] else 'FAIL'} limit=10h 00m 00s"
     )
     log(f"[FINAL_RESULT] summary={summary_path}")
-    log("[DONE] Flowers official-split Ours and ALG completed successfully.")
+    log("[DONE] Flowers train+val/test ALG and Ours completed successfully.")
 
 
 if __name__ == "__main__":
