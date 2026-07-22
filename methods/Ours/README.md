@@ -6,6 +6,11 @@ confirmed by the working paper/source from reproduction choices that are not
 available in the supplied materials. See [`PAPER_AUDIT.md`](PAPER_AUDIT.md)
 for the evidence matrix.
 
+Table 4 attribution controls are isolated from the primary training entry
+points. The fixed teacher-grid permutation control and its locked 82.90%-run
+comparison contract live under
+[`table4_grid_permutation/`](table4_grid_permutation/README.md).
+
 `ours.py` is a standalone PyTorch port rather than a byte-for-byte copy of the
 original pycls wrapper. Its aggregation, projection, attention blocks, MSE
 calculation, and larger-grid resize preserve the supplied implementation.
