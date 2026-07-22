@@ -6,9 +6,20 @@ verified in this repository. Accuracy cells intentionally remain blank.
 
 ## Current status
 
-There are no pending imports in the overnight batch received on 2026-07-22.
-The following families were loaded with PyTorch, checked against their JSON
-summaries, and imported without replacing historical results:
+The overnight batch received on 2026-07-22 has been imported. One completed
+run still awaits its checkpoint archive:
+
+| Method | Dataset | Protocol ID | Log-verified result | Expected destination | Missing artifacts |
+|---|---|---|---:|---|---|
+| Ours | Chaoyang | `researcher_sync_v1_300ep_seed1` | 81.95% | `results/Ours/chaoyang/researcher_sync_v1_300ep_seed1/` | `student_best.pt`, `run_summary.json` |
+
+The completed H200 log reports best epoch 292, last Top-1 81.11%, guidance
+stop epoch 193, and selected best Top-1 81.95%. This value may be shown with a
+pending-artifact marker, but it is not counted among the 33 committed and
+PyTorch-verified checkpoints.
+
+The following received families were loaded with PyTorch, checked against
+their JSON summaries, and imported without replacing historical results:
 
 - `generic_kd_300ep_epoch_only_v1_seed42`: five Flowers-102 and five
   Chaoyang generic-KD runs;

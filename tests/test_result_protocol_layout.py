@@ -55,6 +55,28 @@ class ResultProtocolLayoutTest(unittest.TestCase):
             self.assertTrue((run_dir / "run_summary.json").is_file(), run_dir)
             self.assertTrue((run_dir / "student_best.pt").is_file(), run_dir)
 
+    def test_consolidated_table_uses_only_current_reporting_results(self) -> None:
+        root_readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        results_readme = (RESULTS / "README.md").read_text(encoding="utf-8")
+        expected_rows = (
+            "| KD | Logits | 69.10 | 48.95 | 62.79 |",
+            "| CRD | Pooled contrastive | 68.59 | 49.06 | 79.85 |",
+            "| ReviewKD | Projected fusion | 75.65 | 61.88 | 82.75 |",
+            "| MGD | Masked reconstruction | 75.68 | 54.66 | 81.81 |",
+            "| OFA | Logit-space projection | 67.73 | 46.41 | 78.03 |",
+            "| LG | Direct match (static) |  |  |  |",
+            "| ALG | Scheduled match (static) |  |  |  |",
+            "| **Ours** | **Grid-space, learnable** | **82.90** | **74.81** | **81.95\\*** |",
+        )
+        for row in expected_rows:
+            self.assertIn(row, root_readme)
+            self.assertIn(row, results_readme)
+
+        pending = (RESULTS / "PENDING_IMPORTS.md").read_text(encoding="utf-8")
+        self.assertIn("Ours | Chaoyang", pending)
+        self.assertIn("researcher_sync_v1_300ep_seed1", pending)
+        self.assertIn("81.95%", pending)
+
 
 if __name__ == "__main__":
     unittest.main()

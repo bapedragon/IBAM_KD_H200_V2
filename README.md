@@ -22,6 +22,36 @@ metadata, and 32 x 32 forward checks. They are fixed before downstream KD and
 must be reused across every compared method. This repository remains
 independent from the earlier 224 x 224 teacher experiments.
 
+## Consolidated DeiT-Ti results (Table 2 format)
+
+The table below is the repository's current reproduction table. It reports
+only runs performed in this repository; it does not copy unrun LG/ALG values
+from the draft paper.
+
+| Method | Transfer operator | CIFAR-100 | Flowers-102 | Chaoyang |
+|---|---|---:|---:|---:|
+| Vanilla DeiT-Ti | - | 65.08 | 50.06 | 82.00 |
+| KD | Logits | 69.10 | 48.95 | 62.79 |
+| CRD | Pooled contrastive | 68.59 | 49.06 | 79.85 |
+| ReviewKD | Projected fusion | 75.65 | 61.88 | 82.75 |
+| MGD | Masked reconstruction | 75.68 | 54.66 | 81.81 |
+| OFA | Logit-space projection | 67.73 | 46.41 | 78.03 |
+| LG | Direct match (static) |  |  |  |
+| ALG | Scheduled match (static) |  |  |  |
+| **Ours** | **Grid-space, learnable** | **82.90** | **74.81** | **81.95\*** |
+
+Blank cells mean that the method has not yet been run under its intended
+method-specific protocol. In particular, historical/mixed ALG diagnostics are
+not reported as an ALG result here. `*` marks the completed Chaoyang Ours H200
+run whose `81.95%` final result has been verified from the full Issue log but
+whose checkpoint archive is still awaiting import. All other non-Vanilla
+numbers above have a committed best checkpoint and adjacent run summary.
+
+The generic methods use the completed 300-epoch results. Ours uses the current
+researcher-synchronized 300-epoch runs. Exact protocol IDs, best epochs,
+last-epoch values, historical runs, and artifact status are catalogued in
+[`results/README.md`](results/README.md).
+
 ## Files
 
 ```text

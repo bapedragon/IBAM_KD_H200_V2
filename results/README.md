@@ -45,6 +45,33 @@ their summaries for dataset, method, best accuracy, and checkpoint epoch.
 The Top-1 value is read from the adjacent summary; file names are deliberately
 stable (`student_best.pt`) inside the provenance-rich protocol directory.
 
+## Consolidated DeiT-Ti reproduction table
+
+| Method | Transfer operator | CIFAR-100 | Flowers-102 | Chaoyang |
+|---|---|---:|---:|---:|
+| Vanilla DeiT-Ti | - | 65.08 | 50.06 | 82.00 |
+| KD | Logits | 69.10 | 48.95 | 62.79 |
+| CRD | Pooled contrastive | 68.59 | 49.06 | 79.85 |
+| ReviewKD | Projected fusion | 75.65 | 61.88 | 82.75 |
+| MGD | Masked reconstruction | 75.68 | 54.66 | 81.81 |
+| OFA | Logit-space projection | 67.73 | 46.41 | 78.03 |
+| LG | Direct match (static) |  |  |  |
+| ALG | Scheduled match (static) |  |  |  |
+| **Ours** | **Grid-space, learnable** | **82.90** | **74.81** | **81.95\*** |
+
+Blank cells mean not yet run under the intended method-specific protocol; they
+do not mean zero accuracy. The table intentionally excludes historical/mixed ALG
+diagnostics. `*` means the Chaoyang Ours result is verified from the completed
+H200 log, while its checkpoint and summary archive are still pending import.
+The Vanilla values are draft references; every other populated cell is a
+reproduction result from this project.
+
+Protocol families used in this table:
+
+- generic CIFAR-100: `generic_kd_v2_300ep_seed42`;
+- generic Flowers/Chaoyang: `generic_kd_300ep_epoch_only_v1_seed42`;
+- Ours: `researcher_sync_v1_300ep_seed1`.
+
 ## CIFAR-100
 
 Shared setup: ResNet56 teacher at 32 x 32 and scratch DeiT-Ti student at
