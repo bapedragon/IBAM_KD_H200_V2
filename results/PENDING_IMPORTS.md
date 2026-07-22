@@ -6,17 +6,23 @@ verified in this repository. Accuracy cells intentionally remain blank.
 
 ## Current status
 
-The overnight batch received on 2026-07-22 has been imported. One completed
-run still awaits its checkpoint archive:
+The overnight batch received on 2026-07-22 has been imported. Two completed
+runs still await their checkpoint archives:
 
 | Method | Dataset | Protocol ID | Log-verified result | Expected destination | Missing artifacts |
 |---|---|---|---:|---|---|
 | Ours | Chaoyang | `researcher_sync_v1_300ep_seed1` | 81.95% | `results/Ours/chaoyang/researcher_sync_v1_300ep_seed1/` | `student_best.pt`, `run_summary.json` |
+| ALG | Flowers-102 | `flowers102_deit_ti_alg_paper_lg_v2_trainval_test` | 73.15% | `results/ALG/flowers102/alg_paper_lg_v2_trainval_test_300ep_seed1/` | `student_best.pt`, `summary.json` or normalized `run_summary.json` |
 
 The completed H200 log reports best epoch 292, last Top-1 81.11%, guidance
 stop epoch 193, and selected best Top-1 81.95%. This value may be shown with a
 pending-artifact marker, but it is not counted among the 33 committed and
 PyTorch-verified checkpoints.
+
+The supplied final excerpt for the pure ALG Flowers run reports selected best
+Top-1 `73.15%` under train/eval batch `128/200`, 300 epochs, train+val/test,
+and seed 1. The excerpt does not contain ALG's best epoch or last-epoch
+accuracy, so those fields remain unknown until the output archive is received.
 
 The following received families were loaded with PyTorch, checked against
 their JSON summaries, and imported without replacing historical results:

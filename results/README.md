@@ -31,6 +31,11 @@ dataset. The canonical IDs currently used are:
 | `researcher_sync_v1_300ep_seed1` | researcher-synchronized Ours/ALG family; Flowers uses train+val 2,040 / test 6,149 |
 | `researcher_sync_v2_official_three_way_300ep_seed1_historical` | historical Flowers run: train 1,020, val-best 1,020, final test 6,149 once |
 
+The completed pure ALG Flowers run reports runtime protocol
+`flowers102_deit_ti_alg_paper_lg_v2_trainval_test`. Its output archive has not
+yet passed the import gate, so no canonical protocol directory is created for
+it yet; the result is tracked as log-verified in `PENDING_IMPORTS.md`.
+
 Account names and H200 build numbers are kept only under `run_logs`; they do
 not determine checkpoint placement. `PENDING_IMPORTS.md` records jobs that
 have started but whose output archives have not yet been verified and added.
@@ -56,21 +61,23 @@ stable (`student_best.pt`) inside the provenance-rich protocol directory.
 | MGD | Masked reconstruction | 75.68 | 54.66 | 81.81 |
 | OFA | Logit-space projection | 67.73 | 46.41 | 78.03 |
 | LG | Direct match (static) |  |  |  |
-| ALG | Scheduled match (static) |  |  |  |
+| ALG | Scheduled match (static) |  | 73.15† |  |
 | **Ours** | **Grid-space, learnable** | **82.90** | **74.81** | **81.95\*** |
 
 Blank cells mean not yet run under the intended method-specific protocol; they
-do not mean zero accuracy. The table intentionally excludes historical/mixed ALG
-diagnostics. `*` means the Chaoyang Ours result is verified from the completed
-H200 log, while its checkpoint and summary archive are still pending import.
-The Vanilla values are draft references; every other populated cell is a
-reproduction result from this project.
+do not mean zero accuracy. `†` means the pure ALG-paper/public-LG Flowers
+result is verified from the completed H200 log, while its checkpoint and
+summary archive are pending import. `*` has the same artifact status for the
+Chaoyang Ours result. The Vanilla values are draft references; every other
+populated cell is a reproduction result from this project.
 
 Protocol families used in this table:
 
 - generic CIFAR-100: `generic_kd_v2_300ep_seed42`;
 - generic Flowers/Chaoyang: `generic_kd_300ep_epoch_only_v1_seed42`;
-- Ours: `researcher_sync_v1_300ep_seed1`.
+- Flowers ALG: `flowers102_deit_ti_alg_paper_lg_v2_trainval_test` (log-only,
+  train batch 128);
+- Ours: `researcher_sync_v1_300ep_seed1` (Flowers train batch 64).
 
 ## CIFAR-100
 
@@ -110,16 +117,38 @@ on the official test set (`6,149`).
 | MGD | 248 | **54.66%** | 54.09% | +4.60 pp |
 | OFA | 201 | **46.41%** | 45.54% | -3.65 pp |
 
-Researcher-sync runs using train+val (`2,040`) / test (`6,149`):
+### Selected method-specific Flowers results
+
+Both selected rows use train+val (`2,040`) / test (`6,149`), 300 epochs, seed
+1, and a scratch DeiT-Ti at 224 x 224. They intentionally preserve their own
+method protocols instead of forcing one method's batch setting onto the other.
+
+| Method | Train / eval batch | Best epoch | Best Top-1 | Last Top-1 | Working-paper value | Gap | Artifact status |
+|---|---:|---:|---:|---:|---:|---:|---|
+| ALG (paper/public-LG protocol) | 128 / 200 | pending archive | **73.15%** | pending archive | 68.54% | +4.61 pp | Completed log verified; checkpoint/summary pending |
+| Ours (CIFAR-100-matched researcher sync) | 64 / 200 | 251 | **74.81%** | 74.21% | 70.31% | +4.50 pp | Checkpoint and summary verified |
+
+The Ours batch-64 artifacts are committed at
+`Ours/flowers102/researcher_sync_v1_300ep_seed1/`. The ALG batch-128 value is
+preserved in
+`run_logs/flowers102_alg128_ours128_300ep_final_excerpt.txt`; its best epoch
+and last-epoch value cannot be recovered from the currently supplied excerpt.
+
+### Auxiliary researcher-sync comparison
+
+The earlier shared researcher-sync batch used train/eval batch `64/200` for
+both methods. It remains useful as an ablation, but its ALG row is not the
+selected pure ALG-paper result in the consolidated table.
 
 | Method | Best epoch | Best Top-1 | Last Top-1 | Working-paper value | Gap |
 |---|---:|---:|---:|---:|---:|
-| ALG | 288 | **75.02%** | 74.87% | 68.54% | +6.48 pp |
-| Ours | 251 | **74.81%** | 74.21% | 70.31% | +4.50 pp |
+| ALG (researcher-sync batch 64) | 288 | **75.02%** | 74.87% | 68.54% | +6.48 pp |
+| Ours (researcher-sync batch 64) | 251 | **74.81%** | 74.21% | 70.31% | +4.50 pp |
 
-These researcher-sync Flowers results are recorded by exact protocol ID. They
-must not be confused with the later method-separated ALG/Ours entry points or
-with the three-way split audit below.
+The later method-separated batch-128 sequence also produced Ours `72.78%` and
+ALG `73.15%`; only ALG is selected from that sequence because the requested
+Ours reporting row is the CIFAR-100-matched batch-64 run. These results must
+not be confused with the three-way split audit below.
 
 ### Historical official three-way split audit
 
@@ -208,6 +237,9 @@ in separate protocol directories; no old checkpoint was overwritten.
   CIFAR-100, Ours Flowers-102, and ALG Flowers-102 researcher-sync runs.
 - `run_logs/h200_build-477_flowers-official-three-way-ours-alg-300ep.log`:
   historical Flowers train/val/test audit.
+- `run_logs/flowers102_alg128_ours128_300ep_final_excerpt.txt`: supplied final
+  lines from the method-separated Flowers sequence (ALG batch 128 `73.15%`,
+  Ours batch 128 `72.78%`); checkpoint archives were not supplied.
 
 Generic methods use the CNN-to-ViT adapters documented in each method
 directory. They should not be described as unmodified original CNN-to-CNN

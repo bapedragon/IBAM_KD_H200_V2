@@ -33,6 +33,15 @@ into ALG.
 | Early derivative | ALG Eq. (16), explicit `1/e` normalization |
 | Grid alignment | larger of teacher/student, bilinear |
 
+## Completed H200 result
+
+The pure ALG-paper/public-LG run completed with **73.15% best test Top-1**.
+This value is verified from the final H200 log and used in the consolidated
+table with a pending-artifact marker. The checkpoint and JSON summary have not
+yet been supplied, so the best epoch and last-epoch accuracy remain pending;
+the older researcher-sync batch-64 ALG checkpoint (`75.02%`) is not substituted
+for this result.
+
 Timing run:
 
 ```bash

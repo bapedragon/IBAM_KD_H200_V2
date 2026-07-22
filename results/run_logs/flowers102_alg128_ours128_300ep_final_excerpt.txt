@@ -1,0 +1,21 @@
+Provenance: final H200 Issue-log lines supplied by the user on 2026-07-22.
+Purpose: preserve the reported result while the checkpoint/summary archive is pending.
+
+Sequence protocol:
+- Flowers-102 official train+val: 2,040 images
+- Flowers-102 official test: 6,149 images
+- DeiT-Ti student, 224 x 224, 300 epochs, seed 1, FP32
+- train/eval batch: 128/200
+- ALG runtime protocol: flowers102_deit_ti_alg_paper_lg_v2_trainval_test
+
+[FINAL_RESULT] completed_tasks=2/2 estimated_full=1h 36m 32s
+[FINAL_BEST][ALG] best_test_top1=73.15%
+[FINAL_BEST][Ours] best_test_top1=72.78%
+[FINAL_COMPARISON] ours_minus_alg_test=-0.37pp
+[POD_LIMIT_CHECK] status=PASS limit=10h 00m 00s
+[DONE] Flowers train+val/test ALG and Ours completed successfully.
+
+Artifact note:
+- The supplied excerpt includes the final selected values.
+- The ALG best epoch, ALG last-epoch Top-1, student_best.pt, and summary.json
+  were not included in the received files and must not be inferred.

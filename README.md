@@ -37,19 +37,25 @@ from the draft paper.
 | MGD | Masked reconstruction | 75.68 | 54.66 | 81.81 |
 | OFA | Logit-space projection | 67.73 | 46.41 | 78.03 |
 | LG | Direct match (static) |  |  |  |
-| ALG | Scheduled match (static) |  |  |  |
+| ALG | Scheduled match (static) |  | 73.15† |  |
 | **Ours** | **Grid-space, learnable** | **82.90** | **74.81** | **81.95\*** |
 
 Blank cells mean that the method has not yet been run under its intended
-method-specific protocol. In particular, historical/mixed ALG diagnostics are
-not reported as an ALG result here. `*` marks the completed Chaoyang Ours H200
-run whose `81.95%` final result has been verified from the full Issue log but
-whose checkpoint archive is still awaiting import. All other non-Vanilla
-numbers above have a committed best checkpoint and adjacent run summary.
+method-specific protocol. `†` marks the pure ALG-paper/public-LG Flowers run
+(train batch 128), whose `73.15%` best result is verified from the completed
+H200 log but whose checkpoint and summary archive are still awaiting import.
+`*` similarly marks the completed Chaoyang Ours H200 run whose `81.95%` final
+result is log-verified but whose archive is still awaiting import. Every
+unmarked non-Vanilla number above has a committed best checkpoint and adjacent
+run summary.
 
-The generic methods use the completed 300-epoch results. Ours uses the current
-researcher-synchronized 300-epoch runs. Exact protocol IDs, best epochs,
-last-epoch values, historical runs, and artifact status are catalogued in
+The generic methods use the completed 300-epoch results. The selected Flowers
+ALG value uses the isolated ALG-paper/public-LG protocol with train/eval batch
+`128/200`. The selected Flowers Ours value uses the fully imported
+CIFAR-100-matched researcher-sync protocol with train/eval batch `64/200`.
+Both use 300 epochs, the official train+val (`2,040`) / test (`6,149`) split,
+and seed 1, but they remain distinct protocol families. Exact protocol IDs,
+best epochs, last-epoch values, historical runs, and artifact status are catalogued in
 [`results/README.md`](results/README.md).
 
 ## Files

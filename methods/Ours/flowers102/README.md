@@ -18,6 +18,19 @@
   afterward strict `smoothed_derivative > tau` disables guidance permanently.
 - Working-paper comparison target: `70.31%` Top-1
 
+## Selected repository result
+
+The consolidated table currently selects the fully imported
+`researcher_sync_v1_300ep_seed1` run: train/eval batch `64/200`, 300 epochs,
+official train+val/test, best epoch 251, **74.81% best Top-1**, and 74.21%
+last-epoch Top-1. Batch 64 matches the shared CIFAR-100 researcher-sync
+training setting requested for this comparison. Its checkpoint and summary
+are stored under `results/Ours/flowers102/researcher_sync_v1_300ep_seed1/`.
+
+The method-separated batch-128 entry point documented below was also run and
+reached 72.78%, but it is retained as an auxiliary diagnostic rather than
+replacing the selected batch-64 result.
+
 The fixed Flowers teacher was trained at 32 x 32. The runtime audit verifies
 its manifest hash and preprocessing integration before student training.
 
