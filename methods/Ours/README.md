@@ -11,6 +11,10 @@ points. The fixed teacher-grid permutation control and its locked 82.90%-run
 comparison contract live under
 [`table4_grid_permutation/`](table4_grid_permutation/README.md).
 
+Table 7 loss-balance controls are likewise isolated under
+[`table7_loss_balance/`](table7_loss_balance/README.md). They inherit the same
+82.90%-run protocol and vary only the convex loss-balance parameter `lambda`.
+
 `ours.py` is a standalone PyTorch port rather than a byte-for-byte copy of the
 original pycls wrapper. Its aggregation, projection, attention blocks, MSE
 calculation, and larger-grid resize preserve the supplied implementation.
