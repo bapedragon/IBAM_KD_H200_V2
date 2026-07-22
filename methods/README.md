@@ -16,6 +16,11 @@ Every method/dataset directory owns an executable `train.py` and a local
 they launch those independent entry points as subprocesses and keep every run
 in a separate output directory.
 
+`run_alg_batch_ablation_ours_chaoyang.py` is the four-task method-isolated
+batch runner. It executes pure ALG Flowers batch 64, pure ALG Chaoyang batch
+128 and 64, and finally the CIFAR-100-locked researcher-sync Ours Chaoyang
+batch 64 run. All tasks use distinct protocol IDs and output directories.
+
 Flowers Ours and ALG additionally provide the active comparison wrappers
 `train_official_split.py`. Despite the historical filename, these now enforce
 the ALG-paper dataset accounting used across Flowers experiments: official

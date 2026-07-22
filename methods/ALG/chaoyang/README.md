@@ -30,6 +30,21 @@ batch 128 training base and must not be mixed into the synchronized table.
 The second run is a controlled protocol diagnostic. Results must be compared
 within a family, not presented as a repeated seed of the first family.
 
+`train_pure_alg.py` is the method-isolated ALG-paper/public-LG entry point.
+Unlike researcher-sync `train.py`, it follows the published ALG derivative
+equations, uses `derivative >= -0.02`, and has no extra controller warm-up.
+The optimizer still has the published 20-epoch LR warm-up. Batch size is an
+explicit ablation axis, so batch 128 and 64 receive separate protocol and run
+names:
+
+```bash
+python methods/ALG/chaoyang/train_pure_alg.py --batch-size 128 \
+  --protocol-name chaoyang_deit_ti_alg_paper_lg_v2_b128 --timing-run
+
+python methods/ALG/chaoyang/train_pure_alg.py --batch-size 64 \
+  --protocol-name chaoyang_deit_ti_alg_paper_lg_v2_b64 --timing-run
+```
+
 ```bash
 python methods/ALG/chaoyang/train_draft_common.py --timing-run --num-workers 4
 python methods/ALG/chaoyang/train_draft_common.py --output-dir /app/output \

@@ -19,6 +19,35 @@ runs, so its final 450-epoch request may be submitted directly.
 The script installs its pinned `timm==1.0.27` dependency automatically, so no
 extra installation command is required in the execution field.
 
+## Pure ALG batch ablation + CIFAR-locked Ours Chaoyang (one Issue)
+
+This sequence runs four independent 300-epoch tasks: pure ALG Flowers batch
+64, pure ALG Chaoyang batch 128, pure ALG Chaoyang batch 64, and Ours
+Chaoyang batch 64 using the researcher-sync protocol fixed by the successful
+CIFAR-100 run. Pure ALG uses the ALG equations/public-LG base; it does not use
+the Ours controller or fusion module.
+
+| Field | Value |
+|---|---|
+| Title | `[Request]: 박철현 ALG Flowers Chaoyang batch comparison and Ours Chaoyang training` |
+| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
+| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
+| 코드 실행 명령어 | `python methods/run_alg_batch_ablation_ours_chaoyang.py --full-run --num-workers 4 --output-dir /app/output/alg_batch_ablation_ours_chaoyang_300ep_seed1` |
+| 사용할 이미지 | `pytorch/pytorch:latest` |
+| 사용 언어 | `Python` |
+| GPU 할당량 (MIG 개수) | `7` |
+
+Comparable completed runs indicate a total around three hours, comfortably
+below the 600-minute Pod limit. For a fresh infrastructure check, replace
+`--full-run` with `--timing-run` and omit `--output-dir`; the returned log will
+print the new combined estimate and `[POD_LIMIT_CHECK]` status.
+
+Successful completion prints four `[FINAL_BEST]` lines, `completed_tasks=4/4`,
+`[POD_LIMIT_CHECK] status=PASS`, and the final sequence summary path. Each task
+has its own `student_best.pt`, `student_latest.pt`, and `summary.json`. If a
+later subprocess fails, earlier completed directories remain under
+`/app/output` for collection.
+
 ## Flowers-102 official split Ours + ALG (current request)
 
 This corrected protocol does **not** merge train and val. Both methods use

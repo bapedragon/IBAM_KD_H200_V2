@@ -372,6 +372,26 @@ The full Flowers directory contains `best`, `latest`, and
 in this repository.
 Timing-run accuracy is not a research result.
 
+## Pure ALG batch comparison and CIFAR-locked Ours
+
+One Pod can run the requested four independent 300-epoch tasks in sequence:
+
+```bash
+python methods/run_alg_batch_ablation_ours_chaoyang.py --timing-run \
+  --num-workers 4
+
+python methods/run_alg_batch_ablation_ours_chaoyang.py --full-run \
+  --num-workers 4 \
+  --output-dir /app/output/alg_batch_ablation_ours_chaoyang_300ep_seed1
+```
+
+The order is pure ALG Flowers batch 64, pure ALG Chaoyang batch 128, pure ALG
+Chaoyang batch 64, then Ours Chaoyang batch 64. Pure ALG follows the ALG
+equations and public LG base without Ours settings. Ours follows the
+researcher-synchronized protocol that produced the selected CIFAR-100 result.
+Every run has its own directory, and the final log prints all four Best Top-1
+values plus the combined 600-minute Pod-limit check.
+
 ## Chaoyang timing and full runs
 
 Chaoyang is read from the persistent mount at `/app/data/chaoyang`. The script
