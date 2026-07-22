@@ -87,11 +87,19 @@ class AdaptiveGuidanceController:
         threshold: float,
         smoothing_window: int,
         warm_up: int,
+        stop_comparison: str = "researcher_gt",
+        derivative_mode: str = "researcher_code",
     ) -> None:
         self.beta = float(beta)
         self.threshold = float(threshold)
         self.smoothing_window = int(smoothing_window)
         self.warm_up = int(warm_up)
+        if stop_comparison not in {"paper_ge", "researcher_gt"}:
+            raise ValueError(f"Unsupported ALG stop comparison: {stop_comparison}")
+        self.stop_comparison = stop_comparison
+        if derivative_mode not in {"paper_equations", "researcher_code"}:
+            raise ValueError(f"Unsupported ALG derivative mode: {derivative_mode}")
+        self.derivative_mode = derivative_mode
         self.active = True
         self.stop_epoch: int | None = None
         self.guidance_loss_history: list[float] = []
@@ -133,7 +141,15 @@ class AdaptiveGuidanceController:
         if epoch <= self.smoothing_window:
             deltas = [self._delta_at(index) for index in range(2, epoch + 1)]
             values = [float(value) for value in deltas if value is not None]
-            return sum(values) / len(values) if values else None
+            if not values:
+                return None
+            if self.derivative_mode == "paper_equations":
+                # ALG Eq. (16) averages e derivative terms.  The i=1 term is
+                # undefined algebraically because there is no previous epoch;
+                # treating it as zero is the finite boundary completion that
+                # preserves the equation's explicit 1/e normalization.
+                return sum(values) / epoch
+            return sum(values) / len(values)
 
         if epoch < 2 * self.smoothing_window:
             first = epoch - self.smoothing_window + 1
@@ -173,11 +189,15 @@ class AdaptiveGuidanceController:
         )
         self.smoothed_derivative_history.append(smoothed_derivative)
 
-        if (
-            self.active
-            and smoothed_derivative is not None
-            and smoothed_derivative > self.threshold
-        ):
+        threshold_crossed = (
+            smoothed_derivative is not None
+            and (
+                smoothed_derivative >= self.threshold
+                if self.stop_comparison == "paper_ge"
+                else smoothed_derivative > self.threshold
+            )
+        )
+        if self.active and threshold_crossed:
             self.active = False
             self.stop_epoch = epoch
         return self.state_dict()
@@ -191,6 +211,8 @@ class AdaptiveGuidanceController:
             "threshold": self.threshold,
             "smoothing_window": self.smoothing_window,
             "warm_up": self.warm_up,
+            "stop_comparison": self.stop_comparison,
+            "derivative_mode": self.derivative_mode,
             "active": self.active,
             "stop_epoch": self.stop_epoch,
             "guidance_loss_history": list(self.guidance_loss_history),
@@ -257,6 +279,26 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Epoch before which the researcher controller cannot stop "
             "guidance (researcher implementation default: 20)."
+        ),
+    )
+    parser.add_argument(
+        "--alg-stop-comparison",
+        choices=("paper_ge", "researcher_gt"),
+        default="researcher_gt",
+        help=(
+            "paper_ge implements ALG Eq. (19), where guidance is active only "
+            "while the smoothed derivative is below tau. researcher_gt "
+            "preserves the strict > check in the supplied screenshot."
+        ),
+    )
+    parser.add_argument(
+        "--alg-derivative-mode",
+        choices=("paper_equations", "researcher_code"),
+        default="researcher_code",
+        help=(
+            "paper_equations uses ALG Eqs. (16)-(18), including the stated "
+            "1/e early-epoch normalization. researcher_code preserves the "
+            "implementation shown in the supplied screenshots."
         ),
     )
     parser.add_argument(
@@ -991,7 +1033,8 @@ def main() -> None:
         f"beta={args.beta} tau={args.alg_threshold} "
         f"smoothing_window={args.alg_smoothing_window} "
         f"controller_warm_up={args.alg_warmup_epochs} "
-        "stop_condition=smoothed_derivative>tau "
+        f"stop_comparison={args.alg_stop_comparison} "
+        f"derivative_mode={args.alg_derivative_mode} "
         "descent_guard=False observed_signal=complete_alg_lg_loss"
     )
     log(
@@ -1154,6 +1197,8 @@ def main() -> None:
         threshold=args.alg_threshold,
         smoothing_window=args.alg_smoothing_window,
         warm_up=args.alg_warmup_epochs,
+        stop_comparison=args.alg_stop_comparison,
+        derivative_mode=args.alg_derivative_mode,
     )
     log(
         f"[STUDENT] epochs={args.student_epochs} planned={args.planned_epochs} "

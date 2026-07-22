@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Ours on the strict official Flowers-102 train/val/test split."""
+"""Run Ours with paper-first/source-first settings on Flowers-102."""
 
 from __future__ import annotations
 
@@ -12,18 +12,28 @@ if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
 from methods.Ours.core import cli_main
-from methods.Ours.flowers102.train import PROTOCOL_DEFAULTS as BASE_DEFAULTS
-
-
-PROTOCOL_DEFAULTS = tuple(
-    (option, value)
-    for option, value in BASE_DEFAULTS
-    if option != "--protocol-name"
-) + (
-    (
-        "--protocol-name",
-        "flowers102_deit_ti_ours_researcher_sync_v2_official_split",
-    ),
+PROTOCOL_DEFAULTS = (
+    ("--protocol-name", "flowers102_deit_ti_ours_paper_source_v1_official_split"),
+    ("--student-epochs", "300"),
+    ("--batch-size", "128"),
+    ("--eval-batch-size", "200"),
+    ("--lr", "0.0005"),
+    ("--min-lr", "0.000005"),
+    ("--weight-decay", "0.05"),
+    ("--warmup-epochs", "20"),
+    ("--warmup-factor", "0.001"),
+    ("--label-smoothing", "0.0"),
+    ("--drop-path-rate", "0.1"),
+    ("--seed", "1"),
+    ("--base-protocol", "lg_official"),
+    ("--teacher-image-size", "32"),
+    ("--beta-schedule", "alg"),
+    ("--beta-on", "2.5"),
+    ("--alg-threshold", "-0.02"),
+    ("--alg-smoothing-window", "50"),
+    ("--alg-warmup-epochs", "20"),
+    ("--grid-resize-mode", "larger"),
+    ("--eval-resize-mode", "direct"),
     ("--flowers-split-policy", "official_three_way"),
 )
 

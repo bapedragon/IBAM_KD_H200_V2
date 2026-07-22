@@ -167,8 +167,13 @@ split the three independent jobs across Issues instead.
 For the corrected Flowers official three-way evaluation, use the dedicated
 runner below. It trains on the official train split (`1,020`), selects the best
 checkpoint on official val (`1,020`), and evaluates that checkpoint once on
-official test (`6,149`). This is a new `researcher_sync_v2_official_split`
-family; it does not overwrite the earlier train+val/test-best runs.
+official test (`6,149`). ALG and Ours are deliberately separated: ALG uses the
+ALG paper plus public LG code, while Ours uses the Ours paper and supplied Ours
+source first and falls back to ALG/LG only for unspecified settings. The ALG
+paper itself aggregates `2,040` Flowers images as training data; using official
+train/val here is the shared evaluation lock, not an Ours setting. The runner
+executes ALG first and Ours second, then prints both selected best results at
+the end. This protocol family does not overwrite earlier runs.
 
 ```bash
 python methods/run_flowers_official_split_ours_alg.py --timing-run \
@@ -176,7 +181,7 @@ python methods/run_flowers_official_split_ours_alg.py --timing-run \
 
 python methods/run_flowers_official_split_ours_alg.py --full-run \
   --num-workers 4 \
-  --output-dir /app/output/flowers102_official_split_ours_alg_300ep_seed1
+  --output-dir /app/output/flowers102_method_separated_alg_ours_300ep_seed1
 ```
 
 The earlier measured Flowers and Chaoyang total was 4h 39m 31s. One measured

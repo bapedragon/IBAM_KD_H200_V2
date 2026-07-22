@@ -112,6 +112,23 @@ class AlgControllerTest(unittest.TestCase):
         self.assertTrue(controller.active)
         self.assertIsNone(controller.stop_epoch)
 
+    def test_paper_mode_uses_ge_and_explicit_one_over_e_boundary(self) -> None:
+        controller = AdaptiveGuidanceController(
+            beta=2.5,
+            threshold=0.0,
+            smoothing_window=50,
+            warm_up=0,
+            stop_comparison="paper_ge",
+            derivative_mode="paper_equations",
+        )
+        controller.beta_for_epoch(1)
+        controller.observe(1, 4.0)
+        controller.beta_for_epoch(2)
+        state = controller.observe(2, 4.0)
+        self.assertEqual(state["smoothed_derivative_history"][-1], 0.0)
+        self.assertFalse(controller.active)
+        self.assertEqual(controller.stop_epoch, 2)
+
     def test_crossing_epoch_is_last_guided_epoch(self) -> None:
         controller = AdaptiveGuidanceController(
             beta=2.5,

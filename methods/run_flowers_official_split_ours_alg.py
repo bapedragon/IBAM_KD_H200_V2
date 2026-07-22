@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run official-split Flowers Ours and ALG sequentially on H200."""
+"""Run method-separated ALG then Ours under one official Flowers split."""
 
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 TASKS = (
-    ("Ours", Path("methods/Ours/flowers102/train_official_split.py")),
     ("ALG", Path("methods/ALG/flowers102/train_official_split.py")),
+    ("Ours", Path("methods/Ours/flowers102/train_official_split.py")),
 )
 POD_LIMIT_SECONDS = 600 * 60
 
@@ -64,7 +64,7 @@ def main() -> None:
     default_output = (
         Path("/tmp/flowers102_official_split_ours_alg_timing")
         if args.timing_run
-        else Path("/app/output/flowers102_official_split_ours_alg_300ep_seed1")
+        else Path("/app/output/flowers102_method_separated_alg_ours_300ep_seed1")
     )
     output_root = (args.output_dir or default_output).resolve()
     output_root.mkdir(parents=True, exist_ok=True)
@@ -74,19 +74,23 @@ def main() -> None:
     sequence_start = time.time()
 
     log("=" * 80)
-    log("FLOWERS-102 OFFICIAL SPLIT: OURS -> ALG")
+    log("FLOWERS-102 METHOD-SEPARATED PROTOCOLS: ALG -> OURS")
     log("=" * 80)
     log(f"[MODE] timing_run={args.timing_run} full_run={args.full_run}")
     log("[SPLIT_LOCK] train=1020 val=1020 test=6149")
     log("[SELECTION_LOCK] best=official_val final_report=official_test_once")
-    log("[PROTOCOL_LOCK] epochs=300 batch=64 eval_batch=200 warmup=20 seed=1 FP32")
+    log("[ALG_PROTOCOL] ALG paper + public LG code; no Ours settings")
+    log("[ALG_PROTOCOL] epochs=300 train/eval_batch=128/200 controller_warmup=0")
+    log("[ALG_SPLIT_NOTE] paper reports train=2040/test=6149; this comparison locks official train/val/test")
+    log("[OURS_PROTOCOL] Ours paper + supplied Ours source; ALG only fills gaps")
+    log("[OURS_PROTOCOL] epochs=300 train/eval_batch=128/200 controller_warmup=20")
     log(f"[PATH] output_root={output_root}")
 
     try:
         for order, (method, relative_script) in enumerate(TASKS, start=1):
             mode_name = "timing_2ep" if args.timing_run else "300ep"
             run_name = (
-                f"{method.lower()}_flowers102_deit_ti_official_split_"
+                f"{method.lower()}_flowers102_deit_ti_method_separated_"
                 f"{mode_name}_seed1"
             )
             task_output = output_root / method / "flowers102"
@@ -158,7 +162,7 @@ def main() -> None:
     elapsed = time.time() - sequence_start
     payload = {
         "status": "complete",
-        "protocol": "researcher_sync_v2_official_split_300ep_seed1",
+        "protocol": "method_separated_v1_official_split_300ep_seed1",
         "split": {"train": 1020, "val": 1020, "test": 6149},
         "checkpoint_selection": "official_val",
         "final_report": "official_test_once",
@@ -170,11 +174,26 @@ def main() -> None:
         "records": records,
     }
     atomic_json(summary_path, payload)
+    by_method = {record["method"]: record for record in records}
     log("=" * 80)
     log(
         f"[FINAL_RESULT] completed_tasks=2/2 "
         f"estimated_full={format_duration(estimated_full_seconds)}"
     )
+    for method in ("ALG", "Ours"):
+        record = by_method[method]
+        log(
+            f"[FINAL_BEST][{method}] "
+            f"best_val_top1={record['best_validation_top1']}% "
+            f"selected_checkpoint_test_top1={record['final_test_top1']}%"
+        )
+    alg_test = by_method["ALG"].get("final_test_top1")
+    ours_test = by_method["Ours"].get("final_test_top1")
+    if alg_test is not None and ours_test is not None:
+        log(
+            f"[FINAL_COMPARISON] ours_minus_alg_test="
+            f"{float(ours_test) - float(alg_test):+.2f}pp"
+        )
     log(
         f"[POD_LIMIT_CHECK] status="
         f"{'PASS' if payload['pod_limit_passed'] else 'FAIL'} limit=10h 00m 00s"

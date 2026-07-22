@@ -88,6 +88,23 @@ module and objective. All students start without external pretraining and use
 best Top-1 checkpoint reporting. Older 200/100-epoch files remain explicitly
 labeled as historical results.
 
+### Method-isolated Flowers comparison
+
+[`flowers102/train_official_split.py`](flowers102/train_official_split.py) is
+the active Flowers comparison path. It does **not** inherit ALG as a complete
+training configuration. Precedence is fixed as follows:
+
+1. Ours paper for the student protocol (`300` epochs, train batch `128`,
+   AdamW, LR `5e-4`, weight decay `0.05`, cosine, LR warm-up `20`, 224 px);
+2. supplied Ours source/researcher code for the Ours module, full guidance
+   loss, larger-grid resizing, and 20-epoch controller gate;
+3. ALG/public LG only for an item absent from both Ours sources.
+
+It uses official Flowers `train=1,020`, `val=1,020`, and `test=6,149`; model
+selection is validation Top-1 and test is evaluated once from that selected
+checkpoint. This path is intentionally distinct from the older batch-64
+researcher-sync diagnostic described in the table above.
+
 ## Fixed V2 teacher and shared image geometry
 
 All V2 teachers were trained and verified at 32 x 32. The same augmented

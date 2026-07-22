@@ -21,10 +21,15 @@ gap to `108`. The repository's fixed Chaoyang ResNet56 reaches `76.72%`, while
 the original LG paper reports `78.12%` for its guidance model. Therefore this
 is a carefully matched reproduction check, not a guaranteed bit-exact result.
 
-Flowers-102 uses the same researcher-sync base and controller, the official
-`train+val` / `test` split, and the working-paper references Vanilla `50.06%`,
-LG `67.02%`, and ALG `68.54%`. Its dedicated entry point is
-[`flowers102/train.py`](flowers102/train.py).
+Flowers-102 now has two deliberately separate historical paths. The older
+[`flowers102/train.py`](flowers102/train.py) is the researcher-sync diagnostic
+and must not be used for the method-isolated comparison. The active comparison
+entry point is
+[`flowers102/train_official_split.py`](flowers102/train_official_split.py): it
+uses the locked official `train` / `val` / `test` comparison split and locks
+the method/optimizer to the ALG-paper and public-LG-code protocol without
+importing any Ours-only setting. The split is an explicit deviation from the
+paper's aggregated `2,040`-train / `6,149`-test description.
 
 CIFAR-100 uses the same researcher-sync base and controller, the official
 train/test split, and the working-paper ALG reference `81.98%`. Its dedicated
@@ -55,6 +60,13 @@ researcher three-case derivative calculation with a 50-epoch window, and does
 not test for stopping before controller warm-up epoch 20. The comparison is
 strictly `> tau`; there is no additional descent-first guard. The crossing
 epoch is the final guided epoch and every later epoch is CE-only.
+
+The method-isolated Flowers entry point instead follows the published ALG
+equations: it uses the equation boundary `derivative >= tau`, the paper's
+early-epoch `1/e` normalization, and no extra controller warm-up gate. Epoch 1
+has no previous LG loss, so its missing derivative term is represented as
+zero. The 20-epoch warm-up remains the optimizer LR warm-up stated by ALG; it
+is not reused as a guidance-controller delay.
 
 ## Researcher-synchronized base protocol
 
@@ -95,6 +107,11 @@ this is the original code path rather than a newly invented augmentation.
   as the primary comparison and preserves latest Top-1 in `summary.json`.
 
 ## H200 commands
+
+Method-isolated Flowers official-split comparison (ALG followed by Ours) is
+launched through the repository-level sequential runner documented in the
+root README. This ALG branch uses train/eval batch `128/200`, not the older
+researcher-sync batch `64/200` shown in the general table below.
 
 Full-data two-epoch timing check:
 

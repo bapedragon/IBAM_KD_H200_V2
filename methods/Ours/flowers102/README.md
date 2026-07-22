@@ -7,14 +7,14 @@
 - Current split: official train `1,020` for training, official val `1,020`
   for best-checkpoint selection, and official test `6,149` for one final
   evaluation of the selected checkpoint
-- Researcher-sync protocol: 300 epochs, train/eval batch `64/200`, AdamW
+- Paper-first training protocol: 300 epochs, train/eval batch `128/200`, AdamW
   `5e-4`, minimum LR `5e-6`, weight decay `0.05`, 20-epoch warm-up
   from factor `0.001`, cosine decay
 - Input/regularization: 224 pixels, public LG strong augmentation,
   label smoothing `0.0`, drop path `0.1`, seed `1`, FP32
 - Loss: `CE + beta(e) * (0.5 * L_fuse + 0.5 * L_align)`
 - Grid: supplied-source larger-grid policy, producing targets `32/16/14`
-- Adaptive beta: researcher controller with `beta=2.5`, `tau=-0.02`, window
+- Adaptive beta: supplied Ours/researcher controller with `beta=2.5`, `tau=-0.02`, window
   50 and controller warm-up 20. The complete combined feature loss is observed;
   afterward strict `smoothed_derivative > tau` disables guidance permanently.
 - Working-paper comparison target: `70.31%` Top-1
@@ -36,9 +36,12 @@ python methods/Ours/flowers102/train_official_split.py --num-workers 4 \
   --output-dir /app/output
 ```
 
-The older `train.py` entry point preserves the earlier researcher-sync-v1
-`train+val -> test-best` behavior for provenance only. It is not the current
-official-three-way entry point. The earlier 200-epoch seed-42 result and the
-v1 300-epoch result are never overwritten. See
+The current priority is Ours paper for shared training values, supplied Ours
+source for module behavior, and ALG/LG only for settings absent from both.
+Therefore batch 128 comes from the Ours paper, while larger-grid resizing,
+all-block aggregation, and the combined guidance signal come from the supplied
+Ours implementation. The older `train.py` entry point preserves the earlier
+researcher-sync-v1 behavior for provenance only. It is not the current
+official-three-way entry point. Earlier results are never overwritten. See
 [`../RESEARCHER_SYNC.md`](../RESEARCHER_SYNC.md) for the synchronized
 controller and base protocol.
