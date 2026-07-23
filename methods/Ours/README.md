@@ -19,6 +19,9 @@ The local control that shuffles positions only inside non-overlapping `2x2`
 windows, while keeping key and value identical, is isolated under
 [`table4_local_patch_permutation/`](table4_local_patch_permutation/README.md).
 
+The token-space cross-attention re-measurement is isolated under
+[`table4_token_space/`](table4_token_space/README.md).
+
 Table 7 loss-balance controls are likewise isolated under
 [`table7_loss_balance/`](table7_loss_balance/README.md). They inherit the same
 82.90%-run protocol and vary only the convex loss-balance parameter `lambda`.
