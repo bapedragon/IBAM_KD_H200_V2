@@ -979,17 +979,20 @@ def main() -> None:
         if args.grid_resize_mode == "teacher"
         else "supplied-source larger-grid policy"
     )
+    align_ratio = 1.0 - args.fusion_ratio
     log(
-        "[REPRO_STATUS] Paper-confirmed: Eq.(4), lambda=0.5, ALG beta=2.5, "
+        "[REPRO_STATUS] Paper-confirmed: default lambda=0.5; "
+        f"active lambda={args.fusion_ratio:g}, ALG beta=2.5, "
         "tau=-0.02 and 50-epoch smoothing, all-block aggregation, 1x1 "
         "projection/QKV, bilinear grid alignment, 5x5 deformable attention, "
         f"and frozen teacher. Active grid policy={grid_evidence}."
     )
     log(
         "[REPRO_STATUS] Researcher-synchronized choices: the complete "
-        "0.5*L_align+0.5*L_fuse guidance loss drives the controller; the "
-        "controller has a 20-epoch stop warm-up and no descent-first guard. "
-        "Attention heads/reduction/loss reduction follow the supplied source."
+        f"{args.fusion_ratio:g}*L_fuse+{align_ratio:g}*L_align guidance loss "
+        "drives the controller; the controller has a 20-epoch stop warm-up "
+        "and no descent-first guard. Attention heads/reduction/loss reduction "
+        "follow the supplied source."
     )
 
     if args.base_protocol == "lg_official":

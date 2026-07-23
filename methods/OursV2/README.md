@@ -40,6 +40,21 @@ content-only global attention.  It has no 2D relative-position term.  Because
 `Conv1x1(B,C,H,W)` and `Linear(B,H*W,C)` are equivalent after reshaping, the
 functional intervention is the removal of explicit 2D positional relations.
 
+## Table 7 loss balance
+
+The isolated
+[`table7_loss_balance`](table7_loss_balance/README.md) entry point keeps the
+base `relative_position_v1` architecture and all CIFAR-100 training settings
+fixed while changing only `lambda`.  In particular, `lambda=0` is the
+alignment-only control:
+
+```text
+L_feature = 0 * L_fuse + 1 * L_align
+```
+
+Its direct reference is base Ours V2 `relative_position_v1` at `lambda=0.5`,
+not either Table 4 attention control and not a historical pre-V2 Ours result.
+
 ## CIFAR-100 commands
 
 Run the full-data two-epoch timing checks first:
