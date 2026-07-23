@@ -40,6 +40,24 @@ because it lacks the learned 2D relative-position bias.
 
 ## H200 full run
 
+Run the paired full-data, two-epoch timing audit first:
+
+```bash
+python methods/OursV2/table7_loss_balance/run_cifar100.py \
+  --timing-run --num-workers 4
+```
+
+This runs `lambda=0` followed by `lambda=0.5`, validates the two summaries,
+prints the individual and combined 300-epoch estimates, and checks the
+10-hour Pod limit. If it reports `PASS`, use:
+
+```bash
+python methods/OursV2/table7_loss_balance/run_cifar100.py \
+  --full-run --num-workers 4
+```
+
+The single-lambda entry point remains available for a split run:
+
 ```bash
 python methods/OursV2/table7_loss_balance/train_cifar100.py \
   --lambda-value 0 \

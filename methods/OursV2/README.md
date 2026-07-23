@@ -55,6 +55,13 @@ L_feature = 0 * L_fuse + 1 * L_align
 Its direct reference is base Ours V2 `relative_position_v1` at `lambda=0.5`,
 not either Table 4 attention control and not a historical pre-V2 Ours result.
 
+Run the paired timing audit (`lambda=0` followed by `lambda=0.5`) with:
+
+```bash
+python methods/OursV2/table7_loss_balance/run_cifar100.py \
+  --timing-run --num-workers 4
+```
+
 ## CIFAR-100 commands
 
 Run the full-data two-epoch timing checks first:

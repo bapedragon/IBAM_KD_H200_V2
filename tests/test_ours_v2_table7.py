@@ -62,18 +62,18 @@ class OursV2Table7WrapperTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     inject_locked_defaults([option, value], 0.0, "0")
 
-    def test_issue_contains_copyable_full_run(self) -> None:
-        issue = (
+    def test_readme_retains_single_lambda_full_run(self) -> None:
+        readme = (
             Path(__file__).resolve().parents[1]
-            / "methods/OursV2/table7_loss_balance/H200_ISSUE.md"
+            / "methods/OursV2/table7_loss_balance/README.md"
         ).read_text(encoding="utf-8")
         self.assertIn(
-            "python methods/OursV2/table7_loss_balance/train_cifar100.py "
-            "--lambda-value 0",
-            issue,
+            "methods/OursV2/table7_loss_balance/train_cifar100.py",
+            readme,
         )
-        self.assertIn("relative_position_v1", issue)
-        self.assertIn("args.fusion_ratio = 0.0", issue)
+        self.assertIn("--lambda-value 0", readme)
+        self.assertIn("relative_position_v1", readme)
+        self.assertIn("args.fusion_ratio=0.0", readme)
 
 
 if __name__ == "__main__":
