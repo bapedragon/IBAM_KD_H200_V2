@@ -58,6 +58,20 @@ class OursV2Table7RunnerTest(unittest.TestCase):
         self.assertIn("completed_tasks=2/2", issue)
         self.assertIn("[POD_LIMIT_CHECK] status=PASS|FAIL", issue)
 
+    def test_full_issue_contains_verified_paired_request(self) -> None:
+        issue = (
+            Path(__file__).resolve().parents[1]
+            / "methods/OursV2/table7_loss_balance/H200_FULL_ISSUE.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "python methods/OursV2/table7_loss_balance/run_cifar100.py "
+            "--full-run --num-workers 4",
+            issue,
+        )
+        self.assertIn("estimated_300ep=7h 51m 26s", issue)
+        self.assertIn("headroom=2h 08m 34s", issue)
+        self.assertIn("student_epochs = 300", issue)
+
 
 if __name__ == "__main__":
     unittest.main()

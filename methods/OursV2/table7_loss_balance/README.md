@@ -56,6 +56,9 @@ python methods/OursV2/table7_loss_balance/run_cifar100.py \
   --full-run --num-workers 4
 ```
 
+The verified paired full-run request is recorded in
+[`H200_FULL_ISSUE.md`](H200_FULL_ISSUE.md).
+
 The single-lambda entry point remains available for a split run:
 
 ```bash
