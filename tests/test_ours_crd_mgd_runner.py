@@ -8,6 +8,7 @@ from methods.run_cifar100_ours_crd_mgd import (
     MEASURED_FULL_SECONDS,
     METHODS,
     POD_LIMIT_SECONDS,
+    validate_runtime_plan,
 )
 
 
@@ -30,6 +31,22 @@ class OursCrdMgdRunnerTest(unittest.TestCase):
             MEASURED_FULL_SECONDS["CRD"] + MEASURED_FULL_SECONDS["MGD"],
             POD_LIMIT_SECONDS,
         )
+
+    def test_full_three_method_run_is_blocked_by_default(self) -> None:
+        with self.assertRaises(RuntimeError):
+            validate_runtime_plan(
+                ["Ours", "CRD", "MGD"],
+                full_run=True,
+                allow_over_limit=False,
+            )
+
+    def test_full_three_method_run_can_be_explicitly_allowed(self) -> None:
+        total = validate_runtime_plan(
+            ["Ours", "CRD", "MGD"],
+            full_run=True,
+            allow_over_limit=True,
+        )
+        self.assertEqual(total, 10 * 3600 + 27 * 60 + 7)
 
 
 if __name__ == "__main__":

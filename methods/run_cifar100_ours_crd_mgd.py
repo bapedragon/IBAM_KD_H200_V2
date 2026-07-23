@@ -82,12 +82,36 @@ def parse_args() -> argparse.Namespace:
             "Use this to split a full run across the H200 runtime limit."
         ),
     )
+    parser.add_argument(
+        "--allow-over-limit",
+        action="store_true",
+        help=(
+            "Explicitly allow a full-run plan whose measured aggregate exceeds "
+            "the 600-minute Pod limit. Completed earlier method outputs remain "
+            "independent, but the final method may be terminated externally."
+        ),
+    )
     return parser.parse_args()
 
 
 def run_name(prefix: str, timing_run: bool, seed: int) -> str:
     suffix = "timing_2ep" if timing_run else "full_300ep"
     return f"{prefix}_cifar100_deit_ti_{suffix}_seed{seed}_v2"
+
+
+def validate_runtime_plan(
+    selected_names: list[str], *, full_run: bool, allow_over_limit: bool
+) -> int:
+    measured_seconds = sum(MEASURED_FULL_SECONDS[name] for name in selected_names)
+    if full_run and measured_seconds >= POD_LIMIT_SECONDS and not allow_over_limit:
+        raise RuntimeError(
+            "Selected full-run methods exceed the 600-minute Pod limit: "
+            f"methods={','.join(selected_names)} "
+            f"measured={format_duration(measured_seconds)}. "
+            "Run Ours alone and CRD+MGD in separate Issues, or explicitly accept "
+            "the risk with --allow-over-limit."
+        )
+    return measured_seconds
 
 
 def main() -> None:
@@ -102,16 +126,11 @@ def main() -> None:
     selected_names = [item[0] for item in selected_methods]
     if len(selected_names) != len(args.methods):
         raise ValueError("--methods must not contain duplicate method names")
-    measured_selected_seconds = sum(
-        MEASURED_FULL_SECONDS[name] for name in selected_names
+    measured_selected_seconds = validate_runtime_plan(
+        selected_names,
+        full_run=args.full_run,
+        allow_over_limit=args.allow_over_limit,
     )
-    if args.full_run and measured_selected_seconds >= POD_LIMIT_SECONDS:
-        raise RuntimeError(
-            "Selected full-run methods exceed the 600-minute Pod limit: "
-            f"methods={','.join(selected_names)} "
-            f"measured={format_duration(measured_selected_seconds)}. "
-            "Run Ours alone and CRD+MGD in separate Issues."
-        )
 
     output_root = args.output_dir.resolve()
     output_root.mkdir(parents=True, exist_ok=True)
@@ -127,11 +146,20 @@ def main() -> None:
     log("=" * 80)
     log(f"[MODE] timing_run={args.timing_run} full_run={args.full_run}")
     log(f"[METHODS] selected={','.join(selected_names)}")
+    runtime_delta = POD_LIMIT_SECONDS - measured_selected_seconds
+    delta_label = "margin" if runtime_delta >= 0 else "over_by"
     log(
         f"[RUNTIME_PLAN] measured_full={format_duration(measured_selected_seconds)} "
         f"pod_limit={format_duration(POD_LIMIT_SECONDS)} "
-        f"margin={format_duration(POD_LIMIT_SECONDS - measured_selected_seconds)}"
+        f"{delta_label}={format_duration(abs(runtime_delta))}"
     )
+    if args.full_run and runtime_delta < 0:
+        log(
+            "[RUNTIME_PLAN][WARN] Best-effort over-limit execution was explicitly "
+            "accepted. Ours and CRD outputs are independent and remain valid if "
+            "the Pod terminates during MGD; an incomplete MGD run must not be "
+            "reported as a completed 300-epoch result."
+        )
     log(f"[PATH] repository={REPOSITORY_ROOT}")
     log(f"[PATH] data_dir={args.data_dir.resolve()}")
     log(f"[PATH] teacher_root={args.teacher_root.resolve()}")
