@@ -97,8 +97,9 @@ dataset-specific runs and the generic-KD epoch-only reruns.
 | CIFAR-100 (researcher sync) | 300 | 64 / eval 200 | AdamW | `5e-4` / `5e-6` | `0.05` | 20 | Cosine |
 | Flowers-102 (researcher sync) | 300 | 64 / eval 200 | AdamW | `5e-4` / `5e-6` | `0.05` | 20 | Cosine |
 | Chaoyang (researcher sync) | 300 | 64 / eval 200 | AdamW | `5e-4` / `5e-6` | `0.05` | 20 | Cosine |
+| CUB-200 (pending first run) | 300 | 64 / eval 200 | AdamW | `5e-4` / `5e-6` | `0.05` | 20 | Cosine |
 
-All three are locked to the same audited LG/ALG base as the standalone ALG
+All four are locked to the same audited LG/ALG base as the standalone ALG
 run: FP32, seed
 `1`, label smoothing `0`, drop path `0.1`, warm-up factor `0.001`, ImageNet
 normalization, RandAugment `rand-m9-mstd0.5-inc1`, color jitter `0.4`, random
@@ -107,6 +108,11 @@ This makes each matched ALG/Ours comparison differ only in the Ours feature
 module and objective. All students start without external pretraining and use
 best Top-1 checkpoint reporting. Older 200/100-epoch files remain explicitly
 labeled as historical results.
+
+The CUB-200 extension lives under [`cub200/`](cub200/README.md). Unlike the
+three established datasets, it has no selected V2 teacher yet, so its first
+H200 request trains a scratch 32x32 ResNet56 and then runs Ours. No CUB result
+is reported until both stages and their artifacts have been verified.
 
 ### Method-isolated Flowers comparison
 
@@ -150,6 +156,7 @@ Timing checks (full dataset, two epochs):
 python methods/Ours/cifar100/train.py --timing-run --num-workers 4
 python methods/Ours/flowers102/train.py --timing-run --num-workers 4
 python methods/Ours/chaoyang/train.py --timing-run --num-workers 4
+python methods/Ours/cub200/run_pipeline.py --timing-run --num-workers 4
 ```
 
 Conditional full runs after the timing log and teacher audit are accepted:

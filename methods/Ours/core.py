@@ -52,6 +52,12 @@ TEACHER_CHANNELS = (16, 32, 64)
 STUDENT_CHANNELS = 192
 NUM_STUDENT_BLOCKS = 12
 
+# CUB-200 is an Ours-only extension until matching generic-method baselines
+# are explicitly requested. Keep the shared KD registry unchanged so the
+# other method CLIs do not advertise an unaudited CUB protocol.
+NUM_CLASSES = {**NUM_CLASSES, "cub200": 200}
+VANILLA_TOP1 = {**VANILLA_TOP1, "cub200": {"deit_ti": None}}
+
 
 class AdaptiveGuidanceController:
     """Researcher-supplied adaptive-locality controller.
@@ -428,10 +434,11 @@ def finalize_args(args: argparse.Namespace) -> None:
         "cifar100",
         "flowers102",
         "chaoyang",
+        "cub200",
     }:
         raise ValueError(
             "The audited lg_official loader currently supports CIFAR-100, "
-            "Flowers-102, and Chaoyang only"
+            "Flowers-102, Chaoyang, and CUB-200 only"
         )
     if (
         args.flowers_split_policy == "official_three_way"
@@ -534,7 +541,7 @@ def build_native_teacher_audit_loader(
             transform=transform,
             download=False,
         )
-    else:
+    elif args.dataset == "chaoyang":
         from teachers.train_teacher_chaoyang import (
             ChaoyangDataset,
             resolve_dataset_root,
@@ -542,6 +549,15 @@ def build_native_teacher_audit_loader(
 
         dataset_root = resolve_dataset_root(args.data_dir)
         dataset = ChaoyangDataset(dataset_root, "test", transform)
+    else:
+        from methods.Ours.cub200.dataset import CUB200Dataset, ensure_cub200
+
+        dataset_root = ensure_cub200(args.data_dir)
+        dataset = CUB200Dataset(
+            dataset_root,
+            split="test",
+            transform=transform,
+        )
 
     if args.smoke:
         generator = torch.Generator().manual_seed(args.seed + 1)
@@ -827,7 +843,9 @@ def write_summary(
         "final_test_evaluations": 1 if final_test_accuracy is not None else 0,
         "vanilla_top1": VANILLA_TOP1[args.dataset][args.student],
         "gain_over_vanilla_pp": (
-            reported_accuracy - VANILLA_TOP1[args.dataset][args.student]
+            None
+            if VANILLA_TOP1[args.dataset][args.student] is None
+            else reported_accuracy - VANILLA_TOP1[args.dataset][args.student]
         ),
         "aggregation_weights": aggregation_weights,
         "epoch_times": epoch_times,
@@ -1316,19 +1334,32 @@ def main() -> None:
     log("=" * 72)
     if final_test_accuracy is None:
         reported_accuracy = best_accuracy
-        log(
-            f"[FINAL_RESULT] ours_best_top1={best_accuracy:.2f}% "
-            f"vanilla_top1={vanilla:.2f}% "
-            f"gain_over_vanilla={best_accuracy - vanilla:+.2f}pp"
-        )
+        if vanilla is None:
+            log(
+                f"[FINAL_RESULT] ours_best_top1={best_accuracy:.2f}% "
+                "vanilla_top1=not_run gain_over_vanilla=not_available"
+            )
+        else:
+            log(
+                f"[FINAL_RESULT] ours_best_top1={best_accuracy:.2f}% "
+                f"vanilla_top1={vanilla:.2f}% "
+                f"gain_over_vanilla={best_accuracy - vanilla:+.2f}pp"
+            )
     else:
         reported_accuracy = final_test_accuracy
-        log(
-            f"[FINAL_RESULT] ours_best_val_top1={best_accuracy:.2f}% "
-            f"ours_final_test_top1={final_test_accuracy:.2f}% "
-            f"vanilla_top1={vanilla:.2f}% "
-            f"test_gain_over_vanilla={final_test_accuracy - vanilla:+.2f}pp"
-        )
+        if vanilla is None:
+            log(
+                f"[FINAL_RESULT] ours_best_val_top1={best_accuracy:.2f}% "
+                f"ours_final_test_top1={final_test_accuracy:.2f}% "
+                "vanilla_top1=not_run test_gain_over_vanilla=not_available"
+            )
+        else:
+            log(
+                f"[FINAL_RESULT] ours_best_val_top1={best_accuracy:.2f}% "
+                f"ours_final_test_top1={final_test_accuracy:.2f}% "
+                f"vanilla_top1={vanilla:.2f}% "
+                f"test_gain_over_vanilla={final_test_accuracy - vanilla:+.2f}pp"
+            )
         log(
             "[FINAL_TEST] selected_checkpoint=student_best.pt "
             "selection_split=official_val evaluation_split=official_test "

@@ -16,10 +16,12 @@ try:
     from .train_teacher_chaoyang import ResNet56Chaoyang
     from .train_teacher_cifar100 import ResNet56
     from .train_teacher_flowers import ResNet56Flowers
+    from methods.Ours.cub200.train_teacher import ResNet56CUB200
 except ImportError:  # Direct execution: python teachers/verify_checkpoints.py
     from train_teacher_chaoyang import ResNet56Chaoyang
     from train_teacher_cifar100 import ResNet56
     from train_teacher_flowers import ResNet56Flowers
+    from methods.Ours.cub200.train_teacher import ResNet56CUB200
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent
@@ -31,11 +33,15 @@ DATASET_ALIASES = {
     "flowers-102": "flowers102",
     "flowers102": "flowers102",
     "chaoyang": "chaoyang",
+    "cub-200": "cub200",
+    "cub200": "cub200",
+    "cub_200_2011": "cub200",
 }
 MODEL_FACTORIES: dict[str, Callable[[], nn.Module]] = {
     "cifar100": ResNet56,
     "flowers102": ResNet56Flowers,
     "chaoyang": ResNet56Chaoyang,
+    "cub200": ResNet56CUB200,
 }
 
 

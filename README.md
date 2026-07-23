@@ -14,6 +14,11 @@ The low-resolution teacher stage currently covers:
 | Flowers-102 | **32 x 32** | **66.03%** | 66.33% | -0.30 pp |
 | Chaoyang | **32 x 32** | **76.72%** | 77.20% | -0.48 pp |
 
+CUB-200-2011 is now prepared as a pending Ours-only extension under
+[`methods/Ours/cub200`](methods/Ours/cub200/README.md). Its first request
+trains a scratch 32x32 ResNet56 teacher before the DeiT-Ti student; it is not
+added to the result table until the new H200 artifacts are verified.
+
 The Flowers implementation uses the official `train+val` split (2,040 images)
 for training and the official test split (6,149 images) for evaluation.
 

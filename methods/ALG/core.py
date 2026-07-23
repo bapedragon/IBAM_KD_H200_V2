@@ -524,10 +524,26 @@ def build_alg_loaders_with_final_test(
             test_transform,
         )
         split_description = "train:official_train eval:official_test"
+    elif args.dataset == "cub200":
+        from methods.Ours.cub200.dataset import CUB200Dataset, ensure_cub200
+
+        dataset_root = ensure_cub200(args.data_dir)
+        log(f"[DATA] CUB-200-2011 root={dataset_root}")
+        train_dataset = CUB200Dataset(
+            dataset_root,
+            split="train",
+            transform=train_transform,
+        )
+        test_dataset = CUB200Dataset(
+            dataset_root,
+            split="test",
+            transform=test_transform,
+        )
+        split_description = "train:official_train eval:official_test"
     else:
         raise ValueError(
             "The audited public LG loader supports CIFAR-100, Flowers-102, "
-            "and Chaoyang only"
+            "Chaoyang, and CUB-200 only"
         )
     if args.dataset != "flowers102":
         final_test_dataset = None

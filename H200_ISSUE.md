@@ -4,6 +4,10 @@ Use the timing request first when a pipeline is new. CIFAR-100 estimates its
 300-epoch duration. The Flowers pipeline has already completed multiple full
 runs, so its final 450-epoch request may be submitted directly.
 
+The new CUB-200-2011 scratch-teacher + Ours timing/full request is maintained
+with its code under
+[`methods/Ours/cub200/H200_ISSUE.md`](methods/Ours/cub200/H200_ISSUE.md).
+
 ## 1. Timing run
 
 | Field | Value |
