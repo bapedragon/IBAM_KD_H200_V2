@@ -6,23 +6,18 @@ verified in this repository. Accuracy cells intentionally remain blank.
 
 ## Current status
 
-The overnight batch received on 2026-07-22 has been imported. Two completed
-runs still await their checkpoint archives:
+The overnight batch received on 2026-07-22 and builds 479, 480, 482, 484, and
+485 received on 2026-07-23 have been imported. One completed run still awaits
+its checkpoint archive:
 
 | Method | Dataset | Protocol ID | Log-verified result | Expected destination | Missing artifacts |
 |---|---|---|---:|---|---|
 | Ours | Chaoyang | `researcher_sync_v1_300ep_seed1` | 81.95% | `results/Ours/chaoyang/researcher_sync_v1_300ep_seed1/` | `student_best.pt`, `run_summary.json` |
-| ALG | Flowers-102 | `flowers102_deit_ti_alg_paper_lg_v2_trainval_test` | 73.15% | `results/ALG/flowers102/alg_paper_lg_v2_trainval_test_300ep_seed1/` | `student_best.pt`, `summary.json` or normalized `run_summary.json` |
 
 The completed H200 log reports best epoch 292, last Top-1 81.11%, guidance
 stop epoch 193, and selected best Top-1 81.95%. This value may be shown with a
-pending-artifact marker, but it is not counted among the 33 committed and
+pending-artifact marker, but it is not counted among the committed and
 PyTorch-verified checkpoints.
-
-The supplied final excerpt for the pure ALG Flowers run reports selected best
-Top-1 `73.15%` under train/eval batch `128/200`, 300 epochs, train+val/test,
-and seed 1. The excerpt does not contain ALG's best epoch or last-epoch
-accuracy, so those fields remain unknown until the output archive is received.
 
 The following received families were loaded with PyTorch, checked against
 their JSON summaries, and imported without replacing historical results:
@@ -33,6 +28,21 @@ their JSON summaries, and imported without replacing historical results:
   ALG Flowers-102;
 - `researcher_sync_v2_official_three_way_300ep_seed1_historical`: the
   Flowers train/validation/test audit retained for provenance.
+- `table4_grid_permuted_researcher_sync_v1_300ep_seed1_permseed1`: Table 4
+  grid-permutation best checkpoint and summary;
+- `table7_lambda_0_researcher_sync_v1_300ep_seed1`: Table 7 lambda-zero best
+  checkpoint and summary;
+- `table7_lambda_0p25_researcher_sync_v1_300ep_seed1`: Table 7 lambda-0.25
+  best checkpoint and summary.
+- `paper_lg_v2_trainval_test_b128_300ep_seed1`: selected ALG Flowers batch-128
+  result from build 479;
+- `paper_source_v2_trainval_test_b128_300ep_seed1`: auxiliary Ours Flowers
+  batch-128 result from build 479;
+- `paper_lg_v2_trainval_test_b64_300ep_seed1`,
+  `paper_lg_v2_b128_300ep_seed1`, and `paper_lg_v2_b64_300ep_seed1`: pure-ALG
+  batch controls from build 480;
+- `cifar100_locked_b64_v1_300ep_seed1`: auxiliary Ours Chaoyang batch-64
+  result from build 480.
 
 Add new jobs below this section only after submission, and remove their rows
 after the same import gate has passed.

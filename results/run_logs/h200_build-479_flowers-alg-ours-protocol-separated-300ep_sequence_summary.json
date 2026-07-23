@@ -1,0 +1,65 @@
+{
+  "status": "complete",
+  "protocol": "method_separated_v2_trainval_test_300ep_seed1",
+  "split": {
+    "train_plus_val": 2040,
+    "test": 6149
+  },
+  "checkpoint_selection": "official_test_top1",
+  "final_report": "best_official_test_top1",
+  "elapsed_seconds": 5963.510866641998,
+  "elapsed_human": "1h 39m 24s",
+  "estimated_full_seconds": 5791.547072649002,
+  "estimated_full_human": "1h 36m 32s",
+  "pod_limit_passed": true,
+  "records": [
+    {
+      "order": 1,
+      "method": "ALG",
+      "dataset": "flowers102",
+      "status": "complete",
+      "run_dir": "/app/output/flowers102_trainval_test_alg_ours_300ep_seed1/ALG/flowers102/alg_flowers102_deit_ti_trainval_test_300ep_seed1",
+      "command": [
+        "/usr/bin/python",
+        "/app/scratch/input/bapedragon_479/methods/ALG/flowers102/train_official_split.py",
+        "--data-dir",
+        "data",
+        "--teacher-root",
+        "/app/scratch/input/bapedragon_479/teachers/checkpoints",
+        "--output-dir",
+        "/app/output/flowers102_trainval_test_alg_ours_300ep_seed1/ALG/flowers102",
+        "--run-name",
+        "alg_flowers102_deit_ti_trainval_test_300ep_seed1",
+        "--num-workers",
+        "4"
+      ],
+      "summary": "/app/output/flowers102_trainval_test_alg_ours_300ep_seed1/ALG/flowers102/alg_flowers102_deit_ti_trainval_test_300ep_seed1/summary.json",
+      "best_test_top1": 73.15010570824525,
+      "estimated_planned_seconds": 2878.181523323059
+    },
+    {
+      "order": 2,
+      "method": "Ours",
+      "dataset": "flowers102",
+      "status": "complete",
+      "run_dir": "/app/output/flowers102_trainval_test_alg_ours_300ep_seed1/Ours/flowers102/ours_flowers102_deit_ti_trainval_test_300ep_seed1",
+      "command": [
+        "/usr/bin/python",
+        "/app/scratch/input/bapedragon_479/methods/Ours/flowers102/train_official_split.py",
+        "--data-dir",
+        "data",
+        "--teacher-root",
+        "/app/scratch/input/bapedragon_479/teachers/checkpoints",
+        "--output-dir",
+        "/app/output/flowers102_trainval_test_alg_ours_300ep_seed1/Ours/flowers102",
+        "--run-name",
+        "ours_flowers102_deit_ti_trainval_test_300ep_seed1",
+        "--num-workers",
+        "4"
+      ],
+      "summary": "/app/output/flowers102_trainval_test_alg_ours_300ep_seed1/Ours/flowers102/ours_flowers102_deit_ti_trainval_test_300ep_seed1/summary.json",
+      "best_test_top1": 72.77606114815417,
+      "estimated_planned_seconds": 2913.3655493259434
+    }
+  ]
+}

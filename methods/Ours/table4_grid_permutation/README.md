@@ -61,9 +61,18 @@ python methods/Ours/table4_grid_permutation/train_cifar100.py \
   --output-dir /app/output
 ```
 
-The Table 4 `XX.XX` cell is the final log's `ours_best_top1`, not the two-epoch
-timing accuracy. Import the checkpoint, `summary.json`, and complete log under
-`results/Ours/table4_grid_permutation/cifar100/` after H200 completion.
+The completed 300-epoch result is:
+
+| Best epoch | Best Top-1 | Last Top-1 | Full-Ours gap | Guidance stop |
+|---:|---:|---:|---:|---:|
+| 298 | **81.79%** | 81.61% | -1.11 pp | 137 |
+
+The Table 4 cell is therefore `81.79`, not a projected value. It is `+1.99 pp`
+above the draft token-space result (`79.80%`), so this exact intervention did
+not produce the manuscript's expected collapse. The checkpoint and normalized
+summary are imported at
+`results/Ours/cifar100/table4_grid_permuted_researcher_sync_v1_300ep_seed1_permseed1/`;
+the complete H200 log is under `results/run_logs/`.
 
 ## Expected audit lines
 

@@ -16,8 +16,8 @@ L_total(e) = CE + beta(e) * [lambda * L_fuse + (1-lambda) * L_align]
 
 | Lambda | Weighted feature loss | Table status |
 |---:|---|---|
-| `0` | `L_align` | new run |
-| `0.25` | `0.25 L_fuse + 0.75 L_align` | new run |
+| `0` | `L_align` | complete: `83.29%` |
+| `0.25` | `0.25 L_fuse + 0.75 L_align` | complete: `83.40%` |
 | `0.5` | `0.5 L_fuse + 0.5 L_align` | reuse verified `82.90%` |
 | `0.75` | `0.75 L_fuse + 0.25 L_align` | new run |
 | `1.0` | `L_fuse` | new run |
@@ -83,3 +83,17 @@ For the first `lambda=0` timing run, startup must contain:
 
 If any other protocol field differs from the normal CIFAR-100 Ours run, do
 not accept the result as a Table 7 control.
+
+## Completed results
+
+| Lambda | Best epoch | Best Top-1 | Last Top-1 | Full-Ours gap | Guidance stop |
+|---:|---:|---:|---:|---:|---:|
+| 0 | 269 | **83.29%** | 83.17% | +0.39 pp | 119 |
+| 0.25 | 289 | **83.40%** | 83.24% | +0.50 pp | 117 |
+| 0.5 | 288 | **82.90%** | 82.62% | reference | 117 |
+
+The first two checkpoints and summaries are imported under
+`results/Ours/cifar100/table7_lambda_0_researcher_sync_v1_300ep_seed1/` and
+`results/Ours/cifar100/table7_lambda_0p25_researcher_sync_v1_300ep_seed1/`.
+Values for `0.75`, `1.0`, and the independent pair remain unfilled until their
+own complete artifacts are received.

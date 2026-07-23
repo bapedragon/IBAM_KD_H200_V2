@@ -27,9 +27,12 @@ last-epoch Top-1. Batch 64 matches the shared CIFAR-100 researcher-sync
 training setting requested for this comparison. Its checkpoint and summary
 are stored under `results/Ours/flowers102/researcher_sync_v1_300ep_seed1/`.
 
-The method-separated batch-128 entry point documented below was also run and
-reached 72.78%, but it is retained as an auxiliary diagnostic rather than
-replacing the selected batch-64 result.
+The method-separated batch-128 entry point documented below was also run. It
+reached `72.78%` at epoch 264, ended at `72.29%`, and stopped guidance at
+epoch 211. The complete build-479 log, best checkpoint, and per-run summary are
+committed under `results/Ours/flowers102/paper_source_v2_trainval_test_b128_300ep_seed1/`.
+It remains an auxiliary diagnostic rather than replacing the selected
+batch-64 result.
 
 The fixed Flowers teacher was trained at 32 x 32. The runtime audit verifies
 its manifest hash and preprocessing integration before student training.

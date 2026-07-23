@@ -36,11 +36,18 @@ into ALG.
 ## Completed H200 result
 
 The pure ALG-paper/public-LG run completed with **73.15% best test Top-1**.
-This value is verified from the final H200 log and used in the consolidated
-table with a pending-artifact marker. The checkpoint and JSON summary have not
-yet been supplied, so the best epoch and last-epoch accuracy remain pending;
-the older researcher-sync batch-64 ALG checkpoint (`75.02%`) is not substituted
-for this result.
+The complete build-479 log and sequence summary verify best epoch 274,
+last-epoch Top-1 `72.92%`, and guidance-stop epoch 214. Its best checkpoint and
+per-run summary are committed under
+`results/ALG/flowers102/paper_lg_v2_trainval_test_b128_300ep_seed1/`. The older
+researcher-sync batch-64 ALG checkpoint (`75.02%`) is not substituted for this
+selected result.
+
+Build 480 separately tested the same pure-ALG family with train batch 64. It
+reached `75.05%` at epoch 298, ended at `74.60%`, and stopped guidance at epoch
+185. Its checkpoint and summary are stored under
+`results/ALG/flowers102/paper_lg_v2_trainval_test_b64_300ep_seed1/`. This is a
+batch ablation, not a replacement for the selected batch-128 row.
 
 Timing run:
 

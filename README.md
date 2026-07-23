@@ -37,17 +37,16 @@ from the draft paper.
 | MGD | Masked reconstruction | 75.68 | 54.66 | 81.81 |
 | OFA | Logit-space projection | 67.73 | 46.41 | 78.03 |
 | LG | Direct match (static) |  |  |  |
-| ALG | Scheduled match (static) |  | 73.15† |  |
+| ALG | Scheduled match (static) |  | 73.15 | 83.54 |
 | **Ours** | **Grid-space, learnable** | **82.90** | **74.81** | **81.95\*** |
 
 Blank cells mean that the method has not yet been run under its intended
-method-specific protocol. `†` marks the pure ALG-paper/public-LG Flowers run
-(train batch 128), whose `73.15%` best result is verified from the completed
-H200 log but whose checkpoint and summary archive are still awaiting import.
-`*` similarly marks the completed Chaoyang Ours H200 run whose `81.95%` final
-result is log-verified but whose archive is still awaiting import. Every
-unmarked non-Vanilla number above has a committed best checkpoint and adjacent
-run summary.
+method-specific protocol. Flowers ALG uses train batch 128 (`73.15%`) and
+Chaoyang ALG uses train batch 64 (`83.54%`); both now have a committed best
+checkpoint and adjacent run summary. `*` marks the completed Chaoyang Ours
+H200 run whose `81.95%` final result is log-verified but whose archive is still
+awaiting import. Every unmarked non-Vanilla number above has a committed best
+checkpoint and adjacent run summary.
 
 The generic methods use the completed 300-epoch results. The selected Flowers
 ALG value uses the isolated ALG-paper/public-LG protocol with train/eval batch
@@ -117,6 +116,12 @@ Runs that have started on H200 but whose artifacts have not yet been received
 are tracked separately in
 [`results/PENDING_IMPORTS.md`](results/PENDING_IMPORTS.md). A pending run is
 never listed as a verified result.
+
+The first completed attribution and loss-balance controls are also imported:
+Table 4 global joint-K/V grid permutation reached `81.79%`, while Table 7
+reached `83.29%` at `lambda=0` and `83.40%` at `lambda=0.25`. These controls
+live under distinct provenance-rich directories in `results/Ours/cifar100/`
+and do not replace the full-Ours `82.90%` checkpoint.
 
 ## DeiT-Ti student stage
 

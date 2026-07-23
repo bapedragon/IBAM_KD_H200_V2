@@ -50,3 +50,18 @@ python methods/ALG/chaoyang/train_draft_common.py --timing-run --num-workers 4
 python methods/ALG/chaoyang/train_draft_common.py --output-dir /app/output \
   --run-name alg_chaoyang_deit_ti_draft_common_300ep_seed42 --num-workers 4
 ```
+
+## Completed pure-ALG batch comparison
+
+Build 480 completed both pure-ALG configurations for 300 epochs and seed 1:
+
+| Train batch | Best epoch | Best Top-1 | Last Top-1 | Guidance stop | Paper gap |
+|---:|---:|---:|---:|---:|---:|
+| 128 | 281 | **80.97%** | 80.46% | 213 | -2.53 pp |
+| 64 | 292 | **83.54%** | 82.84% | 183 | +0.04 pp |
+
+The batch-64 result is the intended pure-ALG reproduction in the consolidated
+table. The complete log and sequence summary are committed under
+`results/run_logs/`, and the individual artifacts are committed under
+`results/ALG/chaoyang/paper_lg_v2_b128_300ep_seed1/` and
+`results/ALG/chaoyang/paper_lg_v2_b64_300ep_seed1/`.

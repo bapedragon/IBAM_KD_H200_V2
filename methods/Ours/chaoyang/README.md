@@ -61,3 +61,13 @@ Every checkpoint and `summary.json` records the complete arguments, teacher
 hash, controller history, stop epoch, and feature aggregation weights. Older
 Ours runs remain traceable under [`../legacy`](../legacy/README.md) and Git
 commit `ee2dc55`; they are not repeated seeds of this protocol.
+
+## Build-480 auxiliary result
+
+The CIFAR-100-locked batch-64 variant completed 300 epochs at `81.11%` best
+Top-1 (epoch 271), `80.22%` last Top-1, and guidance-stop epoch 192. It is
+preserved as a protocol comparison under
+`results/Ours/chaoyang/cifar100_locked_b64_v1_300ep_seed1/`, together with the
+complete build-480 log/sequence summary. It does not replace the separately
+log-verified `81.95%` researcher-sync result that is still awaiting its
+individual checkpoint and per-run summary archive.
