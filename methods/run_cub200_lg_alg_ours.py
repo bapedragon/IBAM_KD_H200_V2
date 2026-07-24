@@ -25,6 +25,7 @@ STUDENT_SCRIPTS = {
     "ALG": "methods/ALG/cub200/train.py",
     "Ours": "methods/Ours/cub200/train.py",
 }
+FINAL_RESULT_ORDER = ("teacher", "LG", "ALG", "Ours")
 
 
 def log(message: str = "") -> None:
@@ -51,6 +52,29 @@ def atomic_json_save(payload: dict[str, Any], path: Path) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     temporary.replace(path)
+
+
+def collect_best_top1(
+    summaries: dict[str, dict[str, Any]],
+) -> dict[str, float]:
+    results: dict[str, float] = {}
+    for name in FINAL_RESULT_ORDER:
+        if name not in summaries:
+            raise KeyError(f"Missing completed summary for {name}")
+        if "best_top1" not in summaries[name]:
+            raise KeyError(f"Missing best_top1 in {name} summary")
+        results[name] = float(summaries[name]["best_top1"])
+    return results
+
+
+def format_final_top1_summary(best_top1: dict[str, float]) -> str:
+    return (
+        "[FINAL_TOP1_SUMMARY] "
+        f"Teacher={best_top1['teacher']:.2f}% "
+        f"LG={best_top1['LG']:.2f}% "
+        f"ALG={best_top1['ALG']:.2f}% "
+        f"Ours={best_top1['Ours']:.2f}%"
+    )
 
 
 def run_tracked_task(
@@ -178,11 +202,13 @@ def main() -> None:
         float(summary["estimated_planned_seconds"])
         for summary in summaries.values()
     )
+    best_top1 = collect_best_top1(summaries)
     margin = POD_LIMIT_SECONDS - estimated_seconds
     limit_status = "PASS" if margin > 0 else "FAIL"
     status.update(
         {
             "status": "complete",
+            "best_top1": best_top1,
             "estimated_planned_seconds": estimated_seconds,
             "pod_limit_seconds": POD_LIMIT_SECONDS,
             "pod_limit_status": limit_status,
@@ -204,6 +230,7 @@ def main() -> None:
             "that share a persisted full-teacher directory."
         )
     log(f"[FINAL_RESULT] sequence_status={status_path}")
+    log(format_final_top1_summary(best_top1))
 
 
 if __name__ == "__main__":

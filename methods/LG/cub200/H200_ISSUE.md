@@ -25,11 +25,14 @@ Pass evidence:
 [FAIRNESS] all students consume the exact same teacher manifest/checkpoint
 [SEQUENCE_DONE] completed_tasks=4/4
 [POD_LIMIT_CHECK] status=PASS
+[FINAL_TOP1_SUMMARY] Teacher=...% LG=...% ALG=...% Ours=...%
 ```
 
 The first run can download the official CUB archive. The dataset helper checks
 the archive MD5, metadata consistency, official `5,994/5,794` split, 200
-classes, and all image paths.
+classes, and all image paths. `FINAL_TOP1_SUMMARY` is deliberately the last
+log line so all four best Top-1 values remain visible even when earlier logs
+are truncated.
 
 ## 2. Combined full Issue
 
@@ -55,6 +58,7 @@ Successful completion must contain:
 [DONE] ALG training completed successfully; resources may be released.
 [DONE] Ours training completed successfully; resources may be released.
 [SEQUENCE_DONE] completed_tasks=4/4
+[FINAL_TOP1_SUMMARY] Teacher=...% LG=...% ALG=...% Ours=...%
 ```
 
 ## 3. Split full Issues if the combined estimate fails
