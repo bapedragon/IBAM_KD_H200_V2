@@ -9,3 +9,6 @@ be reviewed without following several imports.
 
 - [`table4_grid_permutation/`](table4_grid_permutation/): the exact Table 4
   fixed teacher-grid permutation experiment that produced 81.79% Top-1.
+- [`ours_v2/`](ours_v2/): base Ours V2 with aggregation, deformable
+  enhancement, position-aware cross-attention, both feature losses, and the
+  locked CIFAR-100 protocol expanded in one reviewable file.
