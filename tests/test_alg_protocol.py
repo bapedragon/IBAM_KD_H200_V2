@@ -20,14 +20,14 @@ def delta_at(losses: list[float], epoch: int, window: int) -> float | None:
     return (losses[epoch - 1] - losses[epoch - window - 1]) / window
 
 
-def researcher_smoothed(
+def paper_smoothed(
     losses: list[float], epoch: int, window: int
 ) -> float | None:
     if epoch < 2:
         return None
     if epoch <= window:
         values = [delta_at(losses, index, window) for index in range(2, epoch + 1)]
-        return sum(float(value) for value in values if value is not None) / len(values)
+        return sum(float(value) for value in values if value is not None) / epoch
     if epoch < 2 * window:
         values = [
             delta_at(losses, index, window)
@@ -42,7 +42,7 @@ def researcher_smoothed(
 
 
 class AlgControllerTest(unittest.TestCase):
-    def test_matches_researcher_three_case_equations(self) -> None:
+    def test_matches_alg_paper_three_case_equations(self) -> None:
         losses = [10.0 - 0.1 * epoch for epoch in range(120)]
         controller = AdaptiveGuidanceController(
             beta=2.5,
@@ -60,7 +60,7 @@ class AlgControllerTest(unittest.TestCase):
             if epoch < 20:
                 self.assertIsNone(actual)
             else:
-                expected = researcher_smoothed(losses, epoch, 50)
+                expected = paper_smoothed(losses, epoch, 50)
                 self.assertIsNotNone(actual)
                 self.assertAlmostEqual(float(actual), float(expected), places=12)
 
@@ -84,7 +84,7 @@ class AlgControllerTest(unittest.TestCase):
         self.assertFalse(controller.active)
         self.assertEqual(controller.stop_epoch, 4)
 
-    def test_no_descent_guard_matches_researcher_code(self) -> None:
+    def test_paper_controller_has_no_extra_descent_guard(self) -> None:
         controller = AdaptiveGuidanceController(
             beta=2.5,
             threshold=-0.02,
@@ -98,7 +98,7 @@ class AlgControllerTest(unittest.TestCase):
         self.assertFalse(controller.active)
         self.assertEqual(controller.stop_epoch, 2)
 
-    def test_strict_greater_than_threshold(self) -> None:
+    def test_paper_greater_than_or_equal_threshold(self) -> None:
         controller = AdaptiveGuidanceController(
             beta=2.5,
             threshold=0.0,
@@ -109,8 +109,8 @@ class AlgControllerTest(unittest.TestCase):
         controller.observe(1, 4.0)
         controller.beta_for_epoch(2)
         controller.observe(2, 4.0)
-        self.assertTrue(controller.active)
-        self.assertIsNone(controller.stop_epoch)
+        self.assertFalse(controller.active)
+        self.assertEqual(controller.stop_epoch, 2)
 
     def test_paper_mode_uses_ge_and_explicit_one_over_e_boundary(self) -> None:
         controller = AdaptiveGuidanceController(

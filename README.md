@@ -14,10 +14,12 @@ The low-resolution teacher stage currently covers:
 | Flowers-102 | **32 x 32** | **66.03%** | 66.33% | -0.30 pp |
 | Chaoyang | **32 x 32** | **76.72%** | 77.20% | -0.48 pp |
 
-CUB-200-2011 is now prepared as a pending Ours-only extension under
-[`methods/Ours/cub200`](methods/Ours/cub200/README.md). Its first request
-trains a scratch 32x32 ResNet56 teacher before the DeiT-Ti student; it is not
-added to the result table until the new H200 artifacts are verified.
+CUB-200-2011 now has a shared scratch 32x32 ResNet56 teacher followed by
+independent official LG, canonical paper ALG, and unchanged Ours students.
+The combined timing/full runner and the Issue fields for both personal and
+lab accounts are under
+[`methods/LG/cub200/H200_ISSUE.md`](methods/LG/cub200/H200_ISSUE.md). CUB is
+not added to the result table until the new H200 artifacts are verified.
 
 The Flowers implementation uses the official `train+val` split (2,040 images)
 for training and the official test split (6,149 images) for evaluation.
@@ -152,13 +154,12 @@ two branches. The teacher and student normalizations are applied separately.
 Spatial feature methods bilinearly match the CNN feature grid to the DeiT
 14x14 patch grid where required.
 
-The Chaoyang ALG reproduction is researcher-synchronized rather than sharing
-the generic-KD data recipe: 300 epochs, batch 64, 20-epoch optimizer and
-controller warm-ups, cosine `5e-4 -> 5e-6`, drop path 0.1, official LG strong
-augmentation, FP32, and seed 1. Its exact three-case derivative controller
-uses window 50, strict `smoothed_derivative > -0.02`, and no descent-first
-guard, matching the synchronized Ours controller. See [`methods/ALG`](methods/ALG)
-for the full audit and paper targets `83.50%` Top-1 / stop epoch `108`.
+The active ALG reproduction is method-isolated from Ours: 300 epochs, batch
+128, 20-epoch optimizer LR warm-up, no controller-only warm-up, cosine
+`5e-4 -> 5e-6`, official LG strong augmentation, FP32, and seed 1. Its
+three-case derivative follows the paper equations and disables guidance at
+`smoothed_derivative >= -0.02`. See [`methods/ALG`](methods/ALG) for the full
+audit and Chaoyang paper targets `83.50%` Top-1 / stop epoch `108`.
 
 Run the full-data two-epoch timing sequence first. Flowers and Chaoyang can be
 submitted as separate Issues in parallel:
@@ -198,10 +199,11 @@ teachers, adapters, and every method-specific loss remain unchanged. The older
 100/200-epoch results remain historical records rather than being silently
 overwritten.
 
-The researcher-sync Ours/ALG batch is separate from the generic rerun. It
-executes Ours CIFAR-100, Ours Flowers-102, then ALG Flowers-102, with every
-task fixed to 300 epochs, seed 1, FP32, train/eval batch 64/200, 20-epoch
-warm-up, public LG augmentation, and independent output directories:
+The legacy-named Ours/ALG batch runner is now method-separated. It executes
+researcher-sync Ours on CIFAR-100 and Flowers-102, then canonical
+paper/official-LG ALG on Flowers-102. The Ours runs retain batch 64 and their
+controller; ALG uses batch 128 and the paper controller. All tasks use
+independent output directories:
 
 ```bash
 python methods/run_researcher_sync_ours_alg.py --timing-run --num-workers 4

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compatibility entry point for the shared CUB-200 ResNet56 teacher."""
+"""Run official LG ResNet56-to-DeiT-Ti on Flowers-102."""
 
 from pathlib import Path
 import sys
@@ -8,9 +8,8 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from teachers.train_teacher_cub200 import *  # noqa: F401,F403
-from teachers.train_teacher_cub200 import main
+from methods.LG.entrypoint import run_dataset
 
 
 if __name__ == "__main__":
-    main()
+    run_dataset("flowers102", "flowers102_deit_ti_official_lg_v1")

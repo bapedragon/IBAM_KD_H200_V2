@@ -4,12 +4,11 @@ This directory contains the V2 ResNet56-to-DeiT-Ti student pipelines for the
 five generic KD baselines in the draft table: KD, CRD, ReviewKD, MGD, and OFA.
 The paper's `Ours` implementation is maintained separately under
 [`Ours`](Ours) because its ALG-controlled grid-preserving feature objective is
-not a generic KD baseline. The original [`ALG`](ALG) baseline is also kept in
-its own directory: it uses public LG feature matching and the published ALG
-on/off controller, rather than the repository's Ours fusion module.
-Every method uses the same fixed teacher checkpoint and the same base student
-protocol for a given dataset. Only the documented transfer operator and its
-method-specific coefficients may differ.
+not a generic KD baseline. Static official [`LG`](LG) and canonical
+[`ALG`](ALG) are independent baselines: ALG is the published adaptive
+controller on the official LG code mechanics, with no Ours optimizer or
+controller setting. They share the same fixed teacher checkpoint for fair
+comparison, but each method keeps its own published training protocol.
 
 Every method/dataset directory owns an executable `train.py` and a local
 `README.md`. The sequential scripts in this directory are scheduling helpers:

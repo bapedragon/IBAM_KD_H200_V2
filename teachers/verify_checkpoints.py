@@ -16,12 +16,12 @@ try:
     from .train_teacher_chaoyang import ResNet56Chaoyang
     from .train_teacher_cifar100 import ResNet56
     from .train_teacher_flowers import ResNet56Flowers
-    from methods.Ours.cub200.train_teacher import ResNet56CUB200
+    from .train_teacher_cub200 import ResNet56CUB200
 except ImportError:  # Direct execution: python teachers/verify_checkpoints.py
     from train_teacher_chaoyang import ResNet56Chaoyang
     from train_teacher_cifar100 import ResNet56
     from train_teacher_flowers import ResNet56Flowers
-    from methods.Ours.cub200.train_teacher import ResNet56CUB200
+    from train_teacher_cub200 import ResNet56CUB200
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent

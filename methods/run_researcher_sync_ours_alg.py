@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run researcher-sync Ours CIFAR/Flowers and ALG Flowers sequentially."""
+"""Run researcher-sync Ours and method-isolated canonical ALG sequentially."""
 
 from __future__ import annotations
 
@@ -78,7 +78,8 @@ def parse_args() -> argparse.Namespace:
 
 def task_run_name(method: str, dataset: str, timing_run: bool) -> str:
     mode = "timing_2ep" if timing_run else "300ep"
-    return f"{method.lower()}_{dataset}_deit_ti_researcher_sync_{mode}_seed1"
+    protocol = "researcher_sync" if method == "Ours" else "paper_official_lg"
+    return f"{method.lower()}_{dataset}_deit_ti_{protocol}_{mode}_seed1"
 
 
 def main() -> None:
@@ -99,12 +100,12 @@ def main() -> None:
     sequence_start = time.time()
 
     log("=" * 80)
-    log("RESEARCHER-SYNC SEQUENCE: OURS CIFAR -> OURS FLOWERS -> ALG FLOWERS")
+    log("METHOD-SEPARATED SEQUENCE: OURS CIFAR -> OURS FLOWERS -> ALG FLOWERS")
     log("=" * 80)
     log(f"[MODE] timing_run={args.timing_run} full_run={args.full_run}")
-    log("[PROTOCOL_LOCK] epochs=300 train/eval_batch=64/200 AdamW")
-    log("[PROTOCOL_LOCK] lr=5e-4 min_lr=5e-6 wd=0.05 warmup=20")
-    log("[PROTOCOL_LOCK] seed=1 FP32 public_LG_augmentation researcher_controller")
+    log("[OURS_PROTOCOL] researcher-sync batch=64 controller_warmup=20 strict_gt")
+    log("[ALG_PROTOCOL] paper+official-LG batch=128 controller_warmup=0 paper_ge")
+    log("[PROTOCOL_LOCK] epochs=300 lr=5e-4 min_lr=5e-6 seed=1 FP32")
     log("[PROTOCOL_LOCK] teacher=32px student=224px grid=larger direct_eval")
     log(f"[PATH] data_dir={args.data_dir.resolve()}")
     log(f"[PATH] teacher_root={args.teacher_root.resolve()}")
@@ -218,7 +219,7 @@ def main() -> None:
     payload = {
         "status": "complete",
         "mode": "timing" if args.timing_run else "full",
-        "protocol": "researcher_sync_v1",
+        "protocol": "method_separated_ours_researcher_alg_paper_v1",
         "planned_epochs_each": 300,
         "tasks": [f"{method}:{dataset}" for method, dataset, _ in TASKS],
         "elapsed_seconds": elapsed,
@@ -244,7 +245,7 @@ def main() -> None:
         f"{format_duration(pod_limit_delta_seconds)}"
     )
     log(f"[FINAL_RESULT] summary={summary_path}")
-    log("[DONE] All researcher-sync tasks completed successfully.")
+    log("[DONE] All method-separated tasks completed successfully.")
 
 
 def cli_main() -> None:
@@ -254,7 +255,7 @@ def cli_main() -> None:
         log("=" * 80)
         log(f"[FATAL] {type(error).__name__}: {error}")
         traceback.print_exc()
-        log("[FATAL] Researcher-sync sequence did not complete.")
+        log("[FATAL] Method-separated sequence did not complete.")
         raise
 
 

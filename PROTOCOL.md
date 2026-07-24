@@ -214,13 +214,12 @@ in saved configs as `*_300ep_epoch_only_v1`.
 Measured H200 averages predict `3h 41m 30s` for all five Chaoyang runs and
 `4h 36m 48s` for all five Flowers runs, totaling `8h 18m 18s`.
 
-## Researcher-synchronized Ours and ALG reruns
+## Historical researcher-synchronized Ours/ALG reruns
 
-The locality-guidance reruns are a separate protocol family from the generic
-KD epoch-only override above. They reproduce the configuration and controller
-shared by the researcher: the public LG data path and model defaults, plus the
-supplied ALG controller. The three currently scheduled runs are Ours on
-CIFAR-100, Ours on Flowers-102, and ALG on Flowers-102.
+This section records already-produced researcher-sync artifacts. It is no
+longer an active ALG protocol. Ours retains its supplied researcher
+controller, while every new ALG run uses the canonical paper controller on the
+official LG base described below.
 
 Canonical protocol ID: `researcher_sync_v1_300ep_seed1`. Its verified outputs
 must live under `results/<Method>/<dataset>/researcher_sync_v1_300ep_seed1/`.
@@ -247,12 +246,9 @@ completed result until the checkpoint and summary pass the import gate.
 | ALG controller | beta `2.5`, threshold `-0.02`, smoothing window `50`, warm-up `20` |
 | Evaluation | direct resize to 224 |
 
-The common items above are identical for Ours and ALG. Their objectives remain
-different: ALG applies the public LG intermediate loss while guidance is
-active; Ours applies the supplied cross-attention/fusion objective with its
-documented `0.5` direct-alignment plus `0.5` fused-feature combination under
-the same controller. Consequently these runs are protocol-matched comparisons,
-not identical methods.
+These values describe the historical artifacts only and must not be used to
+launch a new ALG run. Active wrappers reject controller warm-up 20, strict
+`>` stopping, researcher derivative normalization, and Ours-common bases.
 
 Historical Flowers generic results (200 epochs, seed 42) and Chaoyang generic
 results (100 epochs, seed 42) remain under provenance-rich `_historical`
@@ -318,6 +314,13 @@ Eqs. (10)-(19).
 | Feature operator | 1x1 projection, larger-grid bilinear resize, summed MSE | LG code |
 | Beta / threshold / windows | `2.5` / `-0.02` / `50,50` | ALG paper |
 | Paper target / stop epoch | `83.50%` / `108` | ALG Table II |
+
+The active port also preserves two official-code details that were missing
+from the earlier local runtime: the DeiT classifier head is zero initialized,
+and AdamW excludes biases, one-dimensional parameters, `cls_token`, and
+`pos_embed` from weight decay. The 20 epochs above are optimizer LR warm-up;
+the ALG controller has no additional warm-up gate and follows the paper's
+`>=` boundary.
 
 Strong augmentation is the public LG path: color-jitter argument `0.4`,
 RandAugment `rand-m9-mstd0.5-inc1`, random erasing `0.25` pixel mode,

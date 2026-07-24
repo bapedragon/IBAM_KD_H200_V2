@@ -1,21 +1,13 @@
-#!/usr/bin/env python3
-"""Run canonical paper ALG on the official LG base for CIFAR-100."""
+"""Dataset-locked entry-point helper for official LG."""
 
 from __future__ import annotations
 
 import sys
-from pathlib import Path
+
+from methods.LG.core import cli_main
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-if str(REPOSITORY_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPOSITORY_ROOT))
-
-from methods.ALG.core import cli_main
-
-
-PROTOCOL_DEFAULTS = (
-    ("--protocol-name", "cifar100_deit_ti_alg_paper_official_lg_v1"),
+OFFICIAL_LG_DEFAULTS = (
     ("--student-epochs", "300"),
     ("--batch-size", "128"),
     ("--eval-batch-size", "200"),
@@ -28,11 +20,6 @@ PROTOCOL_DEFAULTS = (
     ("--drop-path-rate", "0.1"),
     ("--teacher-image-size", "32"),
     ("--beta", "2.5"),
-    ("--alg-threshold", "-0.02"),
-    ("--alg-smoothing-window", "50"),
-    ("--alg-warmup-epochs", "0"),
-    ("--alg-stop-comparison", "paper_ge"),
-    ("--alg-derivative-mode", "paper_equations"),
     ("--base-protocol", "lg_official"),
     ("--eval-resize-mode", "direct"),
     ("--seed", "1"),
@@ -46,11 +33,20 @@ def has_option(option: str) -> bool:
     )
 
 
-if __name__ == "__main__":
+def run_dataset(dataset: str, protocol_name: str) -> None:
     if has_option("--dataset"):
-        raise SystemExit("This wrapper fixes --dataset cifar100; remove --dataset.")
-    sys.argv[1:1] = ["--dataset", "cifar100"]
-    for option, value in reversed(PROTOCOL_DEFAULTS):
+        raise SystemExit(f"This wrapper fixes --dataset {dataset}; remove --dataset.")
+    sys.argv[1:1] = ["--dataset", dataset]
+    defaults = (
+        ("--protocol-name", protocol_name),
+        *OFFICIAL_LG_DEFAULTS,
+    )
+    if dataset == "flowers102":
+        defaults = (
+            *defaults,
+            ("--flowers-split-policy", "trainval_test_best"),
+        )
+    for option, value in reversed(defaults):
         if not has_option(option):
             sys.argv[1:1] = [option, value]
     cli_main()

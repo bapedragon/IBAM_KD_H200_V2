@@ -4,9 +4,9 @@ Use the timing request first when a pipeline is new. CIFAR-100 estimates its
 300-epoch duration. The Flowers pipeline has already completed multiple full
 runs, so its final 450-epoch request may be submitted directly.
 
-The new CUB-200-2011 scratch-teacher + Ours timing/full request is maintained
-with its code under
-[`methods/Ours/cub200/H200_ISSUE.md`](methods/Ours/cub200/H200_ISSUE.md).
+The current CUB-200-2011 shared scratch-teacher + LG + ALG + Ours timing/full
+request, including both `bapedragon` and `kau-aimslab`, is maintained under
+[`methods/LG/cub200/H200_ISSUE.md`](methods/LG/cub200/H200_ISSUE.md).
 
 ## 1. Timing run
 
@@ -523,10 +523,10 @@ matching path and ALG Eqs. (10)-(19). The paper comparison targets are
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG researcher-sync timing run` |
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti canonical ALG timing run` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --timing-run --num-workers 4 --run-name alg_chaoyang_researcher_sync_timing_2ep --output-dir /app/output` |
+| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --timing-run --num-workers 4 --run-name alg_chaoyang_paper_official_lg_timing_2ep --output-dir /app/output` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
@@ -535,9 +535,9 @@ Require these markers before the full submission:
 
 ```text
 [MODE] ... timing_run=True ... planned_epochs=300
-[PROTOCOL] ... warmup=20 warmup_factor=0.001 ... batch=64 ...
+[PROTOCOL] ... warmup=20 warmup_factor=0.001 ... batch=128 ...
 [AUGMENT] ... auto_augment=rand-m9-mstd0.5-inc1 ...
-[ALG] ... beta=2.5 tau=-0.02 smoothing_window=50 controller_warm_up=20 stop_condition=smoothed_derivative>tau descent_guard=False ...
+[ALG] ... beta=2.5 tau=-0.02 smoothing_window=50 controller_warm_up=0 stop_comparison=paper_ge derivative_mode=paper_equations ...
 [LG] ... student_blocks=(0,6,11) ... grid=larger_of_teacher_student ...
 [FEATURE_CHECK] ... aligned=[(2, 16, 32, 32), (2, 32, 16, 16), (2, 64, 14, 14)] ...
 [DONE] ALG training completed successfully; resources may be released.
@@ -550,10 +550,10 @@ approximately `76.72%`, and a passing native teacher audit.
 
 | Field | Value |
 |---|---|
-| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG researcher-sync 300-epoch training` |
+| Title | `[Request]: 박철현 Chaoyang DeiT-Ti canonical ALG 300-epoch training` |
 | 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
 | 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --output-dir /app/output --run-name alg_chaoyang_researcher_sync_300ep_seed1 --num-workers 4` |
+| 코드 실행 명령어 | `python methods/ALG/chaoyang/train.py --output-dir /app/output --run-name alg_chaoyang_paper_official_lg_300ep_seed1 --num-workers 4` |
 | 사용할 이미지 | `pytorch/pytorch:latest` |
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
@@ -562,47 +562,12 @@ The full run saves independent `student_best.pt`, `student_latest.pt`, and
 `summary.json` files. The final log prints measured Top-1 versus `83.50%` and
 the observed guidance stop epoch versus `108`; no correction ratio is applied.
 
-## 16. Chaoyang ALG on the historical draft-common base
+## 16. Archived noncanonical ALG diagnostics
 
-This controlled run keeps the ALG operator and all draft-visible shared values
-fixed while replacing the public LG/ALG augmentation/regularization base with
-the historical common base used by the earlier Ours `81.11%` run. It is a
-separate protocol family and must be compared only with that historical Ours
-result.
-
-### 16.1 Full-data two-epoch timing run
-
-| Field | Value |
-|---|---|
-| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG draft-common timing run` |
-| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
-| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/ALG/chaoyang/train_draft_common.py --timing-run --num-workers 4` |
-| 사용할 이미지 | `pytorch/pytorch:latest` |
-| 사용 언어 | `Python` |
-| GPU 할당량 (MIG 개수) | `7` |
-
-Require these markers before the full run:
-
-```text
-[PROTOCOL] name=chaoyang_deit_ti_alg_draft_common_v1 ... base=draft_common ...
-[ENV] ... amp=True seed=42 ...
-[AUGMENT] RandomResizedCrop(scale=0.8..1.0)+HorizontalFlip ...
-[FEATURE_CHECK] ... aligned=[(2, 16, 32, 32), (2, 32, 16, 16), (2, 64, 14, 14)] ...
-[DONE] ALG training completed successfully; resources may be released.
-```
-
-### 16.2 Full 300-epoch run
-
-| Field | Value |
-|---|---|
-| Title | `[Request]: 박철현 Chaoyang DeiT-Ti ALG draft-common full training` |
-| 사용자 ID | `bapedragon` (개인 계정) **or** `kau-aimslab` (연구실 계정) |
-| 실행할 코드의 GitHub 링크 | `https://github.com/bapedragon/IBAM_KD_H200_V2.git` |
-| 코드 실행 명령어 | `python methods/ALG/chaoyang/train_draft_common.py --output-dir /app/output --run-name alg_chaoyang_deit_ti_draft_common_300ep_seed42 --num-workers 4` |
-| 사용할 이미지 | `pytorch/pytorch:latest` |
-| 사용 언어 | `Python` |
-| GPU 할당량 (MIG 개수) | `7` |
+The former `draft_common` and researcher-sync ALG commands are archived under
+`methods/ALG/legacy` for provenance. They are not valid ALG paper runs and
+must not be submitted as H200 Issues. Active ALG wrappers accept only the
+official LG base and paper controller.
 
 ## 17. Researcher-sync Ours CIFAR-100
 

@@ -27,7 +27,8 @@ class ResearcherSyncOursAlgRunnerTest(unittest.TestCase):
         ]
         self.assertEqual(len(full_names), len(set(full_names)))
         self.assertEqual(len(timing_names), len(set(timing_names)))
-        self.assertTrue(all("researcher_sync" in name for name in full_names))
+        self.assertTrue(all("researcher_sync" in name for name in full_names[:2]))
+        self.assertIn("paper_official_lg", full_names[2])
         self.assertTrue(all("300ep_seed1" in name for name in full_names))
         self.assertTrue(all("timing_2ep_seed1" in name for name in timing_names))
 

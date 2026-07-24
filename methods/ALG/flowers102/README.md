@@ -52,19 +52,18 @@ batch ablation, not a replacement for the selected batch-128 row.
 Timing run:
 
 ```bash
-python methods/ALG/flowers102/train_official_split.py --timing-run --num-workers 4
+python methods/ALG/flowers102/train.py --timing-run --num-workers 4
 ```
 
 Full run:
 
 ```bash
-python methods/ALG/flowers102/train_official_split.py --num-workers 4 \
+python methods/ALG/flowers102/train.py --num-workers 4 \
   --run-name alg_flowers102_deit_ti_trainval_test_300ep_seed1 \
   --output-dir /app/output
 ```
 
-The older `train.py` entry point intentionally preserves the earlier
-researcher-sync experiment for provenance only. It used train batch 64 and a
-20-epoch controller stop warm-up and must not be mixed with this ALG-paper/LG-
-code result. Historical runs remain separately labeled and are never
-overwritten.
+`train.py` is now the canonical entry point. The older batch-64/controller-
+warm-up results remain labeled historical artifacts only; they are not
+reachable through the active ALG wrapper and are never substituted for the
+paper-protocol run.
