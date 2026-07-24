@@ -85,3 +85,20 @@ python serve/table4_grid_permutation/train_cifar100_full.py \
 
 The original modular source remains at
 `methods/Ours/table4_grid_permutation/`.
+
+## Export the completed V1 run's feature maps
+
+The completed 81.79% V1 checkpoint can be replayed without retraining. The
+following command uses one official CIFAR-100 test image and saves the teacher
+feature maps immediately before and after the exact checkpointed stage-wise
+permutation:
+
+```bash
+python serve/table4_grid_permutation/export_v1_feature_maps.py --device cpu
+```
+
+The output filename explicitly contains `v1`. Each pickle contains the
+original image, preprocessing metadata, checkpoint hashes, and all three
+stages' `before_feature_map`, `after_feature_map`, `permutation`, and
+`inverse_permutation`. The exporter verifies exact permutation and inverse
+recovery before writing the file.
