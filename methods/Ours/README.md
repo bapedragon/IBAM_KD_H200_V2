@@ -22,6 +22,14 @@ windows, while keeping key and value identical, is isolated under
 The token-space cross-attention re-measurement is isolated under
 [`table4_token_space/`](table4_token_space/README.md).
 
+The later researcher-requested spatial-collapse experiment is isolated under
+[`cnn_to_transformer_spatial_collapse/`](cnn_to_transformer_spatial_collapse/README.md).
+It is not another permutation/token-QKV control. It reverses the alignment
+direction by resizing each teacher CNN stage to the student's `14x14` patch
+grid, projecting `16/32/64 -> 192`, and evaluating fusion and feature losses
+on flattened `[B,196,192]` representations. The primary V1 implementation
+remains unchanged.
+
 Table 7 loss-balance controls are likewise isolated under
 [`table7_loss_balance/`](table7_loss_balance/README.md). They inherit the same
 82.90%-run protocol and vary only the convex loss-balance parameter `lambda`.
