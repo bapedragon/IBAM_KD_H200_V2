@@ -131,12 +131,12 @@ class CNNToTransformerSpatialCollapseOurs(nn.Module):
             num_cnn=len(self.teacher_channels),
         )
 
-        # This is the researcher's requested reversal of the original
-        # Conv2d(student_channels, teacher_channels, 1) projections.
+        # 핵심 1: 기존 Student 192→Teacher C 투영을 Teacher C→192로 반전한다.
         self.teacher_to_transformer_projections = nn.ModuleList(
             nn.Conv2d(channels, self.student_channels, kernel_size=1)
             for channels in self.teacher_channels
         )
+        # 변환된 세 stage 모두 Transformer dimension 192에서 V1 attention을 한다.
         self.fusion_blocks = nn.ModuleList(
             TransformerRepresentationCrossAttention(
                 self.student_channels,
@@ -202,6 +202,7 @@ class CNNToTransformerSpatialCollapseOurs(nn.Module):
                     f"actual={student_map.shape[1]}"
                 )
             transformer_grid = student_map.shape[-2:]
+            # 핵심 2: 모든 Teacher stage를 Student patch grid(14×14)에 맞춘다.
             if teacher_feature.shape[-2:] != transformer_grid:
                 teacher_feature = F.interpolate(
                     teacher_feature,
@@ -210,6 +211,7 @@ class CNNToTransformerSpatialCollapseOurs(nn.Module):
                     align_corners=False,
                 )
             teacher_map = projection(teacher_feature)
+            # 핵심 3: shuffle/permutation 없이 BCHW를 BND로 reshape만 한다.
             student_tokens = student_map.flatten(2).transpose(1, 2)
             teacher_tokens = teacher_map.flatten(2).transpose(1, 2)
             if student_tokens.shape != teacher_tokens.shape:
@@ -220,6 +222,7 @@ class CNNToTransformerSpatialCollapseOurs(nn.Module):
                 )
 
             fused_tokens = fusion(student_map, teacher_tokens)
+            # 핵심 4: L_align과 L_fuse를 같은 Transformer 표현에서 계산한다.
             alignment_loss = alignment_loss + F.mse_loss(
                 student_tokens.float(),
                 teacher_tokens.float(),
