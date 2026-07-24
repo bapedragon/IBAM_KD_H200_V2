@@ -31,8 +31,15 @@ dataset. The canonical IDs currently used are:
 | `researcher_sync_v1_300ep_seed1` | researcher-synchronized Ours/ALG family; Flowers uses train+val 2,040 / test 6,149 |
 | `researcher_sync_v2_official_three_way_300ep_seed1_historical` | historical Flowers run: train 1,020, val-best 1,020, final test 6,149 once |
 | `table4_grid_permuted_researcher_sync_v1_300ep_seed1_permseed1` | Table 4 global, fixed, stage-wise spatial permutation; the same permutation feeds K/V and both feature targets |
+| `table4_kv_independent_researcher_sync_v1_300ep_seed1_k1_v1001` | Table 4 global permutation with independent K/V seeds (`1` and `1001`) |
+| `table4_local_patch2_researcher_sync_v1_300ep_seed1_permseed1` | Table 4 fixed permutation restricted to non-overlapping `2x2` windows |
+| `table4_token_space_researcher_sync_v1_300ep_seed1` | Table 4 token-space Linear-Q/K/V control |
 | `table7_lambda_0_researcher_sync_v1_300ep_seed1` | Table 7 alignment-only endpoint (`lambda=0`) |
 | `table7_lambda_0p25_researcher_sync_v1_300ep_seed1` | Table 7 `0.25 L_fuse + 0.75 L_align` |
+| `table7_lambda_0p75_researcher_sync_v1_300ep_seed1` | Table 7 `0.75 L_fuse + 0.25 L_align` |
+| `table7_lambda_1_researcher_sync_v1_300ep_seed1` | Table 7 fusion-only endpoint (`lambda=1`) |
+| `table7_lambda_0_relative_position_v1_300ep_seed1` | Ours V2 relative-position Table 7 alignment-only endpoint |
+| `table7_lambda_0p5_relative_position_v1_300ep_seed1` | Ours V2 relative-position Table 7 balanced reference |
 | `paper_lg_v2_trainval_test_b128_300ep_seed1` | selected pure-ALG Flowers train batch 128 |
 | `paper_lg_v2_trainval_test_b64_300ep_seed1` | pure-ALG Flowers train batch 64 control |
 | `paper_source_v2_trainval_test_b128_300ep_seed1` | Ours Flowers batch-128 protocol-separated control |
@@ -49,7 +56,7 @@ outputs retain `student_latest.pt`; its exact final-epoch accuracy is also
 preserved in `run_summary.json`. This avoids doubling repository size and H200
 clone time without discarding the reported result.
 
-All 42 currently committed checkpoints were loaded with PyTorch and verified against
+All 49 currently committed checkpoints were loaded with PyTorch and verified against
 their summaries for dataset, method, best accuracy, and checkpoint epoch.
 The Top-1 value is read from the adjacent summary; file names are deliberately
 stable (`student_best.pt`) inside the provenance-rich protocol directory.
@@ -107,21 +114,26 @@ remains in a distinct historical protocol directory and was not overwritten.
 
 ### Table 4 attribution control
 
-The completed global grid-permutation control changes only the teacher spatial
-ordering. It uses one fixed permutation per stage and applies that same
-permutation to K, V, the alignment target, and the fusion target.
+The controls below keep the full-Ours training protocol fixed and change only
+the stated spatial or attention intervention.
 
 | Configuration | Best epoch | Best Top-1 | Last Top-1 | Gap to full Ours | Artifact status |
 |---|---:|---:|---:|---:|---|
 | Full Ours | 288 | **82.90%** | 82.62% | - | Verified |
-| Grid-permuted teacher features | 298 | **81.79%** | 81.61% | -1.11 pp | Verified |
+| Global joint-K/V grid permutation | 298 | **81.79%** | 81.61% | -1.11 pp | Verified |
+| Independent global K/V permutations | 298 | **81.00%** | 80.87% | -1.90 pp | Verified |
+| Local `2x2` patch-grid permutation | 297 | **82.46%** | 82.41% | -0.44 pp | Verified |
+| Token-space Linear Q/K/V | 290 | **83.12%** | 82.88% | +0.22 pp | Verified |
 
-The measured `81.79%` is `+1.99 pp` above the draft token-space row
-(`79.80%`). It therefore does not support a claimed collapse below that row.
-The result must be reported as measured or followed by a separately defined
-permutation intervention; it must not be replaced with an expected value.
-Artifacts:
-`Ours/cifar100/table4_grid_permuted_researcher_sync_v1_300ep_seed1_permseed1/`.
+The global joint-K/V result is `+1.99 pp` above the draft token-space row
+(`79.80%`), while the direct token-space remeasurement is `83.12%`. The latter
+is consistent with the documented mathematical equivalence between a shared
+`1x1` convolution and a token-wise linear layer after reshaping. Results are
+reported as measured rather than replaced with draft expectations.
+
+Artifacts are stored under the matching protocol directories in
+`Ours/cifar100/`: `table4_grid_permuted_*`, `table4_kv_independent_*`,
+`table4_local_patch2_*`, and `table4_token_space_*`.
 
 ### Table 7 loss-balance controls
 
@@ -134,13 +146,27 @@ convex feature-loss balance:
 | 0 | `L_align` | 269 | **83.29%** | 83.17% | +0.39 pp | Verified |
 | 0.25 | `0.25 L_fuse + 0.75 L_align` | 289 | **83.40%** | 83.24% | +0.50 pp | Verified |
 | 0.5 | `0.5 L_fuse + 0.5 L_align` | 288 | **82.90%** | 82.62% | reference | Reused verified full Ours |
-| 0.75 | `0.75 L_fuse + 0.25 L_align` | - | - | - | - | Awaiting result |
-| 1.0 | `L_fuse` | - | - | - | - | - | Awaiting result |
+| 0.75 | `0.75 L_fuse + 0.25 L_align` | 296 | **82.63%** | 82.55% | -0.27 pp | Verified rerun |
+| 1.0 | `L_fuse` | 288 | **82.29%** | 81.87% | -0.61 pp | Verified |
 | `(lambda_1, lambda_2)` | independent weights | - | - | - | - | Pair not yet fixed |
 
-The imported endpoints are stored at
-`Ours/cifar100/table7_lambda_0_researcher_sync_v1_300ep_seed1/` and
-`Ours/cifar100/table7_lambda_0p25_researcher_sync_v1_300ep_seed1/`.
+The imported sweep checkpoints are stored in the four matching
+`table7_lambda_*_researcher_sync_v1_300ep_seed1` protocol directories. The
+`lambda=0.5` reference reuses the full-Ours checkpoint.
+
+### Ours V2 relative-position Table 7 control
+
+This separate pair uses the position-aware `relative_position_v1`
+architecture for both rows and changes only `lambda`. It must not be mixed
+with the pre-V2 sweep above.
+
+| Lambda | Feature loss | Best epoch | Best Top-1 | Last Top-1 | Gap to V2 `lambda=0.5` |
+|---:|---|---:|---:|---:|---:|
+| 0 | `L_align` | 277 | **83.43%** | 83.42% | +0.59 pp |
+| 0.5 | `0.5 L_fuse + 0.5 L_align` | 273 | **82.84%** | 82.55% | reference |
+
+Both runs completed in one H200 sequence and are stored under
+`OursV2/cifar100/table7_lambda_{0,0p5}_relative_position_v1_300ep_seed1/`.
 
 ## Flowers-102 — completed 300-epoch results
 

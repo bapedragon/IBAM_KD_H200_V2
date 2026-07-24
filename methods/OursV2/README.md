@@ -55,6 +55,9 @@ L_feature = 0 * L_fuse + 1 * L_align
 Its direct reference is base Ours V2 `relative_position_v1` at `lambda=0.5`,
 not either Table 4 attention control and not a historical pre-V2 Ours result.
 
+The completed paired run reached **83.43%** at `lambda=0` (epoch 277, last
+`83.42%`) and **82.84%** at `lambda=0.5` (epoch 273, last `82.55%`).
+
 Run the paired timing audit (`lambda=0` followed by `lambda=0.5`) with:
 
 ```bash

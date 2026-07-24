@@ -19,8 +19,8 @@ L_total(e) = CE + beta(e) * [lambda * L_fuse + (1-lambda) * L_align]
 | `0` | `L_align` | complete: `83.29%` |
 | `0.25` | `0.25 L_fuse + 0.75 L_align` | complete: `83.40%` |
 | `0.5` | `0.5 L_fuse + 0.5 L_align` | reuse verified `82.90%` |
-| `0.75` | `0.75 L_fuse + 0.25 L_align` | new run |
-| `1.0` | `L_fuse` | new run |
+| `0.75` | `0.75 L_fuse + 0.25 L_align` | complete rerun: `82.63%` |
+| `1.0` | `L_fuse` | complete: `82.29%` |
 
 The independent-weight `(lambda_1, lambda_2)` column is deliberately not
 implemented yet. V3 requests one such row but does not state the pair to use.
@@ -91,9 +91,10 @@ not accept the result as a Table 7 control.
 | 0 | 269 | **83.29%** | 83.17% | +0.39 pp | 119 |
 | 0.25 | 289 | **83.40%** | 83.24% | +0.50 pp | 117 |
 | 0.5 | 288 | **82.90%** | 82.62% | reference | 117 |
+| 0.75 | 296 | **82.63%** | 82.55% | -0.27 pp | 116 |
+| 1.0 | 288 | **82.29%** | 81.87% | -0.61 pp | 114 |
 
-The first two checkpoints and summaries are imported under
-`results/Ours/cifar100/table7_lambda_0_researcher_sync_v1_300ep_seed1/` and
-`results/Ours/cifar100/table7_lambda_0p25_researcher_sync_v1_300ep_seed1/`.
-Values for `0.75`, `1.0`, and the independent pair remain unfilled until their
-own complete artifacts are received.
+The four non-reference checkpoints and summaries are imported under their
+matching `results/Ours/cifar100/table7_lambda_*` protocol directories.
+The independent pair remains unfilled until its weights are fixed and its own
+complete artifacts are received.

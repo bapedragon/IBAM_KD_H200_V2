@@ -81,3 +81,13 @@ The startup audit must include:
 The completed `summary.json` must report `method=OursV2`,
 `ours_v2.variant=relative_position_v1`, `args.fusion_ratio=0.0`, and
 `student_epochs=300`.
+
+## Completed results
+
+| Lambda | Best epoch | Best Top-1 | Last Top-1 | Gap to `lambda=0.5` |
+|---:|---:|---:|---:|---:|
+| 0 | 277 | **83.43%** | 83.42% | +0.59 pp |
+| 0.5 | 273 | **82.84%** | 82.55% | reference |
+
+Both checkpoints contain the `relative_position_v1` metadata and learned
+head-specific 2D relative-position tables for all three fusion stages.

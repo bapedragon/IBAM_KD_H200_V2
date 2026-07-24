@@ -66,3 +66,9 @@ python methods/Ours/table4_local_patch_permutation/train_cifar100.py \
 
 Before accepting the run, the startup log must report stages `32×32`, `16×16`,
 and `14×14`, window `2×2`, and non-zero `changed_positions`.
+
+## Completed result
+
+The 300-epoch run completed with best Top-1 **82.46%** at epoch 297 and
+last Top-1 `82.41%`. Checkpoint inspection confirmed the `2x2` window size,
+seed `1`, and complete within-window permutation buffers at all three stages.

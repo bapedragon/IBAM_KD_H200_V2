@@ -96,6 +96,7 @@ IBAM_KD_H200_V2/
 │   ├── MGD/
 │   ├── OFA/
 │   ├── Ours/
+│   ├── OursV2/
 │   └── run_logs/
 └── teachers/
     ├── checkpoints/
@@ -122,11 +123,15 @@ are tracked separately in
 [`results/PENDING_IMPORTS.md`](results/PENDING_IMPORTS.md). A pending run is
 never listed as a verified result.
 
-The first completed attribution and loss-balance controls are also imported:
-Table 4 global joint-K/V grid permutation reached `81.79%`, while Table 7
-reached `83.29%` at `lambda=0` and `83.40%` at `lambda=0.25`. These controls
-live under distinct provenance-rich directories in `results/Ours/cifar100/`
-and do not replace the full-Ours `82.90%` checkpoint.
+The completed attribution and loss-balance controls are also imported. Table
+4 reached `81.79%` for global joint-K/V permutation, `81.00%` for independent
+K/V permutations, `82.46%` for local `2x2` permutation, and `83.12%` for the
+token-space remeasurement. The pre-V2 Table 7 sweep is `83.29`, `83.40`,
+`82.90`, `82.63`, and `82.29%` at lambda `0`, `0.25`, `0.5`, `0.75`, and
+`1.0`. The separate Ours V2 relative-position pair reached `83.43%` at
+lambda `0` and `82.84%` at lambda `0.5`. All controls live in distinct
+provenance-rich protocol directories and do not replace the full-Ours
+`82.90%` checkpoint.
 
 ## DeiT-Ti student stage
 

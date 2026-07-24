@@ -91,3 +91,9 @@ The startup log must contain:
 [TABLE4_CONTROL] ... only_change=grid_to_token_space_cross_attention
 [TABLE4_TOKEN_SPACE] enabled=True ... token_qkv=Linear_on_flattened_BNC
 ```
+
+## Completed result
+
+The 300-epoch run completed with best Top-1 **83.12%** at epoch 290 and
+last Top-1 `82.88%`. The checkpoint contains the token-space activation
+marker and the expected Linear Q/K/V state.

@@ -6,9 +6,9 @@ verified in this repository. Accuracy cells intentionally remain blank.
 
 ## Current status
 
-The overnight batch received on 2026-07-22 and builds 479, 480, 482, 484, and
-485 received on 2026-07-23 have been imported. One completed run still awaits
-its checkpoint archive:
+The overnight batch received on 2026-07-22 and builds 479, 480, 482, 484,
+485, 488, 490, 493, 494, 496, and 503 received through 2026-07-24 have been
+imported. One completed run still awaits its checkpoint archive:
 
 | Method | Dataset | Protocol ID | Log-verified result | Expected destination | Missing artifacts |
 |---|---|---|---:|---|---|
@@ -34,6 +34,16 @@ their JSON summaries, and imported without replacing historical results:
   checkpoint and summary;
 - `table7_lambda_0p25_researcher_sync_v1_300ep_seed1`: Table 7 lambda-0.25
   best checkpoint and summary.
+- `table7_lambda_0p75_researcher_sync_v1_300ep_seed1` and
+  `table7_lambda_1_researcher_sync_v1_300ep_seed1`: the remaining received
+  Table 7 convex-sweep checkpoints and summaries;
+- `table4_kv_independent_researcher_sync_v1_300ep_seed1_k1_v1001`,
+  `table4_local_patch2_researcher_sync_v1_300ep_seed1_permseed1`, and
+  `table4_token_space_researcher_sync_v1_300ep_seed1`: the three received
+  Table 4 follow-up controls;
+- `table7_lambda_0_relative_position_v1_300ep_seed1` and
+  `table7_lambda_0p5_relative_position_v1_300ep_seed1`: the paired Ours V2
+  relative-position Table 7 runs from build 503;
 - `paper_lg_v2_trainval_test_b128_300ep_seed1`: selected ALG Flowers batch-128
   result from build 479;
 - `paper_source_v2_trainval_test_b128_300ep_seed1`: auxiliary Ours Flowers

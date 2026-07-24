@@ -66,3 +66,9 @@ python methods/Ours/table4_kv_independent_permutation/train_cifar100.py \
 The startup log must show one `K` and one `V` line per stage, with different
 seeds and different stored permutation buffers. The final report prints best
 Top-1 and checkpoint paths through the shared Ours training pipeline.
+
+## Completed result
+
+The 300-epoch run completed with best Top-1 **81.00%** at epoch 298 and
+last Top-1 `80.87%`. Checkpoint inspection confirmed independent K/V seeds
+`1/1001` and full permutations at all three stages.
