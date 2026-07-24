@@ -7,6 +7,7 @@ from methods.run_cub200_lg_alg_ours import (
     STUDENT_SCRIPTS,
     collect_best_top1,
     format_final_top1_summary,
+    parse_args,
 )
 
 
@@ -54,6 +55,22 @@ class Cub200LgAlgRunnerTest(unittest.TestCase):
                     "ALG": {"best_top1": 3.0},
                 }
             )
+
+    def test_cli_ignores_whitespace_only_platform_arguments(self) -> None:
+        args = parse_args(
+            [
+                "--timing-run",
+                "     ",
+                "\t",
+                "--num-workers",
+                "4",
+                "--output-dir",
+                "/app/output/cub200_timing",
+            ]
+        )
+        self.assertTrue(args.timing_run)
+        self.assertEqual(args.num_workers, 4)
+        self.assertEqual(str(args.output_dir), "/app/output/cub200_timing")
 
 
 if __name__ == "__main__":

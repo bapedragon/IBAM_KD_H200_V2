@@ -18,6 +18,9 @@ protocol against the exact same generated teacher manifest.
 | 사용 언어 | `Python` |
 | GPU 할당량 (MIG 개수) | `7` |
 
+Paste the execution command as one line. The runner also ignores
+whitespace-only arguments injected by the Issue execution wrapper.
+
 Pass evidence:
 
 ```text

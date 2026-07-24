@@ -32,7 +32,7 @@ def log(message: str = "") -> None:
     print(message, flush=True)
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_mutually_exclusive_group(required=True)
     modes.add_argument("--timing-run", action="store_true")
@@ -45,7 +45,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--no-download", action="store_true")
-    return parser.parse_args()
+    raw_args = sys.argv[1:] if argv is None else argv
+    return parser.parse_args(
+        argument for argument in raw_args if argument.strip()
+    )
 
 
 def atomic_json_save(payload: dict[str, Any], path: Path) -> None:
